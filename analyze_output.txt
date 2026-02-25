@@ -1,0 +1,23 @@
+﻿Analyzing barber_app...                                         
+
+warning - Unused import: 'package:google_fonts/google_fonts.dart' - lib\main.dart:3:8 - unused_import
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\screens\settings_screen.dart:460:13 - deprecated_member_use
+  error - The name 'MyApp' isn't a class - test\widget_test.dart:16:35 - creation_with_non_type
+
+flutter : 3 issues found. 
+(ran in 26.5s)
+Au caractère Ligne:1 : 33
++ $env:Path += 
+";C:\flutter\bin"; flutter 
+analyze 2>&1 | Out-File 
+-File ...
++                          
+       ~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (3 i  
+  ssues found. (ran in 2   
+ 6.5s):String) [], Remo    
+teException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 

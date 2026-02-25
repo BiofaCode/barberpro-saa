@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarberPro | Plateforme SaaS Admin</title>
+    <link rel="stylesheet" href="/admin/css/admin.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+        rel="stylesheet">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>">
+</head>
+
+<body>
+    <div class="app" id="app">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">⚙️</div>
+                    <div class="logo-text">Barber<span>Pro</span></div>
+                </div>
+                <div class="logo-badge">SaaS</div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-page="dashboard" id="nav-dashboard">
+                    <span class="nav-icon">📊</span> Dashboard
+                </a>
+                <a href="#" class="nav-item" data-page="salons" id="nav-salons">
+                    <span class="nav-icon">🏪</span> Mes Clients
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">F</div>
+                    <div>
+                        <div class="user-name">Fabio</div>
+                        <div class="user-role">Super Admin</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <header class="topbar">
+                <button class="hamburger" id="hamburger">☰</button>
+                <div class="topbar-title" id="pageTitle">Dashboard Plateforme</div>
+                <div class="topbar-actions"></div>
+            </header>
+
+            <div class="content">
+                <!-- DASHBOARD -->
+                <section class="page active" id="page-dashboard">
+                    <div class="stats-row" id="statsRow"></div>
+                    <div class="card" style="margin-top:20px">
+                        <div class="card-header">
+                            <h3>🏪 Derniers salons créés</h3>
+                            <button class="btn btn-primary" onclick="openCreateSalonModal()">+ Créer un Salon</button>
+                        </div>
+                        <div class="card-body" id="recentSalonsList">
+                            <div class="empty-state">Chargement...</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- MES CLIENTS (SALONS) -->
+                <section class="page" id="page-salons">
+                    <div class="page-header">
+                        <h2>🏪 Mes Clients (Salons)</h2>
+                        <button class="btn btn-primary" onclick="openCreateSalonModal()">+ Créer un Salon</button>
+                    </div>
+                    <div class="salons-grid" id="salonsList"></div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalContent"></div>
+    </div>
+
+    <script src="/admin/js/admin.js"></script>
+</body>
+
+</html>

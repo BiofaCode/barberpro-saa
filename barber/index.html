@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BarberPro | Espace Barbier</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/barber/css/barber.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💇</text></svg>">
+</head>
+
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="login-logo-icon">✂️</div>
+                <h1>Barber<span>Pro</span></h1>
+                <p>Espace barbier</p>
+            </div>
+            <div id="loginError" class="login-error" style="display:none"></div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input form-input-full" id="loginEmail" value="ahmed@elitebarber.fr"
+                    placeholder="votre@email.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Mot de passe</label>
+                <input type="password" class="form-input form-input-full" id="loginPassword" value="barber123"
+                    placeholder="••••••••">
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doLogin()">Se connecter</button>
+            <div class="login-demo">
+                💡 Compte démo : ahmed@elitebarber.fr / barber123
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App (hidden until login) -->
+    <div id="appScreen" class="app" style="display:none">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">✂️</span>
+                    <span class="logo-text" id="sidebarSalonName">Mon <span>Salon</span></span>
+                </div>
+                <span class="logo-badge">BARBIER</span>
+            </div>
+            <nav class="sidebar-nav">
+                <a class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>Tableau de
+                    bord</a>
+                <a class="nav-item" onclick="showPage('bookings')"><span class="nav-icon">📅</span>Rendez-vous</a>
+                <a class="nav-item" onclick="showPage('clients')"><span class="nav-icon">👥</span>Mes Clients</a>
+                <a class="nav-item" onclick="showPage('employees')"><span class="nav-icon">💇</span>Mon Équipe</a>
+                <a class="nav-item" onclick="showPage('services')"><span class="nav-icon">💈</span>Prestations</a>
+                <a class="nav-item" onclick="showPage('settings')"><span class="nav-icon">⚙️</span>Mon Salon</a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="userAvatar">A</div>
+                    <div>
+                        <div class="user-name" id="userName">Barbier</div>
+                        <div class="user-role">Propriétaire</div>
+                    </div>
+                </div>
+                <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:12px" onclick="doLogout()">🚪
+                    Déconnexion</button>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="topbar">
+                <button class="hamburger" onclick="toggleSidebar()">☰</button>
+                <span class="topbar-title" id="topbarTitle">Tableau de bord</span>
+                <div style="flex:1"></div>
+                <a class="btn btn-outline btn-sm" id="salonWebLink" href="#" target="_blank">🌐 Voir mon site</a>
+            </div>
+
+            <div class="content">
+                <!-- Dashboard -->
+                <div class="page active" id="page-dashboard">
+                    <div class="stats-row" id="dashStats"></div>
+                    <div style="margin-top:24px">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>📋 Rendez-vous du jour</h3>
+                            </div>
+                            <div class="card-body" id="todayBookings">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon">📅</div>
+                                    <div class="empty-state-text">Chargement...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bookings -->
+                <div class="page" id="page-bookings">
+                    <div class="page-header">
+                        <h2>📅 Rendez-vous</h2><button class="btn btn-ghost btn-sm" onclick="loadBookings()">🔄
+                            Rafraîchir</button>
+                    </div>
+                    <div id="bookingsList">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📅</div>
+                            <div class="empty-state-text">Chargement...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clients -->
+                <div class="page" id="page-clients">
+                    <div class="page-header">
+                        <h2>👥 Mes Clients</h2>
+                    </div>
+                    <div id="clientsList"></div>
+                </div>
+
+                <!-- Employees -->
+                <div class="page" id="page-employees">
+                    <div class="page-header">
+                        <h2>💇 Mon Équipe</h2><button class="btn btn-primary btn-sm" onclick="showAddEmployee()">+
+                            Ajouter</button>
+                    </div>
+                    <div id="employeesList"></div>
+                </div>
+
+                <!-- Services -->
+                <div class="page" id="page-services">
+                    <div class="page-header">
+                        <h2>💈 Mes Prestations</h2><button class="btn btn-primary btn-sm" onclick="showAddService()">+
+                            Ajouter</button>
+                    </div>
+                    <div id="servicesList"></div>
+                </div>
+
+                <!-- Settings -->
+                <div class="page" id="page-settings">
+                    <div class="page-header">
+                        <h2>⚙️ Mon Salon</h2>
+                    </div>
+                    <div id="salonDetails"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Titre</h3><button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="modal-footer" id="modalFooter"></div>
+        </div>
+    </div>
+
+    <script src="/barber/js/barber.js"></script>
+</body>
+
+</html>

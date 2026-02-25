@@ -1,0 +1,10 @@
+﻿Resolving dependencies...
+Downloading packages...
+  google_fonts 6.3.3 (8.0.2 available)
+  intl 0.19.0 (0.20.2 available)
+  meta 1.17.0 (1.18.1 available)
+Got dependencies!
+3 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing barber_app...                                         
+No issues found! (ran in 139.6s)

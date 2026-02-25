@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="BarberPro - Réservez votre rendez-vous chez votre barbier en quelques clics. Coupe, barbe, soin premium. Salon de coiffure moderne et professionnel.">
+  <meta name="keywords" content="barbier, coiffeur, salon de coiffure, rendez-vous, réservation, coupe de cheveux, barbe">
+  <meta name="author" content="BarberPro">
+  <title>BarberPro | Salon de Coiffure Premium - Réservation en Ligne</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💈</text></svg>">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-logo">
+      <div class="nav-logo-icon">✂️</div>
+      <div class="nav-logo-text">Barber<span>Pro</span></div>
+    </div>
+    <div class="nav-links" id="navLinks">
+      <a href="#services">Services</a>
+      <a href="#gallery">Galerie</a>
+      <a href="#booking">Réserver</a>
+      <a href="#testimonials">Avis</a>
+      <a href="#contact">Contact</a>
+      <a href="#booking" class="btn btn-primary nav-cta">Prendre RDV</a>
+    </div>
+    <div class="nav-hamburger" id="navHamburger">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero" id="hero">
+    <div class="hero-bg">
+      <div class="hero-bg-overlay"></div>
+      <div class="hero-particles" id="heroParticles"></div>
+    </div>
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="pulse"></span>
+        Prêt à vous accueillir
+      </div>
+      <h1>L'Art de la <span class="highlight">Coiffure</span> Masculine</h1>
+      <p class="hero-description">
+        Découvrez une expérience barbier unique. Des coupes sur-mesure, 
+        des soins premium et un service d'exception dans un cadre moderne et raffiné.
+      </p>
+      <div class="hero-actions">
+        <a href="#booking" class="btn btn-primary" id="heroBookBtn">
+          ✂️ Réserver Maintenant
+        </a>
+        <a href="#services" class="btn btn-outline">
+          Nos Services →
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-number" data-count="2500">0</div>
+          <div class="hero-stat-label">Clients satisfaits</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-number" data-count="8">0</div>
+          <div class="hero-stat-label">Années d'expérience</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-number" data-count="15">0</div>
+          <div class="hero-stat-label">Services uniques</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services Section -->
+  <section class="services" id="services">
+    <div class="reveal">
+      <span class="section-badge">Nos prestations</span>
+      <h2 class="section-title">Des Services d'Exception</h2>
+      <p class="section-subtitle">Chaque coupe est une œuvre d'art. Nous offrons une gamme complète de services pour révéler le meilleur de vous-même.</p>
+    </div>
+    <div class="services-grid">
+      <div class="service-card reveal">
+        <div class="service-icon">✂️</div>
+        <h3>Coupe Classique</h3>
+        <p>Une coupe précise et élégante, adaptée à la forme de votre visage et à votre style personnel.</p>
+        <div class="service-meta">
+          <span class="service-price">25€</span>
+          <span class="service-duration">⏱ 30 min</span>
+        </div>
+      </div>
+      <div class="service-card reveal">
+        <div class="service-icon">🪒</div>
+        <h3>Taille de Barbe</h3>
+        <p>Sculpture et entretien de votre barbe avec des produits haut de gamme pour un résultat impeccable.</p>
+        <div class="service-meta">
+          <span class="service-price">15€</span>
+          <span class="service-duration">⏱ 20 min</span>
+        </div>
+      </div>
+      <div class="service-card reveal">
+        <div class="service-icon">💎</div>
+        <h3>Pack Premium</h3>
+        <p>Coupe + taille de barbe + soin du visage. L'expérience complète pour les hommes exigeants.</p>
+        <div class="service-meta">
+          <span class="service-price">55€</span>
+          <span class="service-duration">⏱ 60 min</span>
+        </div>
+      </div>
+      <div class="service-card reveal">
+        <div class="service-icon">🎨</div>
+        <h3>Coloration</h3>
+        <p>Transformez votre look avec une coloration professionnelle, naturelle ou audacieuse selon vos envies.</p>
+        <div class="service-meta">
+          <span class="service-price">40€</span>
+          <span class="service-duration">⏱ 45 min</span>
+        </div>
+      </div>
+      <div class="service-card reveal">
+        <div class="service-icon">🧴</div>
+        <h3>Soin Capillaire</h3>
+        <p>Traitement profond pour revitaliser vos cheveux. Hydratation, nutrition et brillance retrouvées.</p>
+        <div class="service-meta">
+          <span class="service-price">30€</span>
+          <span class="service-duration">⏱ 35 min</span>
+        </div>
+      </div>
+      <div class="service-card reveal">
+        <div class="service-icon">👶</div>
+        <h3>Coupe Enfant</h3>
+        <p>Une coupe adaptée aux plus jeunes dans une ambiance détendue et ludique. Moins de 12 ans.</p>
+        <div class="service-meta">
+          <span class="service-price">18€</span>
+          <span class="service-duration">⏱ 25 min</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gallery Section -->
+  <section class="gallery" id="gallery">
+    <div class="reveal">
+      <span class="section-badge">Notre travail</span>
+      <h2 class="section-title">La Galerie</h2>
+      <p class="section-subtitle">Découvrez nos réalisations et laissez-vous inspirer par notre savoir-faire.</p>
+    </div>
+    <div class="gallery-grid reveal">
+      <div class="gallery-item" id="gallery-1">
+        <div style="width:100%;height:100%;background:linear-gradient(135deg,#2a2015,#1a1510);display:flex;align-items:center;justify-content:center;font-size:3rem">✂️</div>
+        <div class="gallery-item-overlay"><span>Coupe Fade</span></div>
+      </div>
+      <div class="gallery-item" id="gallery-2">
+        <div style="width:100%;height:100%;background:linear-gradient(135deg,#1a1510,#0d0d0d);display:flex;align-items:center;justify-content:center;font-size:3rem">🪒</div>
+        <div class="gallery-item-overlay"><span>Barbe Sculptée</span></div>
+      </div>
+      <div class="gallery-item" id="gallery-3">
+        <div style="width:100%;height:100%;background:linear-gradient(135deg,#15201a,#0d0d0d);display:flex;align-items:center;justify-content:center;font-size:3rem">💈</div>
+        <div class="gallery-item-overlay"><span>Style Classique</span></div>
+      </div>
+      <div class="gallery-item" id="gallery-4">
+        <div style="width:100%;height:100%;background:linear-gradient(135deg,#201a15,#0d0d0d);display:flex;align-items:center;justify-content:center;font-size:3rem">💎</div>
+        <div class="gallery-item-overlay"><span>Pack Premium</span></div>
+      </div>
+      <div class="gallery-item" id="gallery-5">
+        <div style="width:100%;height:100%;background:linear-gradient(135deg,#151a20,#0d0d0d);display:flex;align-items:center;justify-content:center;font-size:3rem">🎨</div>
+        <div class="gallery-item-overlay"><span>Coloration</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Booking Section -->
+  <section class="booking" id="booking">
+    <div class="reveal">
+      <div style="text-align:center;margin-bottom:var(--space-xl)">
+        <span class="section-badge">Réservation</span>
+        <h2 class="section-title">Réservez Votre Rendez-Vous</h2>
+        <p class="section-subtitle">Simple, rapide et confirmé instantanément. Votre barbier vous attend.</p>
+      </div>
+    </div>
+    <div class="booking-container reveal">
+      <div class="booking-header">
+        <div class="booking-steps">
+          <div class="booking-step active" data-step="1">
+            <div class="booking-step-number">1</div>
+            <span class="booking-step-text">Service</span>
+          </div>
+          <div class="booking-step-line"></div>
+          <div class="booking-step" data-step="2">
+            <div class="booking-step-number">2</div>
+            <span class="booking-step-text">Date & Heure</span>
+          </div>
+          <div class="booking-step-line"></div>
+          <div class="booking-step" data-step="3">
+            <div class="booking-step-number">3</div>
+            <span class="booking-step-text">Informations</span>
+          </div>
+          <div class="booking-step-line"></div>
+          <div class="booking-step" data-step="4">
+            <div class="booking-step-number">4</div>
+            <span class="booking-step-text">Confirmation</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="booking-form" id="bookingForm">
+        <!-- Step 1: Service Selection -->
+        <div class="booking-section active" data-section="1">
+          <h3 style="margin-bottom:var(--space-lg);font-family:var(--font-body);font-size:1.1rem;color:var(--color-text-secondary)">
+            Choisissez votre prestation
+          </h3>
+          <div class="service-select-grid" id="serviceSelectGrid">
+            <div class="service-select-card" data-service="coupe" data-price="25" data-duration="30">
+              <div class="service-select-icon">✂️</div>
+              <h4>Coupe Classique</h4>
+              <div class="service-select-price">25€</div>
+            </div>
+            <div class="service-select-card" data-service="barbe" data-price="15" data-duration="20">
+              <div class="service-select-icon">🪒</div>
+              <h4>Taille de Barbe</h4>
+              <div class="service-select-price">15€</div>
+            </div>
+            <div class="service-select-card" data-service="premium" data-price="55" data-duration="60">
+              <div class="service-select-icon">💎</div>
+              <h4>Pack Premium</h4>
+              <div class="service-select-price">55€</div>
+            </div>
+            <div class="service-select-card" data-service="coloration" data-price="40" data-duration="45">
+              <div class="service-select-icon">🎨</div>
+              <h4>Coloration</h4>
+              <div class="service-select-price">40€</div>
+            </div>
+            <div class="service-select-card" data-service="soin" data-price="30" data-duration="35">
+              <div class="service-select-icon">🧴</div>
+              <h4>Soin Capillaire</h4>
+              <div class="service-select-price">30€</div>
+            </div>
+            <div class="service-select-card" data-service="enfant" data-price="18" data-duration="25">
+              <div class="service-select-icon">👶</div>
+              <h4>Coupe Enfant</h4>
+              <div class="service-select-price">18€</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Date & Time -->
+        <div class="booking-section" data-section="2">
+          <h3 style="margin-bottom:var(--space-lg);font-family:var(--font-body);font-size:1.1rem;color:var(--color-text-secondary)">
+            Choisissez la date et l'heure
+          </h3>
+          <div class="calendar-wrapper">
+            <div class="calendar-header">
+              <button class="calendar-nav" id="calendarPrev">◀</button>
+              <span class="calendar-month" id="calendarMonth"></span>
+              <button class="calendar-nav" id="calendarNext">▶</button>
+            </div>
+            <div class="calendar-grid" id="calendarGrid">
+              <div class="calendar-day-name">Lun</div>
+              <div class="calendar-day-name">Mar</div>
+              <div class="calendar-day-name">Mer</div>
+              <div class="calendar-day-name">Jeu</div>
+              <div class="calendar-day-name">Ven</div>
+              <div class="calendar-day-name">Sam</div>
+              <div class="calendar-day-name">Dim</div>
+            </div>
+          </div>
+          <div class="time-slots" id="timeSlots" style="display:none">
+            <h4>Créneaux disponibles</h4>
+            <div class="time-slots-grid" id="timeSlotsGrid"></div>
+          </div>
+        </div>
+
+        <!-- Step 3: Personal Info -->
+        <div class="booking-section" data-section="3">
+          <h3 style="margin-bottom:var(--space-lg);font-family:var(--font-body);font-size:1.1rem;color:var(--color-text-secondary)">
+            Vos informations
+          </h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="firstName">Prénom *</label>
+              <input type="text" class="form-input" id="firstName" placeholder="Votre prénom" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="lastName">Nom *</label>
+              <input type="text" class="form-input" id="lastName" placeholder="Votre nom" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="email">Email *</label>
+              <input type="email" class="form-input" id="email" placeholder="votre@email.com" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="phone">Téléphone *</label>
+              <input type="tel" class="form-input" id="phone" placeholder="06 12 34 56 78" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="notes">Notes (optionnel)</label>
+            <textarea class="form-input" id="notes" rows="3" placeholder="Des préférences ou demandes particulières..."></textarea>
+          </div>
+        </div>
+
+        <!-- Step 4: Confirmation -->
+        <div class="booking-section" data-section="4">
+          <h3 style="margin-bottom:var(--space-lg);font-family:var(--font-body);font-size:1.1rem;color:var(--color-text-secondary)">
+            Récapitulatif de votre rendez-vous
+          </h3>
+          <div class="confirmation-card">
+            <div class="confirmation-row">
+              <span class="confirmation-label">Service</span>
+              <span class="confirmation-value" id="confirmService">-</span>
+            </div>
+            <div class="confirmation-row">
+              <span class="confirmation-label">Date</span>
+              <span class="confirmation-value" id="confirmDate">-</span>
+            </div>
+            <div class="confirmation-row">
+              <span class="confirmation-label">Heure</span>
+              <span class="confirmation-value" id="confirmTime">-</span>
+            </div>
+            <div class="confirmation-row">
+              <span class="confirmation-label">Durée</span>
+              <span class="confirmation-value" id="confirmDuration">-</span>
+            </div>
+            <div class="confirmation-row">
+              <span class="confirmation-label">Client</span>
+              <span class="confirmation-value" id="confirmName">-</span>
+            </div>
+            <div class="confirmation-row">
+              <span class="confirmation-label">Email</span>
+              <span class="confirmation-value" id="confirmEmail">-</span>
+            </div>
+            <div class="confirmation-row">
+              <span class="confirmation-label">Téléphone</span>
+              <span class="confirmation-value" id="confirmPhone">-</span>
+            </div>
+            <div class="confirmation-row" style="border-top: 2px solid var(--color-primary); margin-top: var(--space-md); padding-top: var(--space-lg);">
+              <span class="confirmation-label" style="font-weight:600;color:var(--color-text-primary);">Total</span>
+              <span class="confirmation-value" id="confirmTotal" style="font-size:1.3rem;color:var(--color-primary);font-family:var(--font-heading);">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="booking-nav">
+        <button class="btn btn-ghost" id="bookingPrev" style="display:none">← Retour</button>
+        <div></div>
+        <button class="btn btn-primary" id="bookingNext">Suivant →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section class="testimonials" id="testimonials">
+    <div class="reveal">
+      <span class="section-badge">Témoignages</span>
+      <h2 class="section-title">Ce Que Disent Nos Clients</h2>
+      <p class="section-subtitle">La satisfaction de nos clients est notre plus grande fierté.</p>
+    </div>
+    <div class="testimonials-grid">
+      <div class="testimonial-card reveal">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"Un service exceptionnel ! La coupe est toujours parfaite et l'ambiance est au top. Mon barbier préféré depuis 3 ans."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">M</div>
+          <div>
+            <div class="testimonial-name">Mehdi A.</div>
+            <div class="testimonial-role">Client régulier</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card reveal">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"Le Pack Premium est incroyable. On ressort de là complètement transformé. Le soin du visage est un vrai plus !"</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">L</div>
+          <div>
+            <div class="testimonial-name">Lucas D.</div>
+            <div class="testimonial-role">Client Premium</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card reveal">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"La réservation en ligne est super pratique. Plus besoin d'attendre ! Et la coupe est toujours au rendez-vous."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">K</div>
+          <div>
+            <div class="testimonial-name">Karim B.</div>
+            <div class="testimonial-role">Client depuis 2 ans</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download App Section -->
+  <section class="download-app" id="app">
+    <div class="download-container reveal">
+      <div class="download-content">
+        <span class="section-badge">Application Mobile</span>
+        <h2>Gérez Tout Depuis l'App</h2>
+        <p>Téléchargez l'application BarberPro pour gérer vos rendez-vous, suivre votre activité et communiquer avec vos clients en temps réel.</p>
+        <div class="download-badges">
+          <div class="download-badge">
+            <span class="download-badge-icon">🍎</span>
+            <div class="download-badge-text">
+              <small>Télécharger sur</small>
+              <div>App Store</div>
+            </div>
+          </div>
+          <div class="download-badge">
+            <span class="download-badge-icon">🤖</span>
+            <div class="download-badge-text">
+              <small>Disponible sur</small>
+              <div>Google Play</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="download-mockup">
+        <div class="phone-mockup">
+          <div class="phone-notch"></div>
+          <div class="phone-screen" style="background:linear-gradient(135deg, #1A1A1A, #0D0D0D);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;padding:20px;">
+            <div style="font-size:2rem">💈</div>
+            <div style="font-family:var(--font-heading);color:var(--color-primary);font-size:0.9rem">BarberPro</div>
+            <div style="font-size:0.6rem;color:var(--color-text-muted)">Application Barbier</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer" id="contact">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="nav-logo" style="margin-bottom:var(--space-md)">
+          <div class="nav-logo-icon">✂️</div>
+          <div class="nav-logo-text">Barber<span>Pro</span></div>
+        </div>
+        <p>Votre salon de coiffure premium. L'art du style masculin depuis 2018. Réservez en ligne et profitez d'un service d'exception.</p>
+        <div class="footer-social">
+          <a href="#" aria-label="Instagram">📸</a>
+          <a href="#" aria-label="Facebook">👥</a>
+          <a href="#" aria-label="Twitter">🐦</a>
+          <a href="#" aria-label="TikTok">🎵</a>
+        </div>
+      </div>
+      <div class="footer-column">
+        <h4>Services</h4>
+        <ul>
+          <li><a href="#services">Coupe Classique</a></li>
+          <li><a href="#services">Taille de Barbe</a></li>
+          <li><a href="#services">Pack Premium</a></li>
+          <li><a href="#services">Coloration</a></li>
+          <li><a href="#services">Soin Capillaire</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Horaires</h4>
+        <ul>
+          <li><a href="#">Lun - Ven : 9h - 19h</a></li>
+          <li><a href="#">Samedi : 9h - 18h</a></li>
+          <li><a href="#">Dimanche : Fermé</a></li>
+        </ul>
+      </div>
+      <div class="footer-column">
+        <h4>Contact</h4>
+        <ul>
+          <li><a href="tel:+33612345678">📞 06 12 34 56 78</a></li>
+          <li><a href="mailto:contact@barberpro.fr">✉️ contact@barberpro.fr</a></li>
+          <li><a href="#">📍 12 Rue du Style, Paris</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2026 BarberPro. Tous droits réservés. Fait avec ❤️ pour les barbiers.</p>
+    </div>
+  </footer>
+
+  <!-- Success Modal -->
+  <div class="modal-overlay" id="successModal">
+    <div class="modal">
+      <div class="modal-icon">✅</div>
+      <h3>Rendez-Vous Confirmé !</h3>
+      <p>Votre rendez-vous a bien été enregistré. Vous recevrez un email de confirmation avec tous les détails.</p>
+      <button class="btn btn-primary" id="modalClose" onclick="document.getElementById('successModal').classList.remove('active')">
+        Parfait, merci !
+      </button>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

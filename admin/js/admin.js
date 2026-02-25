@@ -1,0 +1,326 @@
+/* ============================================
+   BARBER PRO SaaS - Super Admin Dashboard JS
+   Gestion de tes clients (barbiers/salons)
+   ============================================ */
+
+const API = '';
+let state = { salons: [], currentPage: 'dashboard' };
+
+async function api(endpoint, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(API + endpoint, opts);
+  return res.json();
+}
+
+function toast(message, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `${type === 'success' ? '✅' : '❌'} ${message}`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ---- Navigation ----
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', e => {
+    e.preventDefault();
+    navigateTo(item.dataset.page);
+  });
+});
+
+function navigateTo(page) {
+  state.currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(`page-${page}`)?.classList.add('active');
+  const titles = { dashboard: 'Dashboard Plateforme', salons: 'Mes Clients (Salons)' };
+  document.getElementById('pageTitle').textContent = titles[page] || page;
+  document.getElementById('sidebar').classList.remove('open');
+  if (page === 'dashboard') loadDashboard();
+  else if (page === 'salons') loadSalons();
+}
+
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+// ============ DASHBOARD ============
+async function loadDashboard() {
+  const [statsRes, salonsRes] = await Promise.all([
+    api('/api/admin/stats'),
+    api('/api/admin/salons')
+  ]);
+
+  if (statsRes.success) {
+    const s = statsRes.data;
+    document.getElementById('statsRow').innerHTML = `
+            <div class="stat-card gold">
+                <div class="stat-icon">🏪</div>
+                <div class="stat-value">${s.totalSalons}</div>
+                <div class="stat-label">Salons actifs</div>
+            </div>
+            <div class="stat-card blue">
+                <div class="stat-icon">👤</div>
+                <div class="stat-value">${s.totalOwners}</div>
+                <div class="stat-label">Propriétaires</div>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value">${s.totalEmployees}</div>
+                <div class="stat-label">Employés total</div>
+            </div>
+            <div class="stat-card orange">
+                <div class="stat-icon">📅</div>
+                <div class="stat-value">${s.totalBookings}</div>
+                <div class="stat-label">RDV total</div>
+            </div>
+            <div class="stat-card gold">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value">${parseFloat(s.revenueEstimate || 0).toFixed(0)}€</div>
+                <div class="stat-label">Revenus estimés/mois</div>
+            </div>
+        `;
+  }
+
+  if (salonsRes.success) {
+    state.salons = salonsRes.data;
+    const container = document.getElementById('recentSalonsList');
+    if (salonsRes.data.length === 0) {
+      container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🏪</div><div class="empty-state-text">Aucun salon créé — cliquez sur "+ Créer un Salon"</div></div>`;
+    } else {
+      container.innerHTML = salonsRes.data.slice(-5).reverse().map(s => `
+                <div class="booking-item" style="cursor:pointer" onclick="navigateTo('salons')">
+                    <div class="booking-icon">🏪</div>
+                    <div class="booking-info">
+                        <div class="booking-info-name">${s.name}</div>
+                        <div class="booking-info-service">${s.owner?.name || '—'} · ${s.address}</div>
+                    </div>
+                    <span class="badge badge-${s.active ? 'active' : 'cancelled'}">${s.active ? 'Actif' : 'Inactif'}</span>
+                    <div style="font-size:.8rem;color:var(--text-muted)">${s.stats?.bookings || 0} RDV · ${s.stats?.clients || 0} clients</div>
+                </div>
+            `).join('');
+    }
+  }
+}
+
+// ============ SALONS (tes clients) ============
+async function loadSalons() {
+  const res = await api('/api/admin/salons');
+  if (!res.success) return;
+  state.salons = res.data;
+
+  const container = document.getElementById('salonsList');
+  if (res.data.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">🏪</div><div class="empty-state-text">Aucun salon créé</div></div>`;
+    return;
+  }
+
+  container.innerHTML = res.data.map(s => `
+        <div class="salon-card">
+            <div class="salon-card-header">
+                <div>
+                    <div class="salon-card-name">${s.name}</div>
+                    <div style="font-size:.8rem;color:var(--text-muted);margin-top:2px">/${s.slug}</div>
+                </div>
+                <span class="badge badge-${(s.subscription?.plan || 'pro') === 'premium' ? 'confirmed' : (s.subscription?.plan || 'pro') === 'starter' ? 'pending' : 'active'}">${s.subscription?.plan || 'pro'}</span>
+            </div>
+            <div class="salon-card-info">
+                <div>👤 <strong>${s.owner?.name || '—'}</strong></div>
+                <div>📧 ${s.owner?.email || '—'}</div>
+                <div>📍 ${s.address || '—'}</div>
+                <div>📞 ${s.phone || '—'}</div>
+            </div>
+            <div class="salon-card-stats">
+                <div class="salon-card-stat">
+                    <div class="salon-card-stat-value">${s.stats?.employees || 0}</div>
+                    <div class="salon-card-stat-label">Employés</div>
+                </div>
+                <div class="salon-card-stat">
+                    <div class="salon-card-stat-value">${s.stats?.bookings || 0}</div>
+                    <div class="salon-card-stat-label">RDV</div>
+                </div>
+                <div class="salon-card-stat">
+                    <div class="salon-card-stat-value">${s.stats?.clients || 0}</div>
+                    <div class="salon-card-stat-label">Clients</div>
+                </div>
+                <div class="salon-card-stat">
+                    <div class="salon-card-stat-value">${s.services?.length || 0}</div>
+                    <div class="salon-card-stat-label">Services</div>
+                </div>
+            </div>
+            <div class="salon-card-actions">
+                <a href="/s/${s.slug}" target="_blank" class="btn btn-sm btn-outline">🌐 Voir le site</a>
+                <button class="btn btn-sm btn-ghost" onclick="copySalonInfo('${s._id}')">📋 Infos connexion</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteSalon('${s._id}')">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function openCreateSalonModal() {
+  showModal('Créer un nouveau salon', `
+        <p style="color:var(--text-sec);font-size:.88rem;margin-bottom:18px">
+            Tu crées un compte pour ton client barbier. Il recevra un site dédié + accès à l'app mobile.
+        </p>
+        <h4 style="color:var(--primary);margin-bottom:10px;font-size:.85rem;text-transform:uppercase;letter-spacing:1px">🏪 Infos du Salon</h4>
+        <div class="form-group">
+            <label class="form-label">Nom du salon</label>
+            <input class="form-input form-input-full" id="mSalonName" placeholder="Ex: Elite Barber Marseille" />
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Adresse</label>
+                <input class="form-input form-input-full" id="mSalonAddr" placeholder="12 Rue du Port, Marseille" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Téléphone salon</label>
+                <input class="form-input form-input-full" id="mSalonPhone" placeholder="04 91 ..." />
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Email du salon</label>
+            <input class="form-input form-input-full" id="mSalonEmail" placeholder="contact@salon.fr" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <input class="form-input form-input-full" id="mSalonDesc" placeholder="Salon premium au cœur de..." />
+        </div>
+
+        <hr style="border-color:var(--border);margin:20px 0" />
+        <h4 style="color:var(--primary);margin-bottom:10px;font-size:.85rem;text-transform:uppercase;letter-spacing:1px">👤 Propriétaire (ton client)</h4>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Nom du propriétaire</label>
+                <input class="form-input form-input-full" id="mOwnerName" placeholder="Prénom Nom" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Téléphone</label>
+                <input class="form-input form-input-full" id="mOwnerPhone" placeholder="06 ..." />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Email (login app)</label>
+                <input class="form-input form-input-full" id="mOwnerEmail" placeholder="barbier@email.com" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Mot de passe</label>
+                <input class="form-input form-input-full" id="mOwnerPass" value="barber123" placeholder="barber123" />
+            </div>
+        </div>
+
+        <hr style="border-color:var(--border);margin:20px 0" />
+        <h4 style="color:var(--primary);margin-bottom:10px;font-size:.85rem;text-transform:uppercase;letter-spacing:1px">💎 Abonnement</h4>
+        <div class="form-group">
+            <label class="form-label">Plan</label>
+            <select class="form-input form-input-full" id="mPlan">
+                <option value="basic">Basic (gratuit)</option>
+                <option value="premium" selected>Premium (29.99€/mois)</option>
+            </select>
+        </div>
+
+        <hr style="border-color:var(--border);margin:20px 0" />
+        <h4 style="color:var(--primary);margin-bottom:10px;font-size:.85rem;text-transform:uppercase;letter-spacing:1px">🎨 Couleur du site</h4>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Couleur principale</label>
+                <input type="color" class="form-input" id="mColor" value="#C9A96E" style="height:42px;width:100%" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Aperçu</label>
+                <div id="colorPreview" style="height:42px;border-radius:8px;background:#C9A96E;display:flex;align-items:center;justify-content:center;color:#000;font-weight:700;font-size:.85rem">BarberPro</div>
+            </div>
+        </div>
+    `, async () => {
+    const data = {
+      name: document.getElementById('mSalonName').value,
+      address: document.getElementById('mSalonAddr').value,
+      phone: document.getElementById('mSalonPhone').value,
+      email: document.getElementById('mSalonEmail').value,
+      description: document.getElementById('mSalonDesc').value,
+      ownerName: document.getElementById('mOwnerName').value,
+      ownerEmail: document.getElementById('mOwnerEmail').value,
+      ownerPhone: document.getElementById('mOwnerPhone').value,
+      ownerPassword: document.getElementById('mOwnerPass').value,
+      subscription: { plan: document.getElementById('mPlan').value },
+      branding: { primaryColor: document.getElementById('mColor').value }
+    };
+
+    if (!data.name || !data.ownerName || !data.ownerEmail) {
+      return toast('Remplis le nom du salon, du propriétaire et son email', 'error');
+    }
+
+    const res = await api('/api/admin/salons', 'POST', data);
+    if (res.success) {
+      toast(`Salon "${res.data.salon.name}" créé ! Site: /s/${res.data.salon.slug}`);
+      closeModal();
+      loadSalons();
+      loadDashboard();
+    } else {
+      toast('Erreur lors de la création', 'error');
+    }
+  });
+
+  // Color preview live update
+  setTimeout(() => {
+    const colorInput = document.getElementById('mColor');
+    const preview = document.getElementById('colorPreview');
+    if (colorInput && preview) {
+      colorInput.addEventListener('input', () => {
+        preview.style.background = colorInput.value;
+      });
+    }
+  }, 100);
+}
+
+function copySalonInfo(salonId) {
+  const salon = state.salons.find(s => (s._id || s.id) === salonId);
+  if (!salon) return;
+  const info = `
+🏪 ${salon.name}
+🌐 Site: ${window.location.origin}/s/${salon.slug}
+👤 Propriétaire: ${salon.owner?.name || '—'}
+📧 Login: ${salon.owner?.email || '—'}
+🔑 Mot de passe: barber123
+    `.trim();
+  navigator.clipboard.writeText(info).then(() => {
+    toast('Infos de connexion copiées !');
+  }).catch(() => {
+    // Fallback
+    showModal('Infos de connexion', `<pre style="color:var(--text);white-space:pre-wrap;font-size:.85rem">${info}</pre>`, () => closeModal());
+  });
+}
+
+async function deleteSalon(id) {
+  if (!confirm('Supprimer ce salon et toutes ses données ? Cette action est irréversible.')) return;
+  await api(`/api/admin/salons/${id}`, 'DELETE');
+  toast('Salon supprimé');
+  loadSalons();
+  loadDashboard();
+}
+
+// ============ MODAL SYSTEM ============
+function showModal(title, bodyHTML, onSave) {
+  const modal = document.getElementById('modalContent');
+  modal.innerHTML = `
+        <div class="modal-header">
+            <h3>${title}</h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-body">${bodyHTML}</div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+            <button class="btn btn-primary" id="modalSaveBtn">Enregistrer</button>
+        </div>
+    `;
+  document.getElementById('modalSaveBtn').addEventListener('click', onSave);
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ============ INIT ============
+loadDashboard();

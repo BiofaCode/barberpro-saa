@@ -1,0 +1,26 @@
+﻿Analyzing barber_app...                                         
+
+warning - Unused import: 'package:flutter/material.dart' - test\widget_test.dart:1:8 - unused_import
+
+flutter : 1 issue 
+found. (ran in 17.5s)
+Au caractère Ligne:1 
+: 33
++ $env:Path += 
+";C:\flutter\bin"; 
+flutter analyze 2>&1 
+| Out-File -File ...
++                    
+             
+~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (1 issue   
+  found. (ran in     
+17.5s):String) [    
+], RemoteExcepti    
+on
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
