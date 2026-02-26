@@ -167,7 +167,7 @@ async function loadBookings() {
                     <div class="data-card-icon">${b.serviceIcon || '✂️'}</div>
                     <div class="data-card-info">
                         <div class="data-card-name">${b.clientName}</div>
-                        <div class="data-card-sub">${b.serviceName} · ${b.date} à ${b.time} · ${b.duration || 30}min</div>
+                        <div class="data-card-sub">${b.serviceName} · ${b.date} à ${b.time} · ${b.duration || 30}min${b.employeeName ? ' · ' + b.employeeName : ''}</div>
                     </div>
                     <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
                     <div class="data-card-right">
@@ -177,6 +177,102 @@ async function loadBookings() {
             `).join('') + '</div>';
         }
     } catch (e) { console.error(e); }
+}
+
+// ---- Manual Booking (phone call, walk-in) ----
+async function showAddBooking() {
+    // Fetch services and employees
+    let services = [], employees = [];
+    try {
+        const [svcRes, empRes] = await Promise.all([
+            fetch(`${API}/api/barber/salon/${salonId}/services`),
+            fetch(`${API}/api/barber/salon/${salonId}/employees`)
+        ]);
+        services = (await svcRes.json()).data || [];
+        employees = (await empRes.json()).data || [];
+    } catch (e) { }
+
+    const svcOptions = services.map(s => `<option value="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">${s.icon} ${s.name} — ${s.price}€ (${s.duration}min)</option>`).join('');
+    const empOptions = employees.length > 0
+        ? '<option value="">— Non assigné —</option>' + employees.map(e => `<option value="${e._id}" data-name="${e.name}">${e.name}</option>`).join('')
+        : '<option value="">Aucun employé</option>';
+
+    document.getElementById('modalTitle').textContent = '📅 Ajouter un rendez-vous';
+    document.getElementById('modalBody').innerHTML = `
+        <div class="form-group"><label class="form-label">Prestation</label>
+            <select class="form-input form-input-full" id="mbService">${svcOptions}</select>
+        </div>
+        <div class="form-row">
+            <div class="form-group" style="flex:1"><label class="form-label">Date</label>
+                <input type="date" class="form-input form-input-full" id="mbDate" value="${todayStr()}">
+            </div>
+            <div class="form-group" style="flex:1"><label class="form-label">Heure</label>
+                <input type="time" class="form-input form-input-full" id="mbTime" value="10:00">
+            </div>
+        </div>
+        ${employees.length > 0 ? `<div class="form-group"><label class="form-label">Employé</label>
+            <select class="form-input form-input-full" id="mbEmployee">${empOptions}</select>
+        </div>` : ''}
+        <div class="form-row">
+            <div class="form-group" style="flex:1"><label class="form-label">Nom du client *</label>
+                <input class="form-input form-input-full" id="mbClientName" placeholder="Nom complet">
+            </div>
+            <div class="form-group" style="flex:1"><label class="form-label">Téléphone</label>
+                <input class="form-input form-input-full" id="mbClientPhone" placeholder="06 12 34 56 78">
+            </div>
+        </div>
+        <div class="form-group"><label class="form-label">Email (optionnel)</label>
+            <input type="email" class="form-input form-input-full" id="mbClientEmail" placeholder="client@email.com">
+        </div>
+        <div class="form-group"><label class="form-label">Notes</label>
+            <input class="form-input form-input-full" id="mbNotes" placeholder="Notes internes...">
+        </div>
+    `;
+    document.getElementById('modalFooter').innerHTML = `
+        <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="addManualBooking()">📅 Ajouter le RDV</button>
+    `;
+    document.getElementById('modal').classList.add('active');
+}
+
+async function addManualBooking() {
+    const clientName = document.getElementById('mbClientName').value.trim();
+    if (!clientName) { showToast('Entrez le nom du client', 'error'); return; }
+
+    const svcSelect = document.getElementById('mbService');
+    const opt = svcSelect.options[svcSelect.selectedIndex];
+    const empSelect = document.getElementById('mbEmployee');
+    const empOpt = empSelect ? empSelect.options[empSelect.selectedIndex] : null;
+
+    const booking = {
+        serviceName: svcSelect.value,
+        serviceIcon: opt?.dataset.icon || '✂️',
+        price: parseInt(opt?.dataset.price) || 0,
+        duration: parseInt(opt?.dataset.duration) || 30,
+        date: document.getElementById('mbDate').value,
+        time: document.getElementById('mbTime').value,
+        clientName: clientName,
+        clientPhone: document.getElementById('mbClientPhone').value.trim(),
+        clientEmail: document.getElementById('mbClientEmail').value.trim(),
+        employeeId: empSelect?.value || null,
+        employeeName: empOpt?.dataset.name || null,
+        notes: document.getElementById('mbNotes').value.trim(),
+        source: 'manual',
+    };
+
+    try {
+        await fetch(`${API}/api/barber/salon/${salonId}/bookings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(booking)
+        });
+        closeModal();
+        showToast('Rendez-vous ajouté ✅');
+        loadBookings();
+        loadDashboard();
+    } catch (e) {
+        showToast('Erreur lors de l\'ajout', 'error');
+    }
 }
 
 // ---- Clients ----

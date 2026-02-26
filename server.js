@@ -338,6 +338,29 @@ route('PUT', '/api/barber/salon/:salonId/bookings/:bookingId', async (req, res, 
     json(res, 200, { success: true, data: booking });
 });
 
+// Manual booking creation (from barber panel)
+route('POST', '/api/barber/salon/:salonId/bookings', async (req, res, params) => {
+    const body = await parseBody(req);
+    if (!body.clientName) return json(res, 400, { success: false, error: 'Nom du client requis' });
+
+    const client = await db.findOrCreateClient(params.salonId, {
+        name: body.clientName, email: body.clientEmail || '', phone: body.clientPhone || '', price: body.price || 0
+    });
+
+    const booking = await db.createBooking({
+        salon: params.salonId, client: client._id,
+        clientName: body.clientName, clientEmail: body.clientEmail || '', clientPhone: body.clientPhone || '',
+        serviceName: body.serviceName || '', serviceIcon: body.serviceIcon || '✂️',
+        price: body.price || 0, duration: body.duration || 30,
+        date: body.date, time: body.time, notes: body.notes || '',
+        employeeId: body.employeeId || null, employeeName: body.employeeName || null,
+        status: 'confirmed', source: body.source || 'manual',
+    });
+
+    console.log(`  📅 RDV manuel: ${body.clientName} - ${body.serviceName} @ ${body.date} ${body.time}`);
+    json(res, 201, { success: true, data: booking });
+});
+
 // Clients
 route('GET', '/api/barber/salon/:salonId/clients', async (req, res, params) => {
     const clients = await db.findClients({ salon: params.salonId });
@@ -396,6 +419,7 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
         serviceName: body.serviceName, serviceIcon: body.serviceIcon || '✂️',
         price: body.price || 0, duration: body.duration || 30,
         date: body.date, time: body.time, notes: body.notes || '',
+        employeeId: body.employeeId || null, employeeName: body.employeeName || null,
         status: 'confirmed', source: 'website',
     });
 

@@ -338,7 +338,7 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© 2026 BarberPro. Tous droits réservés. Fait avec ❤️ pour les barbiers.</p>
+      <p>© 2026 SalonPro. Tous droits réservés. Fait avec ❤️ pour les professionnels de la beauté.</p>
     </div>
   </footer>
 
@@ -352,37 +352,23 @@
         <button class="booking-modal-close" onclick="closeBooking()">✕</button>
       </div>
 
-      <div class="booking-modal-steps">
-        <div class="bm-step active" data-step="1">
-          <div class="bm-step-num">1</div>
-          <span>Service</span>
-        </div>
-        <div class="bm-step-line"></div>
-        <div class="bm-step" data-step="2">
-          <div class="bm-step-num">2</div>
-          <span>Date</span>
-        </div>
-        <div class="bm-step-line"></div>
-        <div class="bm-step" data-step="3">
-          <div class="bm-step-num">3</div>
-          <span>Infos</span>
-        </div>
-        <div class="bm-step-line"></div>
-        <div class="bm-step" data-step="4">
-          <div class="bm-step-num">4</div>
-          <span>Confirmer</span>
-        </div>
-      </div>
+      <div class="booking-modal-steps" id="bmStepsBar"></div>
 
       <div class="booking-modal-body" id="bookingModalBody">
-        <!-- Step 1: Service -->
-        <div class="bm-section active" data-section="1">
+        <!-- Step: Employee (dynamic, only shown if team > 1) -->
+        <div class="bm-section" data-section="employee" style="display:none">
+          <h4>Avec qui souhaitez-vous votre rendez-vous ?</h4>
+          <div class="bm-service-grid" id="bmEmployeeGrid"></div>
+        </div>
+
+        <!-- Step: Service -->
+        <div class="bm-section active" data-section="service">
           <h4>Choisissez votre prestation</h4>
           <div class="bm-service-grid" id="bmServiceGrid"></div>
         </div>
 
-        <!-- Step 2: Date & Time -->
-        <div class="bm-section" data-section="2">
+        <!-- Step: Date & Time -->
+        <div class="bm-section" data-section="datetime">
           <h4>Choisissez la date et l'heure</h4>
           <div class="bm-calendar">
             <div class="bm-cal-header">
@@ -406,8 +392,8 @@
           </div>
         </div>
 
-        <!-- Step 3: Info -->
-        <div class="bm-section" data-section="3">
+        <!-- Step: Info -->
+        <div class="bm-section" data-section="info">
           <h4>Vos informations</h4>
           <div class="bm-form-row">
             <div class="bm-form-group">
@@ -435,8 +421,8 @@
           </div>
         </div>
 
-        <!-- Step 4: Confirmation -->
-        <div class="bm-section" data-section="4">
+        <!-- Step: Confirmation -->
+        <div class="bm-section" data-section="confirm">
           <h4>Récapitulatif</h4>
           <div class="bm-recap">
             <div class="bm-recap-row"><span>Service</span><strong id="bmConfService">-</strong></div>

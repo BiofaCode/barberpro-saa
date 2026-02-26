@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BarberPro | Espace Barbier</title>
+    <title>SalonPro | Espace Pro</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
         rel="stylesheet">
@@ -19,8 +19,8 @@
         <div class="login-card">
             <div class="login-logo">
                 <div class="login-logo-icon">✂️</div>
-                <h1>Barber<span>Pro</span></h1>
-                <p>Espace barbier</p>
+                <h1>Salon<span>Pro</span></h1>
+                <p>Espace professionnel</p>
             </div>
             <div id="loginError" class="login-error" style="display:none"></div>
             <div class="form-group">
@@ -48,7 +48,7 @@
                     <span class="logo-icon">✂️</span>
                     <span class="logo-text" id="sidebarSalonName">Mon <span>Salon</span></span>
                 </div>
-                <span class="logo-badge">BARBIER</span>
+                <span class="logo-badge">PRO</span>
             </div>
             <nav class="sidebar-nav">
                 <a class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>Tableau de
@@ -102,8 +102,11 @@
                 <!-- Bookings -->
                 <div class="page" id="page-bookings">
                     <div class="page-header">
-                        <h2>📅 Rendez-vous</h2><button class="btn btn-ghost btn-sm" onclick="loadBookings()">🔄
-                            Rafraîchir</button>
+                        <h2>📅 Rendez-vous</h2>
+                        <div style="display:flex;gap:8px">
+                            <button class="btn btn-primary btn-sm" onclick="showAddBooking()">+ Ajouter un RDV</button>
+                            <button class="btn btn-ghost btn-sm" onclick="loadBookings()">🔄 Rafraîchir</button>
+                        </div>
                     </div>
                     <div id="bookingsList">
                         <div class="empty-state">
