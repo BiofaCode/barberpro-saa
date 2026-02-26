@@ -38,23 +38,27 @@ function applySalonBranding(salon) {
     const b = salon.branding;
     document.documentElement.style.setProperty('--color-primary', b.primaryColor || '#C9A96E');
     document.documentElement.style.setProperty('--color-primary-light', b.accentColor || '#D4B97E');
+    // Update glow too
+    const hex = b.primaryColor || '#C9A96E';
+    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), bl = parseInt(hex.slice(5, 7), 16);
+    document.documentElement.style.setProperty('--color-primary-glow', `rgba(${r},${g},${bl},0.3)`);
+    document.documentElement.style.setProperty('--color-primary-dark', b.accentColor || '#A88B52');
   }
 
   // Apply salon name + logo
   const logoEl = document.querySelector('.nav-logo-text');
   const logoIcon = document.querySelector('.nav-logo-icon');
   if (salon.logo) {
-    // Replace text logo with image
     if (logoIcon) logoIcon.innerHTML = `<img src="${salon.logo}" alt="${salon.name}" style="width:36px;height:36px;object-fit:cover;border-radius:8px">`;
-    if (logoEl) logoEl.innerHTML = salon.name.split(' ').map((w, i) => i === 0 ? w : `<span>${w}</span>`).join(' ');
-  } else {
-    if (logoEl) logoEl.innerHTML = salon.name.split(' ').map((w, i) => i === 0 ? w : `<span>${w}</span>`).join(' ');
   }
+  if (logoEl) logoEl.innerHTML = salon.name.split(' ').map((w, i) => i === 0 ? w : `<span>${w}</span>`).join(' ');
 
   // Hero content
-  const heroTitle = document.querySelector('.hero-title');
-  const heroSub = document.querySelector('.hero-subtitle');
-  if (heroTitle && salon.branding?.heroTitle) heroTitle.textContent = salon.branding.heroTitle;
+  const heroTitle = document.querySelector('.hero h1');
+  const heroSub = document.querySelector('.hero-description');
+  if (heroTitle && salon.branding?.heroTitle) {
+    heroTitle.innerHTML = salon.branding.heroTitle;
+  }
   if (heroSub && salon.branding?.heroSubtitle) heroSub.textContent = salon.branding.heroSubtitle;
 
   // Page title
@@ -62,6 +66,59 @@ function applySalonBranding(salon) {
 
   // Update services dynamically
   updateServicesFromSalon(salon);
+
+  // Update footer dynamically
+  updateFooterFromSalon(salon);
+}
+
+function updateFooterFromSalon(salon) {
+  // Update footer logo
+  const footerLogo = document.querySelector('.footer-brand .nav-logo-text');
+  if (footerLogo) footerLogo.innerHTML = salon.name.split(' ').map((w, i) => i === 0 ? w : `<span>${w}</span>`).join(' ');
+
+  // Update footer description
+  const footerDesc = document.querySelector('.footer-brand > p');
+  if (footerDesc) footerDesc.textContent = salon.description || `${salon.name} — Votre salon de coiffure premium.`;
+
+  // Update hours in footer
+  const hoursColumn = document.querySelectorAll('.footer-column')[1]; // 2nd column = Horaires
+  if (hoursColumn && salon.hours) {
+    const dayLabels = { lundi: 'Lun', mardi: 'Mar', mercredi: 'Mer', jeudi: 'Jeu', vendredi: 'Ven', samedi: 'Sam', dimanche: 'Dim' };
+    const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+
+    // Group consecutive days with same hours
+    const lines = [];
+    let i = 0;
+    while (i < days.length) {
+      const d = days[i];
+      const h = salon.hours[d];
+      if (!h || !h.open) {
+        lines.push(`<li><a href="#">${dayLabels[d]} : Fermé</a></li>`);
+        i++;
+      } else {
+        // Find consecutive days with same hours
+        let j = i + 1;
+        while (j < days.length && salon.hours[days[j]]?.open === h.open && salon.hours[days[j]]?.close === h.close) j++;
+        if (j - i > 1) {
+          lines.push(`<li><a href="#">${dayLabels[days[i]]} - ${dayLabels[days[j - 1]]} : ${h.open} - ${h.close}</a></li>`);
+        } else {
+          lines.push(`<li><a href="#">${dayLabels[d]} : ${h.open} - ${h.close}</a></li>`);
+        }
+        i = j;
+      }
+    }
+    hoursColumn.innerHTML = `<h4>Horaires</h4><ul>${lines.join('')}</ul>`;
+  }
+
+  // Update contact in footer
+  const contactColumn = document.querySelectorAll('.footer-column')[2]; // 3rd column = Contact
+  if (contactColumn) {
+    const items = [];
+    if (salon.phone) items.push(`<li><a href="tel:${salon.phone.replace(/\s/g, '')}">📞 ${salon.phone}</a></li>`);
+    if (salon.email) items.push(`<li><a href="mailto:${salon.email}">✉️ ${salon.email}</a></li>`);
+    if (salon.address) items.push(`<li><a href="#">📍 ${salon.address}</a></li>`);
+    if (items.length > 0) contactColumn.innerHTML = `<h4>Contact</h4><ul>${items.join('')}</ul>`;
+  }
 }
 
 function updateServicesFromSalon(salon) {
