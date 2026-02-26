@@ -9,7 +9,7 @@
   <meta name="keywords"
     content="barbier, coiffeur, salon de coiffure, rendez-vous, réservation, coupe de cheveux, barbe">
   <meta name="author" content="BarberPro">
-  <title>BarberPro | Salon de Coiffure Premium - Réservation en Ligne</title>
+  <title>SalonPro | Salon Premium - Réservation en Ligne</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="icon"
     href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💈</text></svg>">
@@ -47,14 +47,14 @@
         <span class="pulse"></span>
         Prêt à vous accueillir
       </div>
-      <h1>L'Art de la <span class="highlight">Coiffure</span> Masculine</h1>
+      <h1>L'Art du <span class="highlight">Style</span> & de la Beauté</h1>
       <p class="hero-description">
-        Découvrez une expérience barbier unique. Des coupes sur-mesure,
-        des soins premium et un service d'exception dans un cadre moderne et raffiné.
+        Découvrez une expérience unique. Des soins sur-mesure,
+        des prestations premium et un service d'exception dans un cadre moderne et raffiné.
       </p>
       <div class="hero-actions">
         <a href="javascript:void(0)" class="btn btn-primary" onclick="openBooking()">
-          ✂️ Réserver Maintenant
+          📅 Réserver Maintenant
         </a>
         <a href="#services" class="btn btn-outline">
           Nos Services →
@@ -301,7 +301,7 @@
           <div class="nav-logo-icon">✂️</div>
           <div class="nav-logo-text">Barber<span>Pro</span></div>
         </div>
-        <p>Votre salon de coiffure premium. L'art du style masculin depuis 2018. Réservez en ligne et profitez d'un
+        <p>Votre salon premium. Excellence et savoir-faire depuis 2018. Réservez en ligne et profitez d'un
           service d'exception.</p>
         <div class="footer-social">
           <a href="#" aria-label="Instagram">📸</a>
@@ -437,24 +437,14 @@
         </div>
       </div>
 
+      <!-- Success view (replaces content after booking) -->
+      <div id="bmSuccessView" style="display:none;flex:1;align-items:center;justify-content:center"></div>
+
       <div class="booking-modal-footer">
         <button class="btn btn-ghost" id="bmPrev" style="display:none" onclick="bmPrevStep()">← Retour</button>
         <div></div>
         <button class="btn btn-primary" id="bmNext" onclick="bmNextStep()">Suivant →</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Success Modal -->
-  <div class="modal-overlay" id="successModal">
-    <div class="modal">
-      <div class="modal-icon">✅</div>
-      <h3>Rendez-Vous Confirmé !</h3>
-      <p>Votre rendez-vous a bien été enregistré. Vous recevrez un email de confirmation avec tous les détails.</p>
-      <button class="btn btn-primary" id="modalClose"
-        onclick="document.getElementById('successModal').classList.remove('active'); closeBooking();">
-        Parfait, merci !
-      </button>
     </div>
   </div>
 

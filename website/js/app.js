@@ -69,21 +69,17 @@ function applySalonBranding(salon) {
 function updateFooter(salon) {
   const footerLogo = document.querySelector('.footer-brand .nav-logo-text');
   if (footerLogo) footerLogo.innerHTML = salon.name.split(' ').map((w, i) => i === 0 ? w : `<span>${w}</span>`).join(' ');
-
   const footerDesc = document.querySelector('.footer-brand > p');
   if (footerDesc) footerDesc.textContent = salon.description || `${salon.name} — Votre salon premium.`;
 
   const footerSvc = document.getElementById('footerServices');
-  if (footerSvc && salon.services) {
-    footerSvc.innerHTML = `<h4>Services</h4><ul>${salon.services.map(s => `<li><a href="#services">${s.name}</a></li>`).join('')}</ul>`;
-  }
+  if (footerSvc && salon.services) footerSvc.innerHTML = `<h4>Services</h4><ul>${salon.services.map(s => `<li><a href="#services">${s.name}</a></li>`).join('')}</ul>`;
 
   const footerHours = document.getElementById('footerHours');
   if (footerHours && salon.hours) {
     const dayLabels = { lundi: 'Lun', mardi: 'Mar', mercredi: 'Mer', jeudi: 'Jeu', vendredi: 'Ven', samedi: 'Sam', dimanche: 'Dim' };
     const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
-    const lines = [];
-    let i = 0;
+    const lines = []; let i = 0;
     while (i < days.length) {
       const d = days[i], h = salon.hours[d];
       if (!h || !h.open) { lines.push(`<li><a href="#">${dayLabels[d]} : Fermé</a></li>`); i++; }
@@ -91,8 +87,7 @@ function updateFooter(salon) {
         let j = i + 1;
         while (j < days.length && salon.hours[days[j]]?.open === h.open && salon.hours[days[j]]?.close === h.close) j++;
         const label = j - i > 1 ? `${dayLabels[days[i]]} - ${dayLabels[days[j - 1]]}` : dayLabels[d];
-        lines.push(`<li><a href="#">${label} : ${h.open} - ${h.close}</a></li>`);
-        i = j;
+        lines.push(`<li><a href="#">${label} : ${h.open} - ${h.close}</a></li>`); i = j;
       }
     }
     footerHours.innerHTML = `<h4>Horaires</h4><ul>${lines.join('')}</ul>`;
@@ -154,23 +149,18 @@ function initScrollReveal() {
 }
 
 /* ============================================
-   BOOKING MODAL — Dynamic Steps System
+   BOOKING MODAL — Dynamic Steps
    ============================================ */
 let bmState = {};
-let bmSteps = []; // dynamic step names
+let bmSteps = [];
 
-function getEmployees() {
-  return SALON_DATA?.employees || [];
-}
-
-function hasMultipleEmployees() {
-  return getEmployees().length > 1;
-}
+function getEmployees() { return SALON_DATA?.employees || []; }
+function hasMultipleEmployees() { return getEmployees().length > 1; }
 
 function buildSteps() {
   const steps = [];
   if (hasMultipleEmployees()) steps.push({ id: 'employee', label: 'Pro' });
-  steps.push({ id: 'service', label: 'Service' });
+  steps.push({ id: 'service', label: 'Prestation' });
   steps.push({ id: 'datetime', label: 'Date' });
   steps.push({ id: 'info', label: 'Infos' });
   steps.push({ id: 'confirm', label: 'Confirmer' });
@@ -179,27 +169,36 @@ function buildSteps() {
 
 function renderStepsBar() {
   const bar = document.getElementById('bmStepsBar');
-  bar.innerHTML = bmSteps.map((s, i) => {
-    return (i > 0 ? '<div class="bm-step-line"></div>' : '') +
-      `<div class="bm-step" data-step-id="${s.id}">
-        <div class="bm-step-num">${i + 1}</div>
-        <span>${s.label}</span>
-      </div>`;
-  }).join('');
+  bar.innerHTML = bmSteps.map((s, i) =>
+    (i > 0 ? '<div class="bm-step-line"></div>' : '') +
+    `<div class="bm-step" data-step-id="${s.id}">
+      <div class="bm-step-num">${i + 1}</div>
+      <span>${s.label}</span>
+    </div>`
+  ).join('');
 }
 
 function openBooking() {
   document.getElementById('navHamburger')?.classList.remove('active');
   document.getElementById('navLinks')?.classList.remove('open');
-
   bmState = { stepIdx: 0, employee: null, service: null, date: null, time: null, month: new Date().getMonth(), year: new Date().getFullYear() };
   bmSteps = buildSteps();
-
   renderStepsBar();
   populateEmployees();
   populateServices();
-  goToStep(0);
 
+  // Reset form fields
+  ['bmFirstName', 'bmLastName', 'bmEmail', 'bmPhone', 'bmNotes'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+
+  // Hide success, show normal content
+  document.getElementById('bmSuccessView').style.display = 'none';
+  document.getElementById('bookingModalBody').style.display = 'block';
+  document.querySelector('.booking-modal-steps').style.display = 'flex';
+  document.querySelector('.booking-modal-footer').style.display = 'flex';
+
+  goToStep(0);
   document.getElementById('bookingModal').classList.add('active');
   document.body.style.overflow = 'hidden';
 }
@@ -213,7 +212,6 @@ function populateEmployees() {
   const grid = document.getElementById('bmEmployeeGrid');
   const emps = getEmployees();
   if (emps.length <= 1) return;
-
   grid.innerHTML = emps.map(e => `
     <div class="bm-service-card" data-emp-id="${e._id}" data-emp-name="${e.name}">
       <div class="bm-service-icon" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--color-bg-dark);font-weight:700">${(e.name || '?')[0].toUpperCase()}</div>
@@ -221,10 +219,8 @@ function populateEmployees() {
       <div class="bm-service-dur">${(e.specialties || []).join(', ') || 'Tous services'}</div>
     </div>
   `).join('');
-
   grid.addEventListener('click', (ev) => {
-    const card = ev.target.closest('.bm-service-card');
-    if (!card) return;
+    const card = ev.target.closest('.bm-service-card'); if (!card) return;
     grid.querySelectorAll('.bm-service-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
     bmState.employee = { id: card.dataset.empId, name: card.dataset.empName };
@@ -235,13 +231,12 @@ function populateServices() {
   const grid = document.getElementById('bmServiceGrid');
   const services = SALON_DATA?.services || [
     { name: 'Coupe Classique', icon: '✂️', price: 25, duration: 30 },
-    { name: 'Taille de Barbe', icon: '🪒', price: 15, duration: 20 },
+    { name: 'Soin Visage', icon: '💆', price: 35, duration: 40 },
     { name: 'Pack Premium', icon: '💎', price: 55, duration: 60 },
     { name: 'Coloration', icon: '🎨', price: 40, duration: 45 },
     { name: 'Soin Capillaire', icon: '🧴', price: 30, duration: 35 },
-    { name: 'Coupe Enfant', icon: '👶', price: 18, duration: 25 },
+    { name: 'Épilation', icon: '✨', price: 20, duration: 20 },
   ];
-
   grid.innerHTML = services.map(s => `
     <div class="bm-service-card" data-name="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">
       <div class="bm-service-icon">${s.icon}</div>
@@ -250,10 +245,8 @@ function populateServices() {
       <div class="bm-service-dur">${s.duration} min</div>
     </div>
   `).join('');
-
   grid.addEventListener('click', (ev) => {
-    const card = ev.target.closest('.bm-service-card');
-    if (!card) return;
+    const card = ev.target.closest('.bm-service-card'); if (!card) return;
     grid.querySelectorAll('.bm-service-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
     bmState.service = { name: card.dataset.name, icon: card.dataset.icon, price: parseInt(card.dataset.price), duration: parseInt(card.dataset.duration) };
@@ -271,43 +264,31 @@ function initBookingModal() {
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBooking(); });
 }
 
-/* ---- Step Navigation ---- */
+/* ---- Step Nav ---- */
 function currentStepId() { return bmSteps[bmState.stepIdx]?.id; }
 
 function goToStep(idx) {
   bmState.stepIdx = idx;
   const stepId = bmSteps[idx].id;
+  document.querySelectorAll('.bm-section').forEach(s => { s.classList.remove('active'); s.style.display = 'none'; });
+  const sec = document.querySelector(`.bm-section[data-section="${stepId}"]`);
+  if (sec) { sec.style.display = 'block'; sec.classList.add('active'); }
 
-  // Show/hide sections
-  document.querySelectorAll('.bm-section').forEach(s => {
-    s.classList.remove('active');
-    s.style.display = 'none';
-  });
-  const activeSection = document.querySelector(`.bm-section[data-section="${stepId}"]`);
-  if (activeSection) { activeSection.style.display = 'block'; activeSection.classList.add('active'); }
-
-  // Update step indicators
   document.querySelectorAll('.bm-step').forEach(s => {
-    const sid = s.dataset.stepId;
-    const sIdx = bmSteps.findIndex(st => st.id === sid);
+    const sIdx = bmSteps.findIndex(st => st.id === s.dataset.stepId);
     s.classList.remove('active', 'completed');
     if (sIdx === idx) s.classList.add('active');
     else if (sIdx < idx) s.classList.add('completed');
   });
 
-  // Buttons
   document.getElementById('bmPrev').style.display = idx === 0 ? 'none' : '';
-  const isLast = idx === bmSteps.length - 1;
-  document.getElementById('bmNext').textContent = isLast ? '✓ Confirmer le RDV' : 'Suivant →';
-
+  document.getElementById('bmNext').textContent = idx === bmSteps.length - 1 ? '✓ Confirmer' : 'Suivant →';
   if (stepId === 'datetime') renderBmCalendar();
   if (stepId === 'confirm') populateConfirmation();
 }
 
 function bmNextStep() {
   const stepId = currentStepId();
-
-  // Validation
   if (stepId === 'employee' && !bmState.employee) { showToast('Choisissez un professionnel'); return; }
   if (stepId === 'service' && !bmState.service) { showToast('Choisissez une prestation'); return; }
   if (stepId === 'datetime' && (!bmState.date || !bmState.time)) { showToast('Choisissez une date et un créneau'); return; }
@@ -318,18 +299,11 @@ function bmNextStep() {
     const ph = document.getElementById('bmPhone').value.trim();
     if (!fn || !ln || !em || !ph) { showToast('Remplissez tous les champs obligatoires'); return; }
   }
-
-  if (stepId === 'confirm') {
-    submitBooking();
-    return;
-  }
-
+  if (stepId === 'confirm') { submitBooking(); return; }
   goToStep(bmState.stepIdx + 1);
 }
 
-function bmPrevStep() {
-  if (bmState.stepIdx > 0) goToStep(bmState.stepIdx - 1);
-}
+function bmPrevStep() { if (bmState.stepIdx > 0) goToStep(bmState.stepIdx - 1); }
 
 /* ---- Calendar ---- */
 const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
@@ -337,8 +311,7 @@ const DAY_MAP = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 
 
 function isDayClosed(date) {
   if (!SALON_DATA?.hours) return date.getDay() === 0;
-  const h = SALON_DATA.hours[DAY_MAP[date.getDay()]];
-  return !h || !h.open;
+  return !(SALON_DATA.hours[DAY_MAP[date.getDay()]]?.open);
 }
 
 function getOpenHours(date) {
@@ -352,22 +325,19 @@ function renderBmCalendar() {
   const dayNames = grid.querySelectorAll('.bm-cal-dayname');
   grid.innerHTML = ''; dayNames.forEach(dn => grid.appendChild(dn));
   monthEl.textContent = `${MONTH_NAMES[bmState.month]} ${bmState.year}`;
-
   const firstDay = new Date(bmState.year, bmState.month, 1);
   const lastDay = new Date(bmState.year, bmState.month + 1, 0);
   const today = new Date(); today.setHours(0, 0, 0, 0);
-
   let startDay = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
   for (let i = 0; i < startDay; i++) { const b = document.createElement('div'); b.classList.add('bm-cal-day', 'empty'); grid.appendChild(b); }
-
   for (let d = 1; d <= lastDay.getDate(); d++) {
     const el = document.createElement('button'); el.classList.add('bm-cal-day'); el.textContent = d;
     const date = new Date(bmState.year, bmState.month, d);
-    if (date < today || isDayClosed(date)) { el.classList.add('disabled'); }
+    if (date < today || isDayClosed(date)) el.classList.add('disabled');
     else {
       el.addEventListener('click', () => {
         grid.querySelectorAll('.bm-cal-day').forEach(x => x.classList.remove('selected'));
-        el.classList.add('selected'); bmState.date = date; renderBmTimeSlots();
+        el.classList.add('selected'); bmState.date = date; bmState.time = null; renderBmTimeSlots();
       });
     }
     if (date.getTime() === today.getTime()) el.classList.add('today');
@@ -384,10 +354,18 @@ function renderBmTimeSlots() {
   const hours = getOpenHours(bmState.date);
   const [oH, oM] = hours.open.split(':').map(Number);
   const [cH, cM] = hours.close.split(':').map(Number);
+
+  const now = new Date();
+  const isToday = bmState.date.toDateString() === now.toDateString();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
   let h = oH, m = oM;
   while (h < cH || (h === cH && m < cM)) {
     const t = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    if (h < 12 || h >= 14) { // skip lunch
+    const slotMinutes = h * 60 + m;
+
+    // Skip lunch (12:00-13:59) and past slots for today
+    if ((h < 12 || h >= 14) && !(isToday && slotMinutes <= currentMinutes)) {
       const el = document.createElement('div'); el.classList.add('bm-timeslot'); el.textContent = t;
       el.addEventListener('click', () => {
         grid.querySelectorAll('.bm-timeslot').forEach(s => s.classList.remove('selected'));
@@ -396,6 +374,10 @@ function renderBmTimeSlots() {
       grid.appendChild(el);
     }
     m += 30; if (m >= 60) { m = 0; h++; }
+  }
+
+  if (grid.children.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--color-text-muted);padding:1rem;font-size:0.85rem">Aucun créneau disponible pour cette date</div>';
   }
 }
 
@@ -433,11 +415,33 @@ async function submitBooking() {
     const endpoint = slug ? `/api/salon/${slug}/book` : '/api/bookings';
     await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(booking) });
   } catch (e) {
-    const bookings = JSON.parse(localStorage.getItem('salonpro_bookings') || '[]');
-    bookings.push(booking); localStorage.setItem('salonpro_bookings', JSON.stringify(bookings));
+    const b = JSON.parse(localStorage.getItem('salonpro_bookings') || '[]');
+    b.push(booking); localStorage.setItem('salonpro_bookings', JSON.stringify(b));
   }
 
-  document.getElementById('successModal').classList.add('active');
+  // Show success inside same modal
+  showBookingSuccess();
+}
+
+function showBookingSuccess() {
+  document.getElementById('bookingModalBody').style.display = 'none';
+  document.querySelector('.booking-modal-steps').style.display = 'none';
+  document.querySelector('.booking-modal-footer').style.display = 'none';
+
+  const successView = document.getElementById('bmSuccessView');
+  successView.style.display = 'flex';
+  successView.innerHTML = `
+    <div style="text-align:center;padding:2rem 1rem">
+      <div style="font-size:4rem;margin-bottom:1rem;animation:fadeInUp 0.5s ease-out">✅</div>
+      <h3 style="margin-bottom:0.5rem;font-size:1.3rem">Rendez-vous confirmé !</h3>
+      <p style="color:var(--color-text-secondary);margin-bottom:0.5rem;font-size:0.9rem">
+        ${bmState.service?.name || 'Prestation'} — ${bmState.date ? bmState.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''} à ${bmState.time || ''}
+      </p>
+      ${bmState.employee ? `<p style="color:var(--color-text-muted);font-size:0.85rem;margin-bottom:1.5rem">avec ${bmState.employee.name}</p>` : '<div style="margin-bottom:1.5rem"></div>'}
+      <p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:2rem">Vous recevrez une confirmation par email avec tous les détails.</p>
+      <button class="btn btn-primary" onclick="closeBooking()" style="margin:0 auto">Parfait, merci ! 🎉</button>
+    </div>
+  `;
 }
 
 /* ---- Toast ---- */
