@@ -484,9 +484,9 @@ const server = http.createServer(async (req, res) => {
         const adminPath = pathname === '/admin' || pathname === '/admin/' ? '/admin/index.html' : pathname;
         filePath = path.join(__dirname, adminPath);
     }
-    else if (pathname.startsWith('/barber')) {
-        const barberPath = pathname === '/barber' || pathname === '/barber/' ? '/barber/index.html' : pathname;
-        filePath = path.join(__dirname, barberPath);
+    else if (pathname.startsWith('/pro')) {
+        const proPath = pathname === '/pro' || pathname === '/pro/' ? '/barber/index.html' : pathname.replace(/^\/pro/, '/barber');
+        filePath = path.join(__dirname, proPath);
     }
     else if (pathname.startsWith('/s/')) {
         const parts = pathname.split('/').filter(Boolean);
@@ -540,7 +540,7 @@ server.listen(PORT, () => {
     console.log('  📦 Mode: JSON Database (dev)');
     console.log('  ════════════════════════════════════');
     console.log(`  🔧 Super Admin:   http://localhost:${PORT}/admin`);
-    console.log(`  💇 Barber Admin:  http://localhost:${PORT}/barber`);
+    console.log(`  💇 Espace Pro:    http://localhost:${PORT}/pro`);
     console.log(`  🌐 Salon Demo:    http://localhost:${PORT}/s/elite-barber-paris`);
     console.log(`  📡 API:           http://localhost:${PORT}/api`);
     console.log('  ════════════════════════════════════');
