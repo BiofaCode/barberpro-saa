@@ -309,7 +309,14 @@ function bmPrevStep() { if (bmState.stepIdx > 0) goToStep(bmState.stepIdx - 1); 
 const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const DAY_MAP = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
 
+function isDateClosed(date) {
+  const closedDates = SALON_DATA?.closedDates || [];
+  const dateStr = date.toISOString().split('T')[0];
+  return closedDates.some(cd => dateStr >= cd.start && dateStr <= cd.end);
+}
+
 function isDayClosed(date) {
+  if (isDateClosed(date)) return true;
   if (!SALON_DATA?.hours) return date.getDay() === 0;
   return !(SALON_DATA.hours[DAY_MAP[date.getDay()]]?.open);
 }

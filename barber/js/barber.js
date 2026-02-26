@@ -59,6 +59,18 @@ function initApp() {
         const name = currentSalon.name || 'Mon Salon';
         const words = name.split(' ');
         document.getElementById('sidebarSalonName').innerHTML = words[0] + (words.length > 1 ? ' <span>' + words.slice(1).join(' ') + '</span>' : '');
+
+        // Apply salon colors to admin panel
+        if (currentSalon.branding?.primaryColor) {
+            const hex = currentSalon.branding.primaryColor;
+            document.documentElement.style.setProperty('--primary', hex);
+            const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+            document.documentElement.style.setProperty('--primary-glow', `rgba(${r},${g},${b},0.3)`);
+            document.documentElement.style.setProperty('--primary-light', `rgba(${r},${g},${b},0.1)`);
+        }
+        if (currentSalon.branding?.accentColor) {
+            document.documentElement.style.setProperty('--accent', currentSalon.branding.accentColor);
+        }
     }
     if (currentUser) {
         document.getElementById('userName').textContent = currentUser.name;
@@ -545,6 +557,30 @@ async function loadSettings() {
                 </div>
             </div>
 
+            <!-- CONGÉS / VACANCES -->
+            <div class="card" style="margin-bottom:20px">
+                <div class="card-header"><h3>🏖 Congés & Fermetures</h3></div>
+                <div class="card-body">
+                    <p style="font-size:.85rem;color:var(--text-sec);margin-bottom:12px">Ajoutez les jours de fermeture exceptionnelle (vacances, jours fériés...). Ces jours seront grisés dans le calendrier de réservation.</p>
+                    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px">
+                        <div class="form-group" style="flex:1;margin-bottom:0">
+                            <label class="form-label">Date de début</label>
+                            <input type="date" class="form-input form-input-full" id="closedDateStart">
+                        </div>
+                        <div class="form-group" style="flex:1;margin-bottom:0">
+                            <label class="form-label">Date de fin</label>
+                            <input type="date" class="form-input form-input-full" id="closedDateEnd">
+                        </div>
+                        <div class="form-group" style="flex:1;margin-bottom:0">
+                            <label class="form-label">Motif (optionnel)</label>
+                            <input class="form-input form-input-full" id="closedDateReason" placeholder="Vacances d'été...">
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="addClosedDate()" style="white-space:nowrap">+ Ajouter</button>
+                    </div>
+                    <div id="closedDatesList">${renderClosedDates(salon.closedDates || [])}</div>
+                </div>
+            </div>
+
             <!-- SMS -->
             <div class="card" style="margin-bottom:20px">
                 <div class="card-header"><h3>📱 Rappels SMS</h3><span class="badge badge-pending">En développement</span></div>
@@ -674,6 +710,72 @@ async function saveHours() {
             showToast('Horaires enregistrés ✅');
         } else {
             showToast('Erreur', 'error');
+        }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+// ---- Closed Dates (Vacances/Congés) ----
+function renderClosedDates(dates) {
+    if (!dates || dates.length === 0) {
+        return '<div style="font-size:.85rem;color:var(--text-muted);padding:12px;text-align:center">Aucune fermeture exceptionnelle programmée</div>';
+    }
+    return dates.map((d, i) => {
+        const start = new Date(d.start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        const end = new Date(d.end).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+        const isPast = new Date(d.end) < new Date();
+        return `
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${isPast ? 'opacity:.5' : ''}">
+                <span style="font-size:1.2rem">🏖</span>
+                <div style="flex:1">
+                    <div style="font-weight:600;font-size:.88rem">${start}${d.start !== d.end ? ' → ' + end : ''}</div>
+                    <div style="font-size:.8rem;color:var(--text-muted)">${d.reason || 'Fermeture exceptionnelle'}</div>
+                </div>
+                ${isPast ? '<span class="badge" style="background:var(--bg-alt);color:var(--text-muted);font-size:.7rem">Passé</span>' : '<span class="badge badge-pending" style="font-size:.7rem">À venir</span>'}
+                <button class="btn btn-danger btn-sm" onclick="removeClosedDate(${i})">🗑</button>
+            </div>
+        `;
+    }).join('');
+}
+
+async function addClosedDate() {
+    const start = document.getElementById('closedDateStart').value;
+    const end = document.getElementById('closedDateEnd').value || start;
+    const reason = document.getElementById('closedDateReason').value.trim();
+    if (!start) { showToast('Sélectionnez au moins la date de début', 'error'); return; }
+
+    const closedDates = [...(currentSalon.closedDates || []), { start, end, reason }];
+    closedDates.sort((a, b) => a.start.localeCompare(b.start));
+
+    try {
+        const res = await fetch(`${API}/api/barber/salon/${salonId}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ closedDates })
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentSalon = data.data;
+            document.getElementById('closedDatesList').innerHTML = renderClosedDates(closedDates);
+            document.getElementById('closedDateStart').value = '';
+            document.getElementById('closedDateEnd').value = '';
+            document.getElementById('closedDateReason').value = '';
+            showToast('Fermeture ajoutée ✅');
+        }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+async function removeClosedDate(index) {
+    const closedDates = [...(currentSalon.closedDates || [])];
+    closedDates.splice(index, 1);
+    try {
+        const res = await fetch(`${API}/api/barber/salon/${salonId}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ closedDates })
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentSalon = data.data;
+            document.getElementById('closedDatesList').innerHTML = renderClosedDates(closedDates);
+            showToast('Fermeture supprimée');
         }
     } catch (e) { showToast('Erreur de connexion', 'error'); }
 }

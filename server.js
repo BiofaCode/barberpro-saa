@@ -193,6 +193,7 @@ route('PUT', '/api/barber/salon/:salonId', async (req, res, params) => {
     if (body.description) updates.description = body.description;
     if (body.branding) updates.branding = { ...salon.branding, ...body.branding };
     if (body.hours) updates.hours = body.hours;
+    if (body.closedDates !== undefined) updates.closedDates = body.closedDates;
 
     const updated = await db.updateSalon(params.salonId, updates);
     json(res, 200, { success: true, data: updated });
@@ -398,7 +399,8 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
             branding: salon.branding,
             services: (salon.services || []).filter(s => s.active),
             hours: salon.hours,
-            employees: employees.map(e => ({ name: e.name, specialties: e.specialties })),
+            closedDates: salon.closedDates || [],
+            employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties })),
             rating: salon.rating, reviewCount: salon.reviewCount,
         }
     });

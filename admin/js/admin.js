@@ -1,6 +1,6 @@
 /* ============================================
-   BARBER PRO SaaS - Super Admin Dashboard JS
-   Gestion de tes clients (barbiers/salons)
+   SALON PRO SaaS - Super Admin Dashboard JS
+   Gestion de tes clients (salons/instituts)
    ============================================ */
 
 const API = '';
@@ -162,7 +162,7 @@ async function loadSalons() {
 function openCreateSalonModal() {
   showModal('Créer un nouveau salon', `
         <p style="color:var(--text-sec);font-size:.88rem;margin-bottom:18px">
-            Tu crées un compte pour ton client barbier. Il recevra un site dédié + accès à l'app mobile.
+            Tu crées un compte pour ton client. Il recevra un site dédié + accès à l'espace pro.
         </p>
         <h4 style="color:var(--primary);margin-bottom:10px;font-size:.85rem;text-transform:uppercase;letter-spacing:1px">🏪 Infos du Salon</h4>
         <div class="form-group">
@@ -203,11 +203,11 @@ function openCreateSalonModal() {
         <div class="form-row">
             <div class="form-group">
                 <label class="form-label">Email (login app)</label>
-                <input class="form-input form-input-full" id="mOwnerEmail" placeholder="barbier@email.com" />
+                <input class="form-input form-input-full" id="mOwnerEmail" placeholder="client@email.com" />
             </div>
             <div class="form-group">
                 <label class="form-label">Mot de passe</label>
-                <input class="form-input form-input-full" id="mOwnerPass" value="barber123" placeholder="barber123" />
+                <input class="form-input form-input-full" id="mOwnerPass" value="salon123" placeholder="salon123" />
             </div>
         </div>
 
@@ -230,7 +230,7 @@ function openCreateSalonModal() {
             </div>
             <div class="form-group">
                 <label class="form-label">Aperçu</label>
-                <div id="colorPreview" style="height:42px;border-radius:8px;background:#C9A96E;display:flex;align-items:center;justify-content:center;color:#000;font-weight:700;font-size:.85rem">BarberPro</div>
+                <div id="colorPreview" style="height:42px;border-radius:8px;background:#C9A96E;display:flex;align-items:center;justify-content:center;color:#000;font-weight:700;font-size:.85rem">SalonPro</div>
             </div>
         </div>
     `, async () => {
@@ -283,7 +283,7 @@ function copySalonInfo(salonId) {
 🌐 Site: ${window.location.origin}/s/${salon.slug}
 👤 Propriétaire: ${salon.owner?.name || '—'}
 📧 Login: ${salon.owner?.email || '—'}
-🔑 Mot de passe: barber123
+🔑 Mot de passe: salon123
     `.trim();
   navigator.clipboard.writeText(info).then(() => {
     toast('Infos de connexion copiées !');
