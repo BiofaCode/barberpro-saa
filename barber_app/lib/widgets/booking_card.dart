@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
@@ -125,7 +125,7 @@ class BookingCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${booking.price.toInt()}€',
+                  '${booking.price.toInt()} CHF',
                   style: GoogleFonts.playfairDisplay(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,

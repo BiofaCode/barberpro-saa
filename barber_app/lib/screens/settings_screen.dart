@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
@@ -424,7 +424,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           Text(
-            '${service['price'] ?? 0}€',
+            '${service['price'] ?? 0} CHF',
             style: GoogleFonts.playfairDisplay(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primary),
           ),
         ],

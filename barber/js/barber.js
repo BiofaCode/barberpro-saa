@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
    BARBER PRO - Espace Barbier JS
    ============================================ */
 
@@ -159,7 +159,7 @@ async function loadDashboard() {
             </div>
             <div class="stat-card green">
                 <div class="stat-icon">💰</div>
-                <div class="stat-value">${stats.todayRevenue ?? 0}€</div>
+                <div class="stat-value">${stats.todayRevenue ?? 0} CHF</div>
                 <div class="stat-label">CA du jour</div>
             </div>
             <div class="stat-card blue">
@@ -169,7 +169,7 @@ async function loadDashboard() {
             </div>
             <div class="stat-card orange">
                 <div class="stat-icon">📈</div>
-                <div class="stat-value">${stats.totalRevenue ?? 0}€</div>
+                <div class="stat-value">${stats.totalRevenue ?? 0} CHF</div>
                 <div class="stat-label">CA total</div>
             </div>
         `;
@@ -186,7 +186,7 @@ async function loadDashboard() {
                         <div class="booking-detail">${b.serviceName} · ${b.time} · ${b.duration || 30}min</div>
                     </div>
                     <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
-                    <div style="font-family:'Playfair Display',serif;font-weight:700;color:var(--primary)">${b.price || 0}€</div>
+                    <div style="font-family:'Playfair Display',serif;font-weight:700;color:var(--primary)">${b.price || 0} CHF</div>
                 </div>
             `).join('');
         }
@@ -215,7 +215,7 @@ async function loadBookings() {
                     </div>
                     <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
                     <div class="data-card-right">
-                        <div class="data-card-value">${b.price || 0}€</div>
+                        <div class="data-card-value">${b.price || 0} CHF</div>
                     </div>
                 </div>
             `).join('') + '</div>';
@@ -236,15 +236,27 @@ async function showAddBooking() {
         employees = (await empRes.json()).data || [];
     } catch (e) { }
 
-    const svcOptions = services.map(s => `<option value="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">${s.icon} ${s.name} — ${s.price}€ (${s.duration}min)</option>`).join('');
-    const empOptions = employees.length > 0
-        ? '<option value="">— Non assigné —</option>' + employees.map(e => `<option value="${e._id}" data-name="${e.name}">${e.name}</option>`).join('')
-        : '<option value="">Aucun employé</option>';
+    const svcOptions = services.map(s => `<option value="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">${s.icon} ${s.name} — ${s.price} CHF (${s.duration}min)</option>`).join('');
+
+    window._mbEmployees = employees;
+    const renderEmpOptions = (serviceName) => {
+        if (employees.length === 0) return '<option value="">Aucun employé</option>';
+        const validEmps = employees.filter(e => {
+            if (!serviceName) return true;
+            if (!e.specialties || e.specialties.length === 0) return true;
+            return e.specialties.some(s => s.toLowerCase() === serviceName.toLowerCase());
+        });
+        if (validEmps.length === 0) return '<option value="">— Aucun pro pour cette prestation —</option>';
+        return '<option value="">— Non assigné —</option>' + validEmps.map(e => `<option value="${e._id}" data-name="${e.name}">${e.name}</option>`).join('');
+    };
+
+    const initialService = services.length > 0 ? services[0].name : null;
+    const empOptions = renderEmpOptions(initialService);
 
     document.getElementById('modalTitle').textContent = '📅 Ajouter un rendez-vous';
     document.getElementById('modalBody').innerHTML = `
         <div class="form-group"><label class="form-label">Prestation</label>
-            <select class="form-input form-input-full" id="mbService">${svcOptions}</select>
+            <select class="form-input form-input-full" id="mbService" onchange="document.getElementById('mbEmployee') ? document.getElementById('mbEmployee').innerHTML = renderEmpOptions(this.value) : null">${svcOptions}</select>
         </div>
         <div class="form-row">
             <div class="form-group" style="flex:1"><label class="form-label">Date</label>
@@ -435,7 +447,7 @@ async function loadServices() {
                         <div class="data-card-sub">${s.duration || 30}min · ${s.description || ''}</div>
                     </div>
                     <div class="data-card-right">
-                        <div class="data-card-value">${s.price || 0}€</div>
+                        <div class="data-card-value">${s.price || 0} CHF</div>
                     </div>
                     <div>
                         <button class="btn btn-danger btn-sm" onclick="deleteService('${s._id}')">🗑</button>
@@ -451,7 +463,7 @@ function showAddService() {
     document.getElementById('modalBody').innerHTML = `
         <div class="form-group"><label class="form-label">Nom</label><input class="form-input form-input-full" id="svcName" placeholder="Coupe Classique"></div>
         <div class="form-row">
-            <div class="form-group" style="flex:1"><label class="form-label">Prix (€)</label><input type="number" class="form-input form-input-full" id="svcPrice" placeholder="25"></div>
+            <div class="form-group" style="flex:1"><label class="form-label">Prix (CHF)</label><input type="number" class="form-input form-input-full" id="svcPrice" placeholder="25"></div>
             <div class="form-group" style="flex:1"><label class="form-label">Durée (min)</label><input type="number" class="form-input form-input-full" id="svcDuration" placeholder="30"></div>
         </div>
         <div class="form-group"><label class="form-label">Icône (emoji)</label><input class="form-input form-input-full" id="svcIcon" value="✂️" placeholder="✂️"></div>
@@ -639,7 +651,7 @@ async function loadSettings() {
                     <div class="info-grid">
                         <div class="info-tile"><span class="info-tile-icon">💳</span><div><div class="info-tile-label">Plan</div><div class="info-tile-value" style="text-transform:capitalize">${salon.subscription?.plan || 'standard'}</div></div></div>
                         <div class="info-tile"><span class="info-tile-icon">✅</span><div><div class="info-tile-label">Statut</div><div class="info-tile-value"><span class="badge badge-active">${salon.subscription?.status || 'active'}</span></div></div></div>
-                        <div class="info-tile"><span class="info-tile-icon">💰</span><div><div class="info-tile-label">Prix</div><div class="info-tile-value">${salon.subscription?.price ?? 29.99}€/mois</div></div></div>
+                        <div class="info-tile"><span class="info-tile-icon">💰</span><div><div class="info-tile-label">Prix</div><div class="info-tile-value">${salon.subscription?.price ?? 29.99} CHF/mois</div></div></div>
                     </div>
                 </div>
             </div>

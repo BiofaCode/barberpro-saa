@@ -1,4 +1,4 @@
-/* ============================================
+﻿/* ============================================
    SALON PRO SaaS - Super Admin Dashboard JS
    Gestion de tes clients (salons/instituts)
    ============================================ */
@@ -78,7 +78,7 @@ async function loadDashboard() {
             </div>
             <div class="stat-card gold">
                 <div class="stat-icon">💰</div>
-                <div class="stat-value">${parseFloat(s.revenueEstimate || 0).toFixed(0)}€</div>
+                <div class="stat-value">${parseFloat(s.revenueEstimate || 0).toFixed(0)} CHF</div>
                 <div class="stat-label">Revenus estimés/mois</div>
             </div>
         `;
@@ -217,7 +217,7 @@ function openCreateSalonModal() {
             <label class="form-label">Plan</label>
             <select class="form-input form-input-full" id="mPlan">
                 <option value="basic">Basic (gratuit)</option>
-                <option value="premium" selected>Premium (29.99€/mois)</option>
+                <option value="premium" selected>Premium (29.99 CHF/mois)</option>
             </select>
         </div>
 

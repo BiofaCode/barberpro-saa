@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
@@ -110,7 +110,7 @@ class BookingDetailScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        '${booking.price.toInt()}€',
+                        '${booking.price.toInt()} CHF',
                         style: GoogleFonts.playfairDisplay(
                           fontSize: 32,
                           fontWeight: FontWeight.w700,

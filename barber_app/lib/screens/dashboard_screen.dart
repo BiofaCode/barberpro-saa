@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
@@ -178,7 +178,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: StatCard(
                             icon: Icons.euro_rounded,
                             label: 'CA du jour',
-                            value: '${_stats['todayRevenue'] ?? 0}€',
+                            value: '${_stats['todayRevenue'] ?? 0} CHF',
                             subtitle: 'chiffre d\'affaires',
                             color: AppTheme.success,
                           ),
@@ -204,7 +204,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: StatCard(
                             icon: Icons.trending_up_rounded,
                             label: 'CA total',
-                            value: '${_stats['totalRevenue'] ?? 0}€',
+                            value: '${_stats['totalRevenue'] ?? 0} CHF',
                             subtitle: 'total revenus',
                             color: AppTheme.warning,
                           ),
@@ -352,7 +352,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 Text(
-                  '${next.price.toInt()}€',
+                  '${next.price.toInt()} CHF',
                   style: GoogleFonts.playfairDisplay(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,

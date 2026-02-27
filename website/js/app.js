@@ -56,7 +56,7 @@ function applySalonBranding(salon) {
           <h3>${s.name}</h3>
           <p>${s.description || ''}</p>
           <div class="service-meta">
-            <span class="service-price">${s.price}€</span>
+            <span class="service-price">${s.price} CHF</span>
             <span class="service-duration">⏱ ${s.duration} min</span>
           </div>
         </div>
@@ -159,8 +159,8 @@ function hasMultipleEmployees() { return getEmployees().length > 1; }
 
 function buildSteps() {
   const steps = [];
-  if (hasMultipleEmployees()) steps.push({ id: 'employee', label: 'Pro' });
   steps.push({ id: 'service', label: 'Prestation' });
+  if (hasMultipleEmployees()) steps.push({ id: 'employee', label: 'Pro' });
   steps.push({ id: 'datetime', label: 'Date' });
   steps.push({ id: 'info', label: 'Infos' });
   steps.push({ id: 'confirm', label: 'Confirmer' });
@@ -184,8 +184,9 @@ function openBooking() {
   bmState = { stepIdx: 0, employee: null, service: null, date: null, time: null, month: new Date().getMonth(), year: new Date().getFullYear() };
   bmSteps = buildSteps();
   renderStepsBar();
-  populateEmployees();
   populateServices();
+  // We'll populate employees later when transitioning to the employee step, 
+  // so we can filter them by the selected service.
 
   // Reset form fields
   ['bmFirstName', 'bmLastName', 'bmEmail', 'bmPhone', 'bmNotes'].forEach(id => {
@@ -208,10 +209,26 @@ function closeBooking() {
   document.body.style.overflow = '';
 }
 
-function populateEmployees() {
+function populateEmployees(serviceName = null) {
   const grid = document.getElementById('bmEmployeeGrid');
-  const emps = getEmployees();
-  if (emps.length <= 1) return;
+  let emps = getEmployees();
+
+  // Filter employees by service specialty
+  if (serviceName) {
+    emps = emps.filter(e => {
+      if (!e.specialties || e.specialties.length === 0) return true;
+      return e.specialties.some(s => s.toLowerCase() === serviceName.toLowerCase());
+    });
+  }
+
+  if (emps.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec)">Aucun professionnel disponible pour cette prestation.</div>';
+    return;
+  }
+
+  // If there's only one employee after filtering, and we are showing this step (which only happens if total emps > 1)
+  // We should maybe auto-select them, but for now just showing them is fine.
+
   grid.innerHTML = emps.map(e => `
     <div class="bm-service-card" data-emp-id="${e._id}" data-emp-name="${e.name}">
       <div class="bm-service-icon" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--color-bg-dark);font-weight:700">${(e.name || '?')[0].toUpperCase()}</div>
@@ -241,7 +258,7 @@ function populateServices() {
     <div class="bm-service-card" data-name="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">
       <div class="bm-service-icon">${s.icon}</div>
       <div class="bm-service-name">${s.name}</div>
-      <div class="bm-service-price">${s.price}€</div>
+      <div class="bm-service-price">${s.price} CHF</div>
       <div class="bm-service-dur">${s.duration} min</div>
     </div>
   `).join('');
@@ -283,6 +300,7 @@ function goToStep(idx) {
 
   document.getElementById('bmPrev').style.display = idx === 0 ? 'none' : '';
   document.getElementById('bmNext').textContent = idx === bmSteps.length - 1 ? '✓ Confirmer' : 'Suivant →';
+  if (stepId === 'employee') populateEmployees(bmState.service?.name);
   if (stepId === 'datetime') renderBmCalendar();
   if (stepId === 'confirm') populateConfirmation();
 }
@@ -391,7 +409,7 @@ function renderBmTimeSlots() {
 function populateConfirmation() {
   document.getElementById('bmConfService').textContent = bmState.service?.name || '-';
   document.getElementById('bmConfDuration').textContent = bmState.service ? bmState.service.duration + ' min' : '-';
-  document.getElementById('bmConfTotal').textContent = bmState.service ? bmState.service.price + '€' : '-';
+  document.getElementById('bmConfTotal').textContent = bmState.service ? bmState.service.price + ' CHF' : '-';
   if (bmState.date) document.getElementById('bmConfDate').textContent = bmState.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   document.getElementById('bmConfTime').textContent = bmState.time || '-';
   const fn = document.getElementById('bmFirstName').value, ln = document.getElementById('bmLastName').value;
