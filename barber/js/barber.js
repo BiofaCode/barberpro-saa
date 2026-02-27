@@ -108,11 +108,15 @@ function initApp() {
             showPage('dashboard');
         }
     }
-    if (currentSalon?.slug) {
-        document.getElementById('salonWebLink').href = `/s/${currentSalon.slug}`;
-    }
-
     loadDashboard();
+}
+
+function openWebsite() {
+    if (currentSalon?.slug) {
+        window.open(`/s/${currentSalon.slug}`, '_blank');
+    } else {
+        alert('Impossible d\'ouvrir le site - aucun slug trouvé');
+    }
 }
 
 // ---- Pages ----
@@ -991,4 +995,24 @@ document.getElementById('loginPassword').addEventListener('keydown', e => {
 });
 document.getElementById('loginEmail').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
+});
+
+// Magic Login from Admin
+document.addEventListener('DOMContentLoaded', () => {
+    const magic = localStorage.getItem('magic_login');
+    if (magic) {
+        localStorage.removeItem('magic_login');
+        try {
+            const data = JSON.parse(magic);
+            token = data.token;
+            currentUser = data.user;
+            salonId = data.user.salonId;
+            currentSalon = data.salon;
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appScreen').style.display = 'flex';
+            initApp();
+        } catch (e) {
+            console.error('Magic login failed', e);
+        }
+    }
 });

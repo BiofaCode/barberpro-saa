@@ -130,8 +130,8 @@ route('POST', '/api/admin/salons', async (req, res) => {
         email: body.email || '',
         logo: '',
         branding: {
-            primaryColor: body.branding?.primaryColor || '#C9A96E',
-            accentColor: body.branding?.accentColor || '#D4B97E',
+            primaryColor: body.branding?.primaryColor || '#6366F1',
+            accentColor: body.branding?.accentColor || '#818CF8',
             heroTitle: body.branding?.heroTitle || `Bienvenue chez ${body.name}`,
             heroSubtitle: body.branding?.heroSubtitle || 'Votre salon de coiffure premium',
         },
@@ -175,6 +175,50 @@ route('DELETE', '/api/admin/salons/:id', async (req, res, params) => {
     await db.deleteSalon(params.id);
     json(res, 200, { success: true, message: 'Salon supprimé' });
 });
+
+route('PUT', '/api/admin/salons/:id', async (req, res, params) => {
+    const body = await parseBody(req);
+    const salon = await db.findSalonById(params.id);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const updates = {};
+    if (body.name) updates.name = body.name;
+    if (body.address) updates.address = body.address;
+    if (body.phone) updates.phone = body.phone;
+    if (body.email) updates.email = body.email;
+    if (body.description) updates.description = body.description;
+    if (Object.keys(updates).length > 0) {
+        await db.updateSalon(params.id, updates);
+    }
+    json(res, 200, { success: true, message: 'Salon mis à jour' });
+});
+
+route('PUT', '/api/admin/salons/:salonId/owners/:ownerId/password', async (req, res, params) => {
+    const body = await parseBody(req);
+    if (!body.password) return json(res, 400, { success: false, error: 'nouveau mot de passe requis' });
+
+    await db.updateOwner(params.ownerId, { password: body.password });
+    json(res, 200, { success: true, message: 'Mot de passe modifié' });
+});
+
+route('GET', '/api/admin/salons/:id/magic-link', async (req, res, params) => {
+    const salon = await db.findSalonById(params.id);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const owner = await db.findOwnerBySalon(params.id);
+    if (!owner) return json(res, 404, { success: false, error: 'Aucun propriétaire trouvé' });
+
+    const token = createToken({ ownerId: owner._id, salonId: owner.salon, role: 'owner' });
+    json(res, 200, {
+        success: true,
+        data: {
+            token,
+            user: { id: owner._id, salonId: owner.salon, name: owner.name, email: owner.email, role: 'owner' },
+            salon
+        }
+    });
+});
+
 
 // ==========================
 //  BARBER (OWNER) API

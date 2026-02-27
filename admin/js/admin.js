@@ -30,6 +30,88 @@ function toast(message, type = 'success') {
   setTimeout(() => el.remove(), 3000);
 }
 
+async function quickLogin(salonId) {
+  const res = await api('/api/admin/salons/' + salonId + '/magic-link');
+  if (res.success) {
+    localStorage.setItem('magic_login', JSON.stringify(res.data));
+    window.open('/pro', '_blank');
+  } else {
+    alert(res.error || 'Erreur lors de la création du lien magique');
+  }
+}
+
+async function resetOwnerPassword(salonId, ownerId) {
+  if (!ownerId || ownerId === 'undefined') return alert('Aucun propriétaire principal trouvé');
+  const newPwd = prompt('Entrez le nouveau mot de passe pour le propriétaire :');
+  if (!newPwd) return;
+
+  const res = await api('/api/admin/salons/' + salonId + '/owners/' + ownerId + '/password', {
+    method: 'PUT',
+    body: JSON.stringify({ password: newPwd })
+  });
+
+  if (res.success) {
+    alert('Mot de passe mis à jour avec succès');
+    loadSalons();
+  } else {
+    alert(res.error || 'Erreur');
+  }
+}
+
+function editSalon(salonId) {
+  const salon = state.salons.find(s => s._id === salonId);
+  if (!salon) return;
+
+  showModal('Modifier le salon', `
+        <div class="form-group">
+            <label class="form-label">Nom du salon</label>
+            <input class="form-input form-input-full" id="eSalonName" value="${salon.name || ''}" />
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Adresse</label>
+                <input class="form-input form-input-full" id="eSalonAddr" value="${salon.address || ''}" />
+            </div>
+            <div class="form-group">
+                <label class="form-label">Téléphone</label>
+                <input class="form-input form-input-full" id="eSalonPhone" value="${salon.phone || ''}" />
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Email de contact</label>
+            <input class="form-input form-input-full" id="eSalonEmail" value="${salon.email || ''}" />
+        </div>
+        <div class="form-group">
+            <label class="form-label">Description</label>
+            <input class="form-input form-input-full" id="eSalonDesc" value="${salon.description || ''}" />
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="submitEditSalon('${salonId}')">Enregistrer</button>
+    `);
+}
+
+async function submitEditSalon(salonId) {
+  const updates = {
+    name: document.getElementById('eSalonName').value.trim(),
+    address: document.getElementById('eSalonAddr').value.trim(),
+    phone: document.getElementById('eSalonPhone').value.trim(),
+    email: document.getElementById('eSalonEmail').value.trim(),
+    description: document.getElementById('eSalonDesc').value.trim()
+  };
+
+  const res = await api('/api/admin/salons/' + salonId, {
+    method: 'PUT',
+    body: JSON.stringify(updates)
+  });
+
+  if (res.success) {
+    closeModal();
+    loadSalons();
+    loadDashboard();
+  } else {
+    alert(res.error || 'Erreur lors de la modification');
+  }
+}
+
 // ---- Navigation ----
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', e => {
@@ -162,9 +244,12 @@ async function loadSalons() {
                     <div class="salon-card-stat-label">Services</div>
                 </div>
             </div>
-            <div class="salon-card-actions">
-                <a href="/s/${s.slug}" target="_blank" class="btn btn-sm btn-outline">🌐 Voir le site</a>
-                <button class="btn btn-sm btn-ghost" onclick="copySalonInfo('${s._id}')">📋 Infos connexion</button>
+            <div class="salon-card-actions" style="flex-wrap: wrap; gap: 8px;">
+                <button class="btn btn-sm btn-primary" onclick="quickLogin('${s._id}')">🚀 PRO</button>
+                <a href="/s/${s.slug}" target="_blank" class="btn btn-sm btn-outline">🌐 Site</a>
+                <button class="btn btn-sm btn-outline" onclick="editSalon('${s._id}')">✏️ Edit</button>
+                <button class="btn btn-sm btn-outline" onclick="resetOwnerPassword('${s._id}', '${s.owner?._id}')">🔑 MDP</button>
+                <button class="btn btn-sm btn-ghost" onclick="copySalonInfo('${s._id}')">📋 Info</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteSalon('${s._id}')">🗑️</button>
             </div>
         </div>
