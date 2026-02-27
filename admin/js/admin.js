@@ -322,11 +322,11 @@ function openCreateSalonModal() {
         <div class="form-row">
             <div class="form-group">
                 <label class="form-label">Couleur principale</label>
-                <input type="color" class="form-input" id="mColor" value="#C9A96E" style="height:42px;width:100%" />
+                <input type="color" class="form-input" id="mColor" value="#6366F1" style="height:42px;width:100%" />
             </div>
             <div class="form-group">
                 <label class="form-label">Aperçu</label>
-                <div id="colorPreview" style="height:42px;border-radius:8px;background:#C9A96E;display:flex;align-items:center;justify-content:center;color:#000;font-weight:700;font-size:.85rem">SalonPro</div>
+                <div id="colorPreview" style="height:42px;border-radius:8px;background:#6366F1;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem">SalonPro</div>
             </div>
         </div>
     `, async () => {

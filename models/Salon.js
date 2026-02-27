@@ -9,8 +9,8 @@ const salonSchema = new mongoose.Schema({
     email: { type: String, default: '' },
     logo: { type: String, default: '' }, // URL ou chemin du logo uploadé
     branding: {
-        primaryColor: { type: String, default: '#C9A96E' },
-        accentColor: { type: String, default: '#D4B97E' },
+        primaryColor: { type: String, default: '#6366F1' },
+        accentColor: { type: String, default: '#818CF8' },
         heroTitle: { type: String, default: '' },
         heroSubtitle: { type: String, default: '' },
     },

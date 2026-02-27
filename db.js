@@ -49,8 +49,8 @@ function createInitialData() {
             email: 'contact@elitebarber.fr',
             logo: '',
             branding: {
-                primaryColor: '#C9A96E',
-                accentColor: '#D4B97E',
+                primaryColor: '#6366F1',
+                accentColor: '#818CF8',
                 heroTitle: "L'Art de la Coiffure Masculine",
                 heroSubtitle: 'Excellence, style et précision depuis 2018',
             },

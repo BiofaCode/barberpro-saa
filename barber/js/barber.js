@@ -685,19 +685,19 @@ async function loadSettings() {
                         <div class="form-group" style="flex:1">
                             <label class="form-label">Couleur principale</label>
                             <div style="display:flex;align-items:center;gap:10px">
-                                <input type="color" id="set-color1" value="${salon.branding?.primaryColor || '#C9A96E'}" style="width:50px;height:40px;border:none;border-radius:8px;cursor:pointer" oninput="updateColorPreview()">
-                                <span id="colorLabel1" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.primaryColor || '#C9A96E'}</span>
+                                <input type="color" id="set-color1" value="${salon.branding?.primaryColor || '#6366F1'}" style="width:50px;height:40px;border:none;border-radius:8px;cursor:pointer" oninput="updateColorPreview()">
+                                <span id="colorLabel1" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.primaryColor || '#6366F1'}</span>
                             </div>
                         </div>
                         <div class="form-group" style="flex:1">
                             <label class="form-label">Couleur accent</label>
                             <div style="display:flex;align-items:center;gap:10px">
-                                <input type="color" id="set-color2" value="${salon.branding?.accentColor || '#D4B97E'}" style="width:50px;height:40px;border:none;border-radius:8px;cursor:pointer" oninput="updateColorPreview()">
-                                <span id="colorLabel2" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.accentColor || '#D4B97E'}</span>
+                                <input type="color" id="set-color2" value="${salon.branding?.accentColor || '#818CF8'}" style="width:50px;height:40px;border:none;border-radius:8px;cursor:pointer" oninput="updateColorPreview()">
+                                <span id="colorLabel2" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.accentColor || '#818CF8'}</span>
                             </div>
                         </div>
                     </div>
-                    <div id="colorPreview" style="padding:16px;border-radius:12px;margin-bottom:16px;text-align:center;font-weight:700;font-size:1rem;background:linear-gradient(135deg,${salon.branding?.primaryColor || '#C9A96E'},${salon.branding?.accentColor || '#D4B97E'});color:#000">
+                    <div id="colorPreview" style="padding:16px;border-radius:12px;margin-bottom:16px;text-align:center;font-weight:700;font-size:1rem;background:linear-gradient(135deg,${salon.branding?.primaryColor || '#6366F1'},${salon.branding?.accentColor || '#818CF8'});color:#fff">
                         Aperçu de vos couleurs
                     </div>
                     <div class="form-group"><label class="form-label">Titre principal du site (hero)</label><input class="form-input form-input-full" id="set-heroTitle" value="${salon.branding?.heroTitle || ''}" placeholder="L'Art de la Coiffure Masculine"></div>

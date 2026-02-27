@@ -5,8 +5,8 @@
     --bg: #0A0A14;
     --bg-card: #12121E;
     --bg-surface: #1A1A2E;
-    --primary: #C9A96E;
-    --primary-dim: rgba(201, 169, 110, .15);
+    --primary: #6366F1;
+    --primary-dim: rgba(99, 102, 241, .15);
     --text: #E8E6E3;
     --text-sec: #9A9AA0;
     --text-muted: #5A5A66;
@@ -322,7 +322,7 @@ body {
 }
 
 .stat-card.gold::before {
-    background: linear-gradient(90deg, var(--primary), #D4B97E);
+    background: linear-gradient(90deg, var(--primary), #818CF8);
 }
 
 .stat-card.blue::before {
@@ -498,7 +498,7 @@ body {
 }
 
 .btn-primary:hover {
-    background: #D4B97E;
+    background: #818CF8;
     transform: translateY(-1px);
 }
 

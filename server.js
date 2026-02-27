@@ -441,8 +441,8 @@ route('PUT', '/api/barber/salon/:salonId/branding', async (req, res, params) => 
     const body = await parseBody(req);
 
     const branding = {
-        primaryColor: body.primaryColor || salon.branding?.primaryColor || '#C9A96E',
-        accentColor: body.accentColor || salon.branding?.accentColor || '#D4B97E',
+        primaryColor: body.primaryColor || salon.branding?.primaryColor || '#6366F1',
+        accentColor: body.accentColor || salon.branding?.accentColor || '#818CF8',
         heroTitle: body.heroTitle || salon.branding?.heroTitle || `Bienvenue chez ${salon.name}`,
         heroSubtitle: body.heroSubtitle || salon.branding?.heroSubtitle || 'Votre salon de coiffure premium'
     };

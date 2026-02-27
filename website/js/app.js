@@ -28,9 +28,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 function applySalonBranding(salon) {
   if (salon.branding) {
     const b = salon.branding;
-    document.documentElement.style.setProperty('--color-primary', b.primaryColor || '#C9A96E');
-    document.documentElement.style.setProperty('--color-primary-light', b.accentColor || '#D4B97E');
-    const hex = b.primaryColor || '#C9A96E';
+    document.documentElement.style.setProperty('--color-primary', b.primaryColor || '#6366F1');
+    document.documentElement.style.setProperty('--color-primary-light', b.accentColor || '#818CF8');
+    const hex = b.primaryColor || '#6366F1';
     const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), bl = parseInt(hex.slice(5, 7), 16);
     document.documentElement.style.setProperty('--color-primary-glow', `rgba(${r},${g},${bl},0.3)`);
     document.documentElement.style.setProperty('--color-primary-dark', b.accentColor || '#A88B52');
