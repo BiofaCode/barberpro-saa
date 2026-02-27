@@ -207,7 +207,7 @@ function openCreateSalonModal() {
             </div>
             <div class="form-group">
                 <label class="form-label">Mot de passe</label>
-                <input class="form-input form-input-full" id="mOwnerPass" value="salon123" placeholder="salon123" />
+                <input type="password" class="form-input form-input-full" id="mOwnerPass" placeholder="Mot de passe du propriétaire..." />
             </div>
         </div>
 
