@@ -168,12 +168,34 @@ const db = {
             return true;
         });
     },
+    async findEmployeeByEmail(email) {
+        return getDB().employees.find(e => e.email === email.toLowerCase()) || null;
+    },
     async createEmployee(data) {
         const d = getDB();
-        const emp = { _id: genId(), ...data, active: true };
+        let pwd = null;
+        if (data.password) {
+            pwd = await bcrypt.hash(data.password, 10);
+        }
+        const emp = {
+            _id: genId(),
+            ...data,
+            email: data.email ? data.email.toLowerCase() : '',
+            password: pwd,
+            active: true
+        };
         d.employees.push(emp);
         saveDB(d);
         return emp;
+    },
+    async compareEmployeePassword(emp, password) {
+        if (!emp.password) return false;
+        return bcrypt.compare(password, emp.password);
+    },
+    employeeToJSON(emp) {
+        const e = { ...emp };
+        delete e.password;
+        return e;
     },
     async deleteEmployee(id) {
         const d = getDB();

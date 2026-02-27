@@ -51,6 +51,21 @@ function createToken(payload) {
     return `${header}.${body}.${sig}`;
 }
 
+function verifyToken(req) {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+    const token = authHeader.split(' ')[1];
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+        // Basic verify sig
+        const sig = crypto.createHmac('sha256', JWT_SECRET).update(`${parts[0]}.${parts[1]}`).digest('base64url');
+        if (sig !== parts[2]) return null;
+        return payload;
+    } catch { return null; }
+}
+
 // ---- Routing ----
 const routes = [];
 function route(method, pattern, handler) {
@@ -155,21 +170,51 @@ route('DELETE', '/api/admin/salons/:id', async (req, res, params) => {
 
 route('POST', '/api/barber/login', async (req, res) => {
     const body = await parseBody(req);
-    const owner = await db.findOwnerByEmail(body.email || '');
-    if (!owner) return json(res, 401, { success: false, error: 'Email ou mot de passe incorrect' });
+    if (!body.email || !body.password) {
+        return json(res, 400, { success: false, error: 'Email et mot de passe requis' });
+    }
 
-    const match = await db.comparePassword(owner, body.password);
-    if (!match) return json(res, 401, { success: false, error: 'Email ou mot de passe incorrect' });
+    // Check Owner First
+    const owner = await db.findOwnerByEmail(body.email);
+    if (owner) {
+        const match = await db.comparePassword(owner, body.password);
+        if (match) {
+            const salon = await db.findSalonById(owner.salon);
+            const token = createToken({ ownerId: owner._id, salonId: owner.salon, role: 'owner' });
+            return json(res, 200, {
+                success: true,
+                token,
+                user: { id: owner._id, salonId: owner.salon, name: owner.name, email: owner.email, role: 'owner' },
+                salon: salon || null
+            });
+        }
+    }
 
-    const salon = await db.findSalonById(owner.salon);
-    const token = createToken({ ownerId: owner._id, salonId: owner.salon });
+    // Check Employee Second
+    const employee = await db.findEmployeeByEmail(body.email);
+    if (employee) {
+        if (!employee.active) {
+            return json(res, 403, { success: false, error: 'Accès désactivé pour cet employé' });
+        }
+        const match = await db.compareEmployeePassword(employee, body.password);
+        if (match) {
+            const salon = await db.findSalonById(employee.salon);
+            // Verify if salon active
+            if (!salon || !salon.active) {
+                return json(res, 403, { success: false, error: 'Le salon associé est inactif' });
+            }
+            const token = createToken({ employeeId: employee._id, salonId: employee.salon, role: 'employee' });
+            return json(res, 200, {
+                success: true,
+                token,
+                user: { id: employee._id, salonId: employee.salon, name: employee.name, email: employee.email, role: 'employee' },
+                salon: salon || null
+            });
+        }
+    }
 
-    json(res, 200, {
-        success: true,
-        token,
-        user: { id: owner._id, salonId: owner.salon, name: owner.name, email: owner.email, role: 'owner' },
-        salon: salon || null
-    });
+    // If neither matched
+    json(res, 401, { success: false, error: 'Email ou mot de passe incorrect' });
 });
 
 route('GET', '/api/barber/salon/:salonId', async (req, res, params) => {
@@ -260,15 +305,34 @@ route('DELETE', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
 
 // Stats
 route('GET', '/api/barber/salon/:salonId/stats', async (req, res, params) => {
+    const user = verifyToken(req);
+    const isEmployee = user?.role === 'employee';
+
     const today = new Date().toISOString().split('T')[0];
-    const todayBookings = await db.findBookings({ salon: params.salonId, date: today });
-    const totalBookings = await db.countBookings({ salon: params.salonId });
-    const totalClients = await db.countClients({ salon: params.salonId });
-    const allBookings = await db.findBookings({ salon: params.salonId });
+    const queryToday = { salon: params.salonId, date: today };
+    const queryAll = { salon: params.salonId };
+
+    if (isEmployee) {
+        queryToday.employeeId = user.employeeId;
+        queryAll.employeeId = user.employeeId;
+    }
+
+    const todayBookings = await db.findBookings(queryToday);
+    const allBookings = await db.findBookings(queryAll);
+
+    // Pour un employé, on filtre ses propres clients (uniques)
+    let totalClientsCount = 0;
+    if (isEmployee) {
+        const uniqueClients = new Set(allBookings.map(b => b.client));
+        totalClientsCount = uniqueClients.size;
+    } else {
+        totalClientsCount = await db.countClients({ salon: params.salonId });
+    }
+
     const totalRevenue = allBookings.reduce((s, b) => s + (b.price || 0), 0);
     const todayRevenue = todayBookings.reduce((s, b) => s + (b.price || 0), 0);
 
-    json(res, 200, { success: true, data: { todayBookings: todayBookings.length, todayRevenue, totalBookings, totalClients, totalRevenue } });
+    json(res, 200, { success: true, data: { todayBookings: todayBookings.length, todayRevenue, totalBookings: allBookings.length, totalClients: totalClientsCount, totalRevenue } });
 });
 
 // Services
@@ -313,8 +377,15 @@ route('GET', '/api/barber/salon/:salonId/employees', async (req, res, params) =>
 
 route('POST', '/api/barber/salon/:salonId/employees', async (req, res, params) => {
     const body = await parseBody(req);
-    const emp = await db.createEmployee({ salon: params.salonId, name: body.name, email: body.email || '', phone: body.phone || '', specialties: body.specialties || [] });
-    json(res, 201, { success: true, data: emp });
+    const emp = await db.createEmployee({
+        salon: params.salonId,
+        name: body.name,
+        email: body.email || '',
+        password: body.password || null,
+        phone: body.phone || '',
+        specialties: body.specialties || []
+    });
+    json(res, 201, { success: true, data: db.employeeToJSON(emp) });
 });
 
 route('DELETE', '/api/barber/salon/:salonId/employees/:empId', async (req, res, params) => {
@@ -324,10 +395,14 @@ route('DELETE', '/api/barber/salon/:salonId/employees/:empId', async (req, res, 
 
 // Bookings
 route('GET', '/api/barber/salon/:salonId/bookings', async (req, res, params) => {
+    const user = verifyToken(req);
     const url = new URL(req.url, `http://localhost`);
     const dateFilter = url.searchParams.get('date');
     const query = { salon: params.salonId };
     if (dateFilter) query.date = dateFilter;
+    if (user?.role === 'employee') {
+        query.employeeId = user.employeeId;
+    }
     const bookings = await db.findBookings(query);
     json(res, 200, { success: true, data: bookings });
 });
@@ -348,13 +423,24 @@ route('POST', '/api/barber/salon/:salonId/bookings', async (req, res, params) =>
         name: body.clientName, email: body.clientEmail || '', phone: body.clientPhone || '', price: body.price || 0
     });
 
+    const user = verifyToken(req);
+
+    // Determine employee defaults if not provided in the payload and an employee creates it
+    let employeeId = body.employeeId || null;
+    let employeeName = body.employeeName || null;
+    if (user?.role === 'employee') {
+        employeeId = user.employeeId;
+        const emp = await db.findEmployeeById(user.employeeId);
+        if (emp) employeeName = emp.name;
+    }
+
     const booking = await db.createBooking({
         salon: params.salonId, client: client._id,
         clientName: body.clientName, clientEmail: body.clientEmail || '', clientPhone: body.clientPhone || '',
         serviceName: body.serviceName || '', serviceIcon: body.serviceIcon || '✂️',
         price: body.price || 0, duration: body.duration || 30,
         date: body.date, time: body.time, notes: body.notes || '',
-        employeeId: body.employeeId || null, employeeName: body.employeeName || null,
+        employeeId, employeeName,
         status: 'confirmed', source: body.source || 'manual',
     });
 

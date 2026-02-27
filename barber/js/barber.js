@@ -8,6 +8,16 @@ let salonId = null;
 let currentUser = null;
 let currentSalon = null;
 
+// ---- Custom Fetch that injects the auth token ----
+async function apiFetch(url, options = {}) {
+    const headers = options.headers || {};
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    const finalOptions = { ...options, headers };
+    return fetch(url, finalOptions);
+}
+
 // ---- Login ----
 async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
@@ -30,8 +40,8 @@ async function doLogin() {
         if (data.success) {
             token = data.token;
             currentUser = data.user;
+            salonId = data.user.salonId;
             currentSalon = data.salon;
-            salonId = currentUser.salonId;
             errEl.style.display = 'none';
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'flex';
@@ -73,8 +83,30 @@ function initApp() {
         }
     }
     if (currentUser) {
-        document.getElementById('userName').textContent = currentUser.name;
+        const salonName = currentSalon.name || 'Mon Salon';
+        const words = salonName.split(' ');
+        document.getElementById('sidebarSalonName').innerHTML = words[0] + (words.length > 1 ? ' <span>' + words.slice(1).join(' ') + '</span>' : '');
+
+        // Check Role and adjust UI
+        const isEmployee = currentUser.role === 'employee';
+        document.getElementById('userName').textContent = currentUser.name || (isEmployee ? 'Employé' : 'Propriétaire');
         document.getElementById('userAvatar').textContent = currentUser.name ? currentUser.name[0].toUpperCase() : '?';
+        document.querySelector('.user-role').textContent = isEmployee ? 'Employé' : 'Propriétaire';
+
+        const sidebarNav = document.querySelector('.sidebar-nav');
+        if (isEmployee) {
+            // Hide specific menu items for employees
+            const linksToHide = ['dashboard', 'clients', 'employees', 'services', 'settings'];
+            linksToHide.forEach(pageId => {
+                const link = sidebarNav.querySelector(`a[onclick="showPage('${pageId}')"]`);
+                if (link) link.style.display = 'none';
+            });
+            showPage('bookings');
+        } else {
+            // Show all
+            Array.from(sidebarNav.querySelectorAll('a')).forEach(a => a.style.display = 'flex');
+            showPage('dashboard');
+        }
     }
     if (currentSalon?.slug) {
         document.getElementById('salonWebLink').href = `/s/${currentSalon.slug}`;
@@ -113,8 +145,8 @@ function toggleSidebar() {
 async function loadDashboard() {
     try {
         const [statsRes, bookingsRes] = await Promise.all([
-            fetch(`${API}/api/barber/salon/${salonId}/stats`),
-            fetch(`${API}/api/barber/salon/${salonId}/bookings?date=${todayStr()}`)
+            apiFetch(`${API}/api/barber/salon/${salonId}/stats`),
+            apiFetch(`${API}/api/barber/salon/${salonId}/bookings?date=${todayStr()}`)
         ]);
         const stats = (await statsRes.json()).data || {};
         const bookings = (await bookingsRes.json()).data || [];
@@ -166,7 +198,7 @@ async function loadDashboard() {
 // ---- Bookings ----
 async function loadBookings() {
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}/bookings`);
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/bookings`);
         const data = await res.json();
         const bookings = data.data || [];
 
@@ -197,8 +229,8 @@ async function showAddBooking() {
     let services = [], employees = [];
     try {
         const [svcRes, empRes] = await Promise.all([
-            fetch(`${API}/api/barber/salon/${salonId}/services`),
-            fetch(`${API}/api/barber/salon/${salonId}/employees`)
+            apiFetch(`${API}/api/barber/salon/${salonId}/services`),
+            apiFetch(`${API}/api/barber/salon/${salonId}/employees`),
         ]);
         services = (await svcRes.json()).data || [];
         employees = (await empRes.json()).data || [];
@@ -273,7 +305,7 @@ async function addManualBooking() {
     };
 
     try {
-        await fetch(`${API}/api/barber/salon/${salonId}/bookings`, {
+        await apiFetch(`${API}/api/barber/salon/${salonId}/bookings`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(booking)
@@ -290,7 +322,7 @@ async function addManualBooking() {
 // ---- Clients ----
 async function loadClients() {
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}/clients`);
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/clients`);
         const data = await res.json();
         const clients = data.data || [];
 
@@ -318,7 +350,7 @@ async function loadClients() {
 // ---- Employees ----
 async function loadEmployees() {
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}/employees`);
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees`);
         const data = await res.json();
         const emps = data.data || [];
 
@@ -346,9 +378,11 @@ async function loadEmployees() {
 function showAddEmployee() {
     document.getElementById('modalTitle').textContent = 'Ajouter un employé';
     document.getElementById('modalBody').innerHTML = `
-        <div class="form-group"><label class="form-label">Nom</label><input class="form-input form-input-full" id="empName" placeholder="Nom de l'employé"></div>
-        <div class="form-group"><label class="form-label">Email</label><input class="form-input form-input-full" id="empEmail" placeholder="email@salon.fr"></div>
-        <div class="form-group"><label class="form-label">Spécialités (séparés par virgule)</label><input class="form-input form-input-full" id="empSpec" placeholder="Coupe,Barbe,Coloration"></div>
+        <div class="form-group"><label class="form-label">Nom</label><input class="form-input form-input-full" id="empName" placeholder="Prénom Nom"></div>
+        <div class="form-group"><label class="form-label">Email (pour la connexion)</label><input type="email" class="form-input form-input-full" id="empEmail" placeholder="employe@salon.com"></div>
+        <div class="form-group"><label class="form-label">Mot de passe provisoire</label><input type="text" class="form-input form-input-full" id="empPassword" placeholder="motdepasse123"></div>
+        <div class="form-group"><label class="form-label">Téléphone</label><input class="form-input form-input-full" id="empPhone" placeholder="06XXXXXXXX"></div>
+        <div class="form-group"><label class="form-label">Prestations (séparées par virgule)</label><input class="form-input form-input-full" id="empSpecs" placeholder="Coupe, Barbe, Coloration"></div>
     `;
     document.getElementById('modalFooter').innerHTML = `
         <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
@@ -360,13 +394,15 @@ function showAddEmployee() {
 async function addEmployee() {
     const name = document.getElementById('empName').value.trim();
     const email = document.getElementById('empEmail').value.trim();
-    const specs = document.getElementById('empSpec').value.split(',').map(s => s.trim()).filter(Boolean);
+    const password = document.getElementById('empPassword').value.trim();
+    const phone = document.getElementById('empPhone').value.trim();
+    const specs = document.getElementById('empSpecs').value.split(',').map(s => s.trim()).filter(Boolean);
     if (!name) return;
 
-    await fetch(`${API}/api/barber/salon/${salonId}/employees`, {
+    await apiFetch(`${API}/api/barber/salon/${salonId}/employees`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, specialties: specs })
+        body: JSON.stringify({ name, email, password, phone, specialties: specs })
     });
     closeModal();
     loadEmployees();
@@ -374,8 +410,8 @@ async function addEmployee() {
 }
 
 async function deleteEmployee(id) {
-    if (!confirm('Supprimer cet employé ?')) return;
-    await fetch(`${API}/api/barber/salon/${salonId}/employees/${id}`, { method: 'DELETE' });
+    if (!confirm('Voulez-vous vraiment supprimer cet employé ?')) return;
+    await apiFetch(`${API}/api/barber/salon/${salonId}/employees/${id}`, { method: 'DELETE' });
     loadEmployees();
     showToast('Employé supprimé');
 }
@@ -383,7 +419,7 @@ async function deleteEmployee(id) {
 // ---- Services ----
 async function loadServices() {
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}/services`);
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/services`);
         const data = await res.json();
         const svcs = data.data || [];
 
@@ -436,7 +472,7 @@ async function addService() {
     const description = document.getElementById('svcDesc').value.trim();
     if (!name) return;
 
-    await fetch(`${API}/api/barber/salon/${salonId}/services`, {
+    await apiFetch(`${API}/api/barber/salon/${salonId}/services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, price, duration, icon, description })
@@ -448,7 +484,7 @@ async function addService() {
 
 async function deleteService(id) {
     if (!confirm('Supprimer cette prestation ?')) return;
-    await fetch(`${API}/api/barber/salon/${salonId}/services/${id}`, { method: 'DELETE' });
+    await apiFetch(`${API}/api/barber/salon/${salonId}/services/${id}`, { method: 'DELETE' });
     loadServices();
     showToast('Prestation supprimée');
 }
@@ -456,7 +492,7 @@ async function deleteService(id) {
 // ---- Settings ----
 async function loadSettings() {
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}`);
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}`);
         const data = await res.json();
         const salon = data.data || {};
         currentSalon = salon;
@@ -622,7 +658,7 @@ async function saveInfo() {
     };
     if (!updates.name) return showToast('Le nom du salon est obligatoire', 'error');
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}`, {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updates)
         });
@@ -642,18 +678,16 @@ async function saveInfo() {
 
 // ---- Save Branding ----
 async function saveBranding() {
-    const updates = {
-        branding: {
-            primaryColor: document.getElementById('set-color1').value,
-            accentColor: document.getElementById('set-color2').value,
-            heroTitle: document.getElementById('set-heroTitle').value.trim(),
-            heroSubtitle: document.getElementById('set-heroSubtitle').value.trim(),
-        }
+    const branding = {
+        primaryColor: document.getElementById('set-color1').value,
+        accentColor: document.getElementById('set-color2').value,
+        heroTitle: document.getElementById('set-heroTitle').value.trim(),
+        heroSubtitle: document.getElementById('set-heroSubtitle').value.trim(),
     };
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}`, {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/branding`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updates)
+            body: JSON.stringify(branding)
         });
         const data = await res.json();
         if (data.success) {
@@ -687,22 +721,21 @@ function toggleDay(day, checked) {
 
 async function saveHours() {
     const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
-    const hours = {};
+    const newHours = {};
     days.forEach(d => {
-        const checkbox = document.querySelector(`.hours-check[data-day="${d}"]`);
-        if (checkbox && checkbox.checked) {
-            hours[d] = {
-                open: document.getElementById(`hours-${d}-open`).value,
-                close: document.getElementById(`hours-${d}-close`).value,
-            };
-        } else {
-            hours[d] = null;
-        }
+        const cb = document.querySelector(`.hours-check[data-day="${d}"]`);
+        const isOpen = cb && cb.checked;
+        newHours[d] = {
+            open: isOpen,
+            openTime: isOpen ? document.getElementById(`hours-${d}-open`).value : '09:00',
+            closeTime: isOpen ? document.getElementById(`hours-${d}-close`).value : '19:00',
+        };
     });
+
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}`, {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/hours`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ hours })
+            body: JSON.stringify(newHours)
         });
         const data = await res.json();
         if (data.success) {
@@ -747,9 +780,9 @@ async function addClosedDate() {
     closedDates.sort((a, b) => a.start.localeCompare(b.start));
 
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}`, {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/closed-dates`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ closedDates })
+            body: JSON.stringify(closedDates)
         });
         const data = await res.json();
         if (data.success) {
@@ -763,18 +796,18 @@ async function addClosedDate() {
     } catch (e) { showToast('Erreur de connexion', 'error'); }
 }
 
-async function removeClosedDate(index) {
-    const closedDates = [...(currentSalon.closedDates || [])];
-    closedDates.splice(index, 1);
+async function removeClosedDate(idx) {
+    const dates = (currentSalon.closedDates || []).filter((_, i) => i !== idx);
+
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}`, {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/closed-dates`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ closedDates })
+            body: JSON.stringify(dates)
         });
         const data = await res.json();
         if (data.success) {
             currentSalon = data.data;
-            document.getElementById('closedDatesList').innerHTML = renderClosedDates(closedDates);
+            document.getElementById('closedDatesList').innerHTML = renderClosedDates(dates);
             showToast('Fermeture supprimée');
         }
     } catch (e) { showToast('Erreur de connexion', 'error'); }
@@ -789,7 +822,7 @@ async function uploadLogo() {
     formData.append('logo', fileInput.files[0]);
 
     try {
-        const res = await fetch(`${API}/api/barber/salon/${salonId}/logo`, {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/logo`, {
             method: 'POST',
             body: formData
         });
@@ -807,7 +840,7 @@ async function uploadLogo() {
 
 async function deleteLogo() {
     if (!confirm('Supprimer le logo ?')) return;
-    await fetch(`${API}/api/barber/salon/${salonId}/logo`, { method: 'DELETE' });
+    await apiFetch(`${API}/api/barber/salon/${salonId}/logo`, { method: 'DELETE' });
     showToast('Logo supprimé');
     loadSettings();
 }
