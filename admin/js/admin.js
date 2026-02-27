@@ -228,8 +228,7 @@ function openCreateSalonModal() {
         <div class="form-group">
             <label class="form-label">Plan</label>
             <select class="form-input form-input-full" id="mPlan">
-                <option value="basic">Basic (gratuit)</option>
-                <option value="premium" selected>Premium (29.99 CHF/mois)</option>
+                <option value="pro" selected>Pro (49.90 CHF/mois)</option>
             </select>
         </div>
 

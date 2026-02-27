@@ -757,7 +757,7 @@ async function loadSettings() {
                     <div class="info-grid">
                         <div class="info-tile"><span class="info-tile-icon">💳</span><div><div class="info-tile-label">Plan</div><div class="info-tile-value" style="text-transform:capitalize">${salon.subscription?.plan || 'standard'}</div></div></div>
                         <div class="info-tile"><span class="info-tile-icon">✅</span><div><div class="info-tile-label">Statut</div><div class="info-tile-value"><span class="badge badge-active">${salon.subscription?.status || 'active'}</span></div></div></div>
-                        <div class="info-tile"><span class="info-tile-icon">💰</span><div><div class="info-tile-label">Prix</div><div class="info-tile-value">${salon.subscription?.price ?? 29.99} CHF/mois</div></div></div>
+                        <div class="info-tile"><span class="info-tile-icon">💰</span><div><div class="info-tile-label">Prix</div><div class="info-tile-value">${salon.subscription?.price ?? 49.90} CHF/mois</div></div></div>
                     </div>
                 </div>
             </div>

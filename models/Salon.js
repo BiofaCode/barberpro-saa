@@ -37,7 +37,7 @@ const salonSchema = new mongoose.Schema({
     subscription: {
         plan: { type: String, enum: ['starter', 'pro', 'premium'], default: 'pro' },
         status: { type: String, enum: ['active', 'trial', 'suspended', 'cancelled'], default: 'active' },
-        price: { type: Number, default: 29.99 },
+        price: { type: Number, default: 49.90 },
         startDate: { type: Date, default: Date.now },
     },
     smsReminders: {

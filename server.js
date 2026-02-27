@@ -95,7 +95,8 @@ route('GET', '/api/admin/stats', async (req, res) => {
     const totalBookings = await db.countAllBookings();
     const totalClients = await db.countAllClients();
     const salons = await db.findSalons();
-    const revenueEstimate = salons.reduce((sum, s) => sum + (s.subscription?.price || 29.99), 0);
+    // Pricing: Flat 49.90 CHF per salon
+    const revenueEstimate = salons.reduce((sum, s) => sum + (s.subscription?.price || 49.90), 0);
     json(res, 200, { success: true, data: { totalSalons, totalOwners, totalEmployees, totalBookings, totalClients, revenueEstimate: revenueEstimate.toFixed(2) } });
 });
 
@@ -147,7 +148,7 @@ route('POST', '/api/admin/salons', async (req, res) => {
             vendredi: { open: '09:00', close: '19:00' },
             samedi: { open: '09:00', close: '18:00' },
         },
-        subscription: { plan: body.subscription?.plan || 'pro', status: 'active', price: body.subscription?.plan === 'premium' ? 49.99 : 29.99 },
+        subscription: { plan: body.subscription?.plan || 'pro', status: 'active', price: 49.90 },
         smsReminders: { enabled: false, status: 'En développement' },
         rating: 0,
         reviewCount: 0,
@@ -387,6 +388,23 @@ route('DELETE', '/api/barber/salon/:salonId/services/:svcId', async (req, res, p
     const services = (salon.services || []).filter(s => s._id !== params.svcId);
     await db.updateSalon(params.salonId, { services });
     json(res, 200, { success: true, message: 'Service supprimé' });
+});
+
+// Branding & Hours
+route('PUT', '/api/barber/salon/:salonId/branding', async (req, res, params) => {
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    const body = await parseBody(req);
+
+    const branding = {
+        primaryColor: body.primaryColor || salon.branding?.primaryColor || '#C9A96E',
+        accentColor: body.accentColor || salon.branding?.accentColor || '#D4B97E',
+        heroTitle: body.heroTitle || salon.branding?.heroTitle || `Bienvenue chez ${salon.name}`,
+        heroSubtitle: body.heroSubtitle || salon.branding?.heroSubtitle || 'Votre salon de coiffure premium'
+    };
+
+    const updated = await db.updateSalon(params.salonId, { branding });
+    json(res, 200, { success: true, data: updated });
 });
 
 // Employees and Team Management
