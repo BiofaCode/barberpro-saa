@@ -77,6 +77,17 @@ function route(method, pattern, handler) {
 //  SUPER ADMIN API
 // ==========================
 
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'adminPro2026';
+
+route('POST', '/api/admin/login', async (req, res) => {
+    const body = await parseBody(req);
+    if (!body.password || body.password !== ADMIN_PASSWORD) {
+        return json(res, 401, { success: false, error: 'Mot de passe incorrect' });
+    }
+    const token = createToken({ role: 'superadmin' });
+    json(res, 200, { success: true, token });
+});
+
 route('GET', '/api/admin/stats', async (req, res) => {
     const totalSalons = await db.countSalons();
     const totalOwners = await db.countOwners();
@@ -346,7 +357,16 @@ route('POST', '/api/barber/salon/:salonId/services', async (req, res, params) =>
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
-    const svc = { _id: crypto.randomBytes(12).toString('hex'), name: body.name, icon: body.icon || '✂️', price: body.price || 0, duration: body.duration || 30, description: body.description || '', active: true };
+    const svc = {
+        _id: crypto.randomBytes(12).toString('hex'),
+        name: body.name,
+        icon: body.icon || '✂️',
+        price: body.price || 0,
+        duration: body.duration || 30,
+        description: body.description || '',
+        active: true,
+        assignedEmployees: body.assignedEmployees || []
+    };
     const services = [...(salon.services || []), svc];
     await db.updateSalon(params.salonId, { services });
     json(res, 201, { success: true, data: svc });
@@ -369,28 +389,59 @@ route('DELETE', '/api/barber/salon/:salonId/services/:svcId', async (req, res, p
     json(res, 200, { success: true, message: 'Service supprimé' });
 });
 
-// Employees
+// Employees and Team Management
 route('GET', '/api/barber/salon/:salonId/employees', async (req, res, params) => {
     const employees = await db.findEmployees({ salon: params.salonId });
-    json(res, 200, { success: true, data: employees });
+    const owners = await db.findOwners({ salon: params.salonId });
+
+    const team = [
+        ...owners.map(o => ({ ...db.ownerToJSON(o), role: 'owner' })),
+        ...employees.map(e => ({ ...db.employeeToJSON(e), role: 'employee' }))
+    ];
+    json(res, 200, { success: true, data: team });
 });
 
 route('POST', '/api/barber/salon/:salonId/employees', async (req, res, params) => {
     const body = await parseBody(req);
-    const emp = await db.createEmployee({
-        salon: params.salonId,
-        name: body.name,
-        email: body.email || '',
-        password: body.password || null,
-        phone: body.phone || '',
-        specialties: body.specialties || []
-    });
-    json(res, 201, { success: true, data: db.employeeToJSON(emp) });
+
+    if (body.role === 'owner') {
+        const owner = await db.createOwner({
+            salon: params.salonId,
+            name: body.name,
+            email: body.email || '',
+            password: body.password || 'barber123',
+            phone: body.phone || '',
+            role: 'owner'
+        });
+        return json(res, 201, { success: true, data: { ...db.ownerToJSON(owner), role: 'owner' } });
+    } else {
+        const emp = await db.createEmployee({
+            salon: params.salonId,
+            name: body.name,
+            email: body.email || '',
+            password: body.password || null,
+            phone: body.phone || '',
+            specialties: body.specialties || []
+        });
+        return json(res, 201, { success: true, data: { ...db.employeeToJSON(emp), role: 'employee' } });
+    }
 });
 
 route('DELETE', '/api/barber/salon/:salonId/employees/:empId', async (req, res, params) => {
-    await db.deleteEmployee(params.empId);
-    json(res, 200, { success: true, message: 'Employé supprimé' });
+    const url = new URL(req.url, `http://localhost`);
+    const role = url.searchParams.get('role');
+
+    if (role === 'owner') {
+        // Prevent deleting original owner maybe?
+        const owners = await db.findOwners({ salon: params.salonId });
+        if (owners.length <= 1) {
+            return json(res, 400, { success: false, error: 'Impossible de supprimer le seul propriétaire' });
+        }
+        await db.deleteOwner(params.empId);
+    } else {
+        await db.deleteEmployee(params.empId);
+    }
+    json(res, 200, { success: true, message: 'Membre supprimé' });
 });
 
 // Bookings
@@ -535,6 +586,14 @@ const server = http.createServer(async (req, res) => {
 
     // API
     if (pathname.startsWith('/api/')) {
+        // Protect Admin routes
+        if (pathname.startsWith('/api/admin') && pathname !== '/api/admin/login') {
+            const tokenPayload = verifyToken(req);
+            if (!tokenPayload || tokenPayload.role !== 'superadmin') {
+                return json(res, 401, { success: false, error: 'Accès non autorisé' });
+            }
+        }
+
         const match = routes.find(r => r.method === req.method && r.regex.test(pathname));
         if (match) {
             const params = pathname.match(match.regex)?.groups || {};

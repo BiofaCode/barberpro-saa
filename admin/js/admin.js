@@ -7,9 +7,18 @@ const API = '';
 let state = { salons: [], currentPage: 'dashboard' };
 
 async function api(endpoint, method = 'GET', body = null) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  const token = localStorage.getItem('adminToken');
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(API + endpoint, opts);
+
+  if (res.status === 401 && endpoint !== '/api/admin/login') {
+    logoutAdmin();
+    return { success: false, error: 'Unauthorized' };
+  }
   return res.json();
 }
 
@@ -48,6 +57,9 @@ document.getElementById('hamburger').addEventListener('click', () => {
 
 // ============ DASHBOARD ============
 async function loadDashboard() {
+  const token = localStorage.getItem('adminToken');
+  if (!token) return; // Prevent loading dashboard if not logged in
+
   const [statsRes, salonsRes] = await Promise.all([
     api('/api/admin/stats'),
     api('/api/admin/salons')
@@ -283,7 +295,7 @@ function copySalonInfo(salonId) {
 🌐 Site: ${window.location.origin}/s/${salon.slug}
 👤 Propriétaire: ${salon.owner?.name || '—'}
 📧 Login: ${salon.owner?.email || '—'}
-🔑 Mot de passe: salon123
+🔑 Mot de passe: (celui défini à la création)
     `.trim();
   navigator.clipboard.writeText(info).then(() => {
     toast('Infos de connexion copiées !');
@@ -322,5 +334,55 @@ function showModal(title, bodyHTML, onSave) {
 function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
 document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
 
-// ============ INIT ============
-loadDashboard();
+// ============ LOGIN & INIT ============
+async function loginAdmin() {
+  const pwd = document.getElementById('adminPassword').value;
+  if (!pwd) return;
+
+  document.getElementById('loginError').style.display = 'none';
+  const res = await api('/api/admin/login', 'POST', { password: pwd });
+
+  if (res.success && res.token) {
+    localStorage.setItem('adminToken', res.token);
+    document.getElementById('loginOverlay').style.display = 'none';
+
+    // Show logout button in topbar if needed
+    let acts = document.querySelector('.topbar-actions');
+    if (acts && !acts.innerHTML.includes('Déconnexion')) {
+      acts.innerHTML += `<button class="btn btn-sm btn-outline" onclick="logoutAdmin()">Déconnexion</button>`;
+    }
+
+    loadDashboard();
+  } else {
+    document.getElementById('loginError').textContent = res.error || 'Erreur de connexion';
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function logoutAdmin() {
+  localStorage.removeItem('adminToken');
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('adminPassword').value = '';
+
+  let acts = document.querySelector('.topbar-actions');
+  if (acts) acts.innerHTML = '';
+}
+
+function initApp() {
+  const token = localStorage.getItem('adminToken');
+  if (!token) {
+    document.getElementById('loginOverlay').style.display = 'flex';
+  } else {
+    document.getElementById('loginOverlay').style.display = 'none';
+
+    // Setup logout button
+    let acts = document.querySelector('.topbar-actions');
+    if (acts && !acts.innerHTML.includes('Déconnexion')) {
+      acts.innerHTML = `<button class="btn btn-sm btn-outline" onclick="logoutAdmin()">Déconnexion</button>`;
+    }
+
+    loadDashboard();
+  }
+}
+
+initApp();

@@ -239,12 +239,16 @@ async function showAddBooking() {
     const svcOptions = services.map(s => `<option value="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">${s.icon} ${s.name} — ${s.price} CHF (${s.duration}min)</option>`).join('');
 
     window._mbEmployees = employees;
-    const renderEmpOptions = (serviceName) => {
-        if (employees.length === 0) return '<option value="">Aucun employé</option>';
-        const validEmps = employees.filter(e => {
+    window._mbServices = services;
+    window.renderEmpOptions = (serviceName) => {
+        if (window._mbEmployees.length === 0) return '<option value="">Aucun membre</option>';
+        const validEmps = window._mbEmployees.filter(e => {
             if (!serviceName) return true;
-            if (!e.specialties || e.specialties.length === 0) return true;
-            return e.specialties.some(s => s.toLowerCase() === serviceName.toLowerCase());
+            const service = window._mbServices.find(s => s.name === serviceName);
+            if (service && service.assignedEmployees && service.assignedEmployees.length > 0) {
+                return service.assignedEmployees.includes(e._id);
+            }
+            return true;
         });
         if (validEmps.length === 0) return '<option value="">— Aucun pro pour cette prestation —</option>';
         return '<option value="">— Non assigné —</option>' + validEmps.map(e => `<option value="${e._id}" data-name="${e.name}">${e.name}</option>`).join('');
@@ -256,7 +260,7 @@ async function showAddBooking() {
     document.getElementById('modalTitle').textContent = '📅 Ajouter un rendez-vous';
     document.getElementById('modalBody').innerHTML = `
         <div class="form-group"><label class="form-label">Prestation</label>
-            <select class="form-input form-input-full" id="mbService" onchange="document.getElementById('mbEmployee') ? document.getElementById('mbEmployee').innerHTML = renderEmpOptions(this.value) : null">${svcOptions}</select>
+            <select class="form-input form-input-full" id="mbService" onchange="document.getElementById('mbEmployee') ? document.getElementById('mbEmployee').innerHTML = window.renderEmpOptions(this.value) : null">${svcOptions}</select>
         </div>
         <div class="form-row">
             <div class="form-group" style="flex:1"><label class="form-label">Date</label>
@@ -377,9 +381,9 @@ async function loadEmployees() {
                         <div class="data-card-name">${e.name}</div>
                         <div class="data-card-sub">${(e.specialties || []).join(', ')}</div>
                     </div>
-                    <div><span class="badge badge-active">Actif</span></div>
+                    <div><span class="badge badge-active">${e.role === 'owner' ? 'Propriétaire' : 'Employé'}</span></div>
                     <div>
-                        <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e._id}')">🗑</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e._id}', '${e.role || 'employee'}')">🗑</button>
                     </div>
                 </div>
             `).join('') + '</div>';
@@ -387,14 +391,26 @@ async function loadEmployees() {
     } catch (e) { console.error(e); }
 }
 
+function toggleSpecsField() {
+    const role = document.getElementById('empRole').value;
+    document.getElementById('specsGroup').style.display = role === 'owner' ? 'none' : 'block';
+}
+
 function showAddEmployee() {
-    document.getElementById('modalTitle').textContent = 'Ajouter un employé';
+    document.getElementById('modalTitle').textContent = 'Ajouter un membre de l\'équipe';
     document.getElementById('modalBody').innerHTML = `
+        <div class="form-group">
+            <label class="form-label">Rôle</label>
+            <select class="form-input form-input-full" id="empRole" onchange="toggleSpecsField()">
+                <option value="employee">Employé (Gère ses RDV)</option>
+                <option value="owner">Propriétaire (Accès total au salon)</option>
+            </select>
+        </div>
         <div class="form-group"><label class="form-label">Nom</label><input class="form-input form-input-full" id="empName" placeholder="Prénom Nom"></div>
         <div class="form-group"><label class="form-label">Email (pour la connexion)</label><input type="email" class="form-input form-input-full" id="empEmail" placeholder="employe@salon.com"></div>
         <div class="form-group"><label class="form-label">Mot de passe provisoire</label><input type="text" class="form-input form-input-full" id="empPassword" placeholder="motdepasse123"></div>
         <div class="form-group"><label class="form-label">Téléphone</label><input class="form-input form-input-full" id="empPhone" placeholder="06XXXXXXXX"></div>
-        <div class="form-group"><label class="form-label">Prestations (séparées par virgule)</label><input class="form-input form-input-full" id="empSpecs" placeholder="Coupe, Barbe, Coloration"></div>
+        <div class="form-group" id="specsGroup"><label class="form-label">Prestations (séparées par virgule)</label><input class="form-input form-input-full" id="empSpecs" placeholder="Coupe, Barbe, Coloration"></div>
     `;
     document.getElementById('modalFooter').innerHTML = `
         <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
@@ -404,28 +420,34 @@ function showAddEmployee() {
 }
 
 async function addEmployee() {
+    const role = document.getElementById('empRole').value;
     const name = document.getElementById('empName').value.trim();
     const email = document.getElementById('empEmail').value.trim();
     const password = document.getElementById('empPassword').value.trim();
     const phone = document.getElementById('empPhone').value.trim();
-    const specs = document.getElementById('empSpecs').value.split(',').map(s => s.trim()).filter(Boolean);
+    const specs = role === 'owner' ? [] : document.getElementById('empSpecs').value.split(',').map(s => s.trim()).filter(Boolean);
     if (!name) return;
 
     await apiFetch(`${API}/api/barber/salon/${salonId}/employees`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, phone, specialties: specs })
+        body: JSON.stringify({ name, email, password, phone, role, specialties: specs })
     });
     closeModal();
     loadEmployees();
-    showToast('Employé ajouté ✅');
+    showToast('Membre ajouté ✅');
 }
 
-async function deleteEmployee(id) {
-    if (!confirm('Voulez-vous vraiment supprimer cet employé ?')) return;
-    await apiFetch(`${API}/api/barber/salon/${salonId}/employees/${id}`, { method: 'DELETE' });
+async function deleteEmployee(id, role) {
+    if (!confirm('Voulez-vous vraiment supprimer ce membre ?')) return;
+    const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees/${id}?role=${role}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.success) {
+        alert(data.error || 'Erreur lors de la suppression');
+        return;
+    }
     loadEmployees();
-    showToast('Employé supprimé');
+    showToast('Membre supprimé');
 }
 
 // ---- Services ----
@@ -449,7 +471,8 @@ async function loadServices() {
                     <div class="data-card-right">
                         <div class="data-card-value">${s.price || 0} CHF</div>
                     </div>
-                    <div>
+                    <div style="display:flex;gap:5px;">
+                        <button class="btn btn-outline btn-sm" onclick='showEditService(${JSON.stringify(s).replace(/'/g, "&#39;")})'>✏️</button>
                         <button class="btn btn-danger btn-sm" onclick="deleteService('${s._id}')">🗑</button>
                     </div>
                 </div>
@@ -458,7 +481,7 @@ async function loadServices() {
     } catch (e) { console.error(e); }
 }
 
-function showAddService() {
+async function showAddService() {
     document.getElementById('modalTitle').textContent = 'Ajouter une prestation';
     document.getElementById('modalBody').innerHTML = `
         <div class="form-group"><label class="form-label">Nom</label><input class="form-input form-input-full" id="svcName" placeholder="Coupe Classique"></div>
@@ -468,12 +491,33 @@ function showAddService() {
         </div>
         <div class="form-group"><label class="form-label">Icône (emoji)</label><input class="form-input form-input-full" id="svcIcon" value="✂️" placeholder="✂️"></div>
         <div class="form-group"><label class="form-label">Description</label><input class="form-input form-input-full" id="svcDesc" placeholder="Description courte"></div>
+        <div class="form-group">
+            <label class="form-label">Assigner à (laisser vide = tous)</label>
+            <div id="svcEmployeesList"><div style="margin-top:10px;font-size:0.9rem;color:var(--text-sec)">Chargement des employés...</div></div>
+        </div>
     `;
     document.getElementById('modalFooter').innerHTML = `
         <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
         <button class="btn btn-primary" onclick="addService()">Ajouter</button>
     `;
     document.getElementById('modal').classList.add('active');
+
+    try {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees`);
+        const data = await res.json();
+        const emps = data.data || [];
+        if (emps.length === 0) {
+            document.getElementById('svcEmployeesList').innerHTML = '<div style="font-size:0.9rem;color:var(--text-sec)">Aucun membre dans l\'équipe.</div>';
+        } else {
+            document.getElementById('svcEmployeesList').innerHTML = emps.map(e => `
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.9rem;cursor:pointer">
+                    <input type="checkbox" class="svc-emp-cb" value="${e._id}"> ${e.name} (${e.role === 'owner' ? 'Propriétaire' : 'Employé'})
+                </label>
+            `).join('');
+        }
+    } catch {
+        document.getElementById('svcEmployeesList').innerHTML = '<div style="color:var(--danger);font-size:0.9rem">Erreur de chargement.</div>';
+    }
 }
 
 async function addService() {
@@ -482,16 +526,78 @@ async function addService() {
     const duration = parseInt(document.getElementById('svcDuration').value) || 30;
     const icon = document.getElementById('svcIcon').value.trim() || '✂️';
     const description = document.getElementById('svcDesc').value.trim();
+    const assignedEmployees = Array.from(document.querySelectorAll('.svc-emp-cb:checked')).map(cb => cb.value);
+
     if (!name) return;
 
     await apiFetch(`${API}/api/barber/salon/${salonId}/services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, price, duration, icon, description })
+        body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees })
     });
     closeModal();
     loadServices();
     showToast('Prestation ajoutée ✅');
+}
+
+async function showEditService(svc) {
+    document.getElementById('modalTitle').textContent = 'Modifier une prestation';
+    document.getElementById('modalBody').innerHTML = `
+        <div class="form-group"><label class="form-label">Nom</label><input class="form-input form-input-full" id="svcName" value="${svc.name}"></div>
+        <div class="form-row">
+            <div class="form-group" style="flex:1"><label class="form-label">Prix (CHF)</label><input type="number" class="form-input form-input-full" id="svcPrice" value="${svc.price}"></div>
+            <div class="form-group" style="flex:1"><label class="form-label">Durée (min)</label><input type="number" class="form-input form-input-full" id="svcDuration" value="${svc.duration}"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Icône (emoji)</label><input class="form-input form-input-full" id="svcIcon" value="${svc.icon}"></div>
+        <div class="form-group"><label class="form-label">Description</label><input class="form-input form-input-full" id="svcDesc" value="${svc.description}"></div>
+        <div class="form-group">
+            <label class="form-label">Assigner à (laisser vide = tous)</label>
+            <div id="svcEmployeesList"><div style="margin-top:10px;font-size:0.9rem;color:var(--text-sec)">Chargement des employés...</div></div>
+        </div>
+    `;
+    document.getElementById('modalFooter').innerHTML = `
+        <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="editService('${svc._id}')">Enregistrer</button>
+    `;
+    document.getElementById('modal').classList.add('active');
+
+    try {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees`);
+        const data = await res.json();
+        const emps = data.data || [];
+        if (emps.length === 0) {
+            document.getElementById('svcEmployeesList').innerHTML = '<div style="font-size:0.9rem;color:var(--text-sec)">Aucun membre dans l\'équipe.</div>';
+        } else {
+            const assignedIds = svc.assignedEmployees || [];
+            document.getElementById('svcEmployeesList').innerHTML = emps.map(e => `
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.9rem;cursor:pointer">
+                    <input type="checkbox" class="svc-emp-cb" value="${e._id}" ${assignedIds.includes(e._id) ? 'checked' : ''}> ${e.name} (${e.role === 'owner' ? 'Propriétaire' : 'Employé'})
+                </label>
+            `).join('');
+        }
+    } catch {
+        document.getElementById('svcEmployeesList').innerHTML = '<div style="color:var(--danger);font-size:0.9rem">Erreur de chargement.</div>';
+    }
+}
+
+async function editService(id) {
+    const name = document.getElementById('svcName').value.trim();
+    const price = parseInt(document.getElementById('svcPrice').value) || 0;
+    const duration = parseInt(document.getElementById('svcDuration').value) || 30;
+    const icon = document.getElementById('svcIcon').value.trim() || '✂️';
+    const description = document.getElementById('svcDesc').value.trim();
+    const assignedEmployees = Array.from(document.querySelectorAll('.svc-emp-cb:checked')).map(cb => cb.value);
+
+    if (!name) return;
+
+    await apiFetch(`${API}/api/barber/salon/${salonId}/services/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees })
+    });
+    closeModal();
+    loadServices();
+    showToast('Prestation modifiée ✅');
 }
 
 async function deleteService(id) {

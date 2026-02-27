@@ -138,6 +138,10 @@ const db = {
     },
 
     // ---- Owners ----
+    async findOwners(query = {}) {
+        const d = getDB();
+        return d.owners.filter(o => !query.salon || o.salon === query.salon);
+    },
     async findOwnerByEmail(email) {
         return getDB().owners.find(o => o.email === email.toLowerCase()) || null;
     },
@@ -159,6 +163,20 @@ const db = {
         const o = { ...owner };
         delete o.password;
         return o;
+    },
+    async deleteOwner(id) {
+        const d = getDB();
+        d.owners = d.owners.filter(o => o._id !== id);
+        saveDB(d);
+    },
+    async updateOwner(id, updates) {
+        const d = getDB();
+        const idx = d.owners.findIndex(o => o._id === id);
+        if (idx === -1) return null;
+        Object.assign(d.owners[idx], updates);
+        if (updates.password) d.owners[idx].password = await bcrypt.hash(updates.password, 10);
+        saveDB(d);
+        return d.owners[idx];
     },
 
     // ---- Employees ----

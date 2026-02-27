@@ -213,12 +213,12 @@ function populateEmployees(serviceName = null) {
   const grid = document.getElementById('bmEmployeeGrid');
   let emps = getEmployees();
 
-  // Filter employees by service specialty
+  // Filter employees by service assignment
   if (serviceName) {
-    emps = emps.filter(e => {
-      if (!e.specialties || e.specialties.length === 0) return true;
-      return e.specialties.some(s => s.toLowerCase() === serviceName.toLowerCase());
-    });
+    const service = (SALON_DATA?.services || []).find(s => s.name === serviceName);
+    if (service && service.assignedEmployees && service.assignedEmployees.length > 0) {
+      emps = emps.filter(e => service.assignedEmployees.includes(e._id));
+    }
   }
 
   if (emps.length === 0) {

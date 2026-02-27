@@ -83,6 +83,27 @@
         <div class="modal" id="modalContent"></div>
     </div>
 
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginOverlay" style="z-index: 9999; display: flex;">
+        <div class="modal" style="width: 400px; text-align: center;">
+            <div class="logo" style="justify-content: center; margin-bottom: 20px;">
+                <div class="logo-icon">⚙️</div>
+                <div class="logo-text" style="color:#2d3436;">Salon<span style="color:var(--primary)">Pro</span> Admin
+                </div>
+            </div>
+            <p style="color:var(--text-sec); margin-bottom: 20px;">Connectez-vous pour accéder à la plateforme.</p>
+            <div class="form-group" style="text-align: left;">
+                <label class="form-label">Mot de passe Administrateur</label>
+                <input type="password" class="form-input form-input-full" id="adminPassword" placeholder="••••••••"
+                    onkeypress="if(event.key==='Enter') loginAdmin()" />
+            </div>
+            <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="loginAdmin()">Se
+                Connecter</button>
+            <div id="loginError" style="color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none;">Mot
+                de passe incorrect</div>
+        </div>
+    </div>
+
     <script src="/admin/js/admin.js"></script>
 </body>
 
