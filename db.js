@@ -15,21 +15,38 @@ let dbInstance;
 
 async function connectDB() {
     if (dbInstance) return dbInstance;
-    client = new MongoClient(MONGO_URI);
-    await client.connect();
-    dbInstance = client.db(DB_NAME);
-    console.log('✅ Connected to MongoDB Atlas');
 
-    // Create indexes for performance
-    await dbInstance.collection('owners').createIndex({ email: 1 });
-    await dbInstance.collection('owners').createIndex({ salon: 1 });
-    await dbInstance.collection('employees').createIndex({ email: 1 });
-    await dbInstance.collection('employees').createIndex({ salon: 1 });
-    await dbInstance.collection('salons').createIndex({ slug: 1 }, { unique: true });
-    await dbInstance.collection('clients').createIndex({ salon: 1 });
-    await dbInstance.collection('bookings').createIndex({ salon: 1, date: -1 });
+    console.log('🔌 Connecting to MongoDB Atlas...');
+    console.log('   URI:', MONGO_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@'));
 
-    return dbInstance;
+    try {
+        client = new MongoClient(MONGO_URI, {
+            serverSelectionTimeoutMS: 10000,
+            connectTimeoutMS: 10000,
+        });
+        await client.connect();
+        dbInstance = client.db(DB_NAME);
+
+        // Quick ping to verify connection
+        await dbInstance.command({ ping: 1 });
+        console.log('✅ Connected to MongoDB Atlas - database:', DB_NAME);
+
+        // Create indexes for performance
+        await dbInstance.collection('owners').createIndex({ email: 1 });
+        await dbInstance.collection('owners').createIndex({ salon: 1 });
+        await dbInstance.collection('employees').createIndex({ email: 1 });
+        await dbInstance.collection('employees').createIndex({ salon: 1 });
+        await dbInstance.collection('salons').createIndex({ slug: 1 }, { unique: true });
+        await dbInstance.collection('clients').createIndex({ salon: 1 });
+        await dbInstance.collection('bookings').createIndex({ salon: 1, date: -1 });
+        console.log('📇 Indexes created');
+
+        return dbInstance;
+    } catch (err) {
+        console.error('❌ MongoDB connection failed:', err.message);
+        console.error('   Check: 1) MONGODB_URI env var 2) Atlas IP whitelist (allow 0.0.0.0/0) 3) User/password');
+        throw err;
+    }
 }
 
 function getDB() {
