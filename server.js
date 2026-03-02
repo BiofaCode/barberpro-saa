@@ -44,6 +44,51 @@ function parseBody(req) {
     });
 }
 
+function parseMultipart(req) {
+    return new Promise((resolve, reject) => {
+        const contentType = req.headers['content-type'] || '';
+        const boundaryMatch = contentType.match(/boundary=(.+)/);
+        if (!boundaryMatch) return resolve({ fields: {}, filePath: null });
+
+        const boundary = boundaryMatch[1];
+        const chunks = [];
+        req.on('data', c => chunks.push(c));
+        req.on('end', () => {
+            try {
+                const buffer = Buffer.concat(chunks);
+                const parts = buffer.toString('binary').split('--' + boundary).slice(1, -1);
+                const fields = {};
+                let filePath = null;
+
+                for (const part of parts) {
+                    const headerEnd = part.indexOf('\r\n\r\n');
+                    if (headerEnd === -1) continue;
+                    const headers = part.substring(0, headerEnd);
+                    const body = part.substring(headerEnd + 4).replace(/\r\n$/, '');
+
+                    const nameMatch = headers.match(/name="([^"]+)"/);
+                    const filenameMatch = headers.match(/filename="([^"]+)"/);
+
+                    if (filenameMatch && nameMatch) {
+                        const ext = path.extname(filenameMatch[1]) || '.jpg';
+                        const fileName = crypto.randomBytes(8).toString('hex') + ext;
+                        const dest = path.join(UPLOAD_DIR, fileName);
+                        fs.writeFileSync(dest, Buffer.from(body, 'binary'));
+                        filePath = path.join('uploads', fileName);
+                    } else if (nameMatch) {
+                        fields[nameMatch[1]] = body.trim();
+                    }
+                }
+                resolve({ fields, filePath });
+            } catch (e) {
+                console.error('Multipart parse error:', e.message);
+                resolve({ fields: {}, filePath: null });
+            }
+        });
+        req.on('error', () => resolve({ fields: {}, filePath: null }));
+    });
+}
+
 function createToken(payload) {
     const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
     const body = Buffer.from(JSON.stringify({ ...payload, iat: Date.now() })).toString('base64url');
@@ -479,6 +524,24 @@ route('DELETE', '/api/barber/salon/:salonId/gallery/:photoId', async (req, res, 
     const gallery = (salon.gallery || []).filter(p => p._id !== params.photoId);
     await db.updateSalon(params.salonId, { gallery });
     json(res, 200, { success: true, message: 'Photo supprimée' });
+});
+
+// ---- Logo ----
+route('POST', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false });
+
+    const { filePath } = await parseMultipart(req);
+    if (!filePath) return json(res, 400, { success: false, error: 'Image requise' });
+
+    const logoUrl = '/' + filePath.replace(/\\/g, '/');
+    await db.updateSalon(params.salonId, { logo: logoUrl });
+    json(res, 200, { success: true, data: { logo: logoUrl } });
+});
+
+route('DELETE', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
+    await db.updateSalon(params.salonId, { logo: '' });
+    json(res, 200, { success: true, message: 'Logo supprimé' });
 });
 
 // ---- Testimonials ----
