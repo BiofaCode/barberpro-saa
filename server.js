@@ -740,17 +740,29 @@ const server = http.createServer(async (req, res) => {
 //  START
 // ==========================
 
-server.listen(PORT, () => {
-    console.log('');
-    console.log('  💈 BarberPro SaaS Platform v2.0');
-    console.log('  ════════════════════════════════════');
-    console.log('  📦 Mode: JSON Database (dev)');
-    console.log('  ════════════════════════════════════');
-    console.log(`  🔧 Super Admin:   http://localhost:${PORT}/admin`);
-    console.log(`  💇 Espace Pro:    http://localhost:${PORT}/pro`);
-    console.log(`  🌐 Salon Demo:    http://localhost:${PORT}/s/elite-barber-paris`);
-    console.log(`  📡 API:           http://localhost:${PORT}/api`);
-    console.log('  ════════════════════════════════════');
-    console.log('  ✅ Prêt ! Ouvre une des URLs ci-dessus');
-    console.log('');
-});
+async function start() {
+    try {
+        await db.connectDB();
+        await db.seedIfEmpty();
+    } catch (err) {
+        console.error('❌ Failed to connect to MongoDB:', err.message);
+        process.exit(1);
+    }
+
+    server.listen(PORT, () => {
+        console.log('');
+        console.log('  💈 BarberPro SaaS Platform v2.0');
+        console.log('  ════════════════════════════════════');
+        console.log('  📦 Mode: MongoDB Atlas (persistent)');
+        console.log('  ════════════════════════════════════');
+        console.log(`  🔧 Super Admin:   http://localhost:${PORT}/admin`);
+        console.log(`  💇 Espace Pro:    http://localhost:${PORT}/pro`);
+        console.log(`  🌐 Salon Demo:    http://localhost:${PORT}/s/elite-barber-paris`);
+        console.log(`  📡 API:           http://localhost:${PORT}/api`);
+        console.log('  ════════════════════════════════════');
+        console.log('  ✅ Prêt ! Ouvre une des URLs ci-dessus');
+        console.log('');
+    });
+}
+
+start();

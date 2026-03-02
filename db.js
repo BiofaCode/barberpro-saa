@@ -1,159 +1,169 @@
 /* ============================================
-   Database Adapter - JSON (dev) & MongoDB (prod)
+   Database Adapter - MongoDB Atlas
    ============================================ */
 
-const fs = require('fs');
-const path = require('path');
+const { MongoClient, ObjectId } = require('mongodb');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
-const DATA_DIR = path.join(__dirname, 'data');
-const DB_FILE = path.join(DATA_DIR, 'database.json');
+// ---- Connection ----
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb+srv://info_db_user:mrQ0tFyyilw4hpUu@salonpro.kpketkg.mongodb.net/';
+const DB_NAME = 'salonpro';
 
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+let client;
+let dbInstance;
 
-function genId() { return crypto.randomBytes(12).toString('hex'); } // Same length as MongoDB ObjectId
+async function connectDB() {
+    if (dbInstance) return dbInstance;
+    client = new MongoClient(MONGO_URI);
+    await client.connect();
+    dbInstance = client.db(DB_NAME);
+    console.log('✅ Connected to MongoDB Atlas');
 
-// ---- JSON Storage ----
-function loadDB() {
-    if (!fs.existsSync(DB_FILE)) return null;
-    try { return JSON.parse(fs.readFileSync(DB_FILE, 'utf8')); }
-    catch { return null; }
+    // Create indexes for performance
+    await dbInstance.collection('owners').createIndex({ email: 1 });
+    await dbInstance.collection('owners').createIndex({ salon: 1 });
+    await dbInstance.collection('employees').createIndex({ email: 1 });
+    await dbInstance.collection('employees').createIndex({ salon: 1 });
+    await dbInstance.collection('salons').createIndex({ slug: 1 }, { unique: true });
+    await dbInstance.collection('clients').createIndex({ salon: 1 });
+    await dbInstance.collection('bookings').createIndex({ salon: 1, date: -1 });
+
+    return dbInstance;
 }
-function saveDB(db) { fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8'); }
 
 function getDB() {
-    let db = loadDB();
-    if (!db) {
-        db = createInitialData();
-        saveDB(db);
-    }
-    return db;
+    if (!dbInstance) throw new Error('Database not connected. Call connectDB() first.');
+    return dbInstance;
 }
 
-function createInitialData() {
+function genId() { return crypto.randomBytes(12).toString('hex'); }
+
+// Helper: convert _id for compatibility (our API uses string _id)
+function withStringId(doc) {
+    if (!doc) return null;
+    if (doc._id && typeof doc._id === 'object') doc._id = doc._id.toString();
+    return doc;
+}
+
+// ============ SEED DATA ============
+async function seedIfEmpty() {
+    const db = getDB();
+    const salonCount = await db.collection('salons').countDocuments();
+    if (salonCount > 0) return; // Already has data
+
+    console.log('🌱 Seeding initial data...');
     const salonId = genId();
     const ownerId = genId();
     const emp1Id = genId();
     const emp2Id = genId();
-    const hashedPassword = bcrypt.hashSync('barber123', 10);
+    const hashedPassword = await bcrypt.hash('barber123', 10);
 
-    return {
-        salons: [{
-            _id: salonId,
-            slug: 'elite-barber-paris',
-            name: 'Elite Barber Paris',
-            description: 'Salon de coiffure premium au cœur de Paris',
-            address: '12 Rue du Style, 75001 Paris',
-            phone: '06 12 34 56 78',
-            email: 'contact@elitebarber.fr',
-            logo: '',
-            branding: {
-                primaryColor: '#6366F1',
-                accentColor: '#818CF8',
-                heroTitle: "L'Art de la Coiffure Masculine",
-                heroSubtitle: 'Excellence, style et précision depuis 2018',
-            },
-            services: [
-                { _id: genId(), name: 'Coupe Classique', icon: '✂️', price: 25, duration: 30, description: 'Coupe précise et élégante', active: true },
-                { _id: genId(), name: 'Taille de Barbe', icon: '🪒', price: 15, duration: 20, description: 'Sculpture et entretien barbe', active: true },
-                { _id: genId(), name: 'Pack Premium', icon: '💎', price: 55, duration: 60, description: 'Coupe + barbe + soin visage', active: true },
-                { _id: genId(), name: 'Coloration', icon: '🎨', price: 40, duration: 45, description: 'Coloration professionnelle', active: true },
-                { _id: genId(), name: 'Soin Capillaire', icon: '🧴', price: 30, duration: 35, description: 'Traitement profond cheveux', active: true },
-                { _id: genId(), name: 'Coupe Enfant', icon: '👶', price: 18, duration: 25, description: 'Coupe moins de 12 ans', active: true },
-            ],
-            hours: {
-                lundi: { open: '09:00', close: '19:00' },
-                mardi: { open: '09:00', close: '19:00' },
-                mercredi: { open: '09:00', close: '19:00' },
-                jeudi: { open: '09:00', close: '19:00' },
-                vendredi: { open: '09:00', close: '19:00' },
-                samedi: { open: '09:00', close: '18:00' },
-            },
-            subscription: { plan: 'premium', status: 'active', price: 49.99 },
-            smsReminders: { enabled: false, status: 'En développement' },
-            rating: 4.9,
-            reviewCount: 125,
-            active: true,
-            createdAt: new Date().toISOString(),
-        }],
-        owners: [{
-            _id: ownerId,
-            salon: salonId,
-            name: 'Ahmed Mansouri',
-            email: 'ahmed@elitebarber.fr',
-            password: hashedPassword,
-            phone: '06 12 34 56 78',
-            role: 'owner',
-        }],
-        employees: [
-            { _id: emp1Id, salon: salonId, name: 'Ahmed Mansouri', email: 'ahmed@elitebarber.fr', specialties: ['Coupe', 'Barbe', 'Coloration'], active: true },
-            { _id: emp2Id, salon: salonId, name: 'Karim Benali', email: 'karim@elitebarber.fr', specialties: ['Coupe', 'Barbe'], active: true },
+    await db.collection('salons').insertOne({
+        _id: salonId,
+        slug: 'elite-barber-paris',
+        name: 'Elite Barber Paris',
+        description: 'Salon de coiffure premium au cœur de Paris',
+        address: '12 Rue du Style, 75001 Paris',
+        phone: '06 12 34 56 78',
+        email: 'contact@elitebarber.fr',
+        logo: '',
+        branding: {
+            primaryColor: '#6366F1',
+            accentColor: '#818CF8',
+            heroTitle: "L'Art de la Coiffure Masculine",
+            heroSubtitle: 'Excellence, style et précision depuis 2018',
+        },
+        services: [
+            { _id: genId(), name: 'Coupe Classique', icon: '✂️', price: 25, duration: 30, description: 'Coupe précise et élégante', active: true },
+            { _id: genId(), name: 'Taille de Barbe', icon: '🪒', price: 15, duration: 20, description: 'Sculpture et entretien barbe', active: true },
+            { _id: genId(), name: 'Pack Premium', icon: '💎', price: 55, duration: 60, description: 'Coupe + barbe + soin visage', active: true },
+            { _id: genId(), name: 'Coloration', icon: '🎨', price: 40, duration: 45, description: 'Coloration professionnelle', active: true },
+            { _id: genId(), name: 'Soin Capillaire', icon: '🧴', price: 30, duration: 35, description: 'Traitement profond cheveux', active: true },
+            { _id: genId(), name: 'Coupe Enfant', icon: '👶', price: 18, duration: 25, description: 'Coupe moins de 12 ans', active: true },
         ],
-        clients: [],
-        bookings: [],
-    };
+        hours: {
+            lundi: { open: '09:00', close: '19:00' },
+            mardi: { open: '09:00', close: '19:00' },
+            mercredi: { open: '09:00', close: '19:00' },
+            jeudi: { open: '09:00', close: '19:00' },
+            vendredi: { open: '09:00', close: '19:00' },
+            samedi: { open: '09:00', close: '18:00' },
+        },
+        subscription: { plan: 'premium', status: 'active', price: 49.90 },
+        smsReminders: { enabled: false, status: 'En développement' },
+        rating: 4.9,
+        reviewCount: 125,
+        active: true,
+        createdAt: new Date().toISOString(),
+    });
+
+    await db.collection('owners').insertOne({
+        _id: ownerId,
+        salon: salonId,
+        name: 'Ahmed Mansouri',
+        email: 'ahmed@elitebarber.fr',
+        password: hashedPassword,
+        phone: '06 12 34 56 78',
+        role: 'owner',
+    });
+
+    await db.collection('employees').insertMany([
+        { _id: emp1Id, salon: salonId, name: 'Ahmed Mansouri', email: 'ahmed@elitebarber.fr', specialties: ['Coupe', 'Barbe', 'Coloration'], active: true },
+        { _id: emp2Id, salon: salonId, name: 'Karim Benali', email: 'karim@elitebarber.fr', specialties: ['Coupe', 'Barbe'], active: true },
+    ]);
+
+    console.log('✅ Seed data inserted');
 }
 
-// ============ ADAPTER (mimics Mongoose-like API for JSON) ============
+// ============ ADAPTER ============
 
 const db = {
+    // ---- Init ----
+    connectDB,
+    seedIfEmpty,
+
     // ---- Salons ----
     async findSalons(query = {}) {
-        const data = getDB();
-        return data.salons.filter(s => {
-            for (const k in query) { if (s[k] !== query[k]) return false; }
-            return true;
-        });
+        return (await getDB().collection('salons').find(query).toArray());
     },
     async findSalonById(id) {
-        return getDB().salons.find(s => s._id === id) || null;
+        return await getDB().collection('salons').findOne({ _id: id });
     },
     async findSalonBySlug(slug) {
-        return getDB().salons.find(s => s.slug === slug) || null;
+        return await getDB().collection('salons').findOne({ slug });
     },
     async createSalon(data) {
-        const d = getDB();
         const salon = { _id: genId(), ...data, createdAt: new Date().toISOString() };
-        d.salons.push(salon);
-        saveDB(d);
+        await getDB().collection('salons').insertOne(salon);
         return salon;
     },
     async updateSalon(id, updates) {
-        const d = getDB();
-        const idx = d.salons.findIndex(s => s._id === id);
-        if (idx === -1) return null;
-        Object.assign(d.salons[idx], updates);
-        saveDB(d);
-        return d.salons[idx];
+        await getDB().collection('salons').updateOne({ _id: id }, { $set: updates });
+        return await getDB().collection('salons').findOne({ _id: id });
     },
     async deleteSalon(id) {
-        const d = getDB();
-        d.salons = d.salons.filter(s => s._id !== id);
-        d.owners = d.owners.filter(o => o.salon !== id);
-        d.employees = d.employees.filter(e => e.salon !== id);
-        d.clients = d.clients.filter(c => c.salon !== id);
-        d.bookings = d.bookings.filter(b => b.salon !== id);
-        saveDB(d);
+        await getDB().collection('salons').deleteOne({ _id: id });
+        await getDB().collection('owners').deleteMany({ salon: id });
+        await getDB().collection('employees').deleteMany({ salon: id });
+        await getDB().collection('clients').deleteMany({ salon: id });
+        await getDB().collection('bookings').deleteMany({ salon: id });
     },
 
     // ---- Owners ----
     async findOwners(query = {}) {
-        const d = getDB();
-        return d.owners.filter(o => !query.salon || o.salon === query.salon);
+        return await getDB().collection('owners').find(query).toArray();
     },
     async findOwnerByEmail(email) {
-        return getDB().owners.find(o => o.email === email.toLowerCase()) || null;
+        return await getDB().collection('owners').findOne({ email: email.toLowerCase() });
     },
     async findOwnerBySalon(salonId) {
-        return getDB().owners.find(o => o.salon === salonId) || null;
+        return await getDB().collection('owners').findOne({ salon: salonId });
     },
     async createOwner(data) {
-        const d = getDB();
         const pwd = await bcrypt.hash(data.password, 10);
         const owner = { _id: genId(), ...data, password: pwd, email: data.email.toLowerCase() };
-        d.owners.push(owner);
-        saveDB(d);
+        await getDB().collection('owners').insertOne(owner);
         return owner;
     },
     async comparePassword(owner, password) {
@@ -165,32 +175,24 @@ const db = {
         return o;
     },
     async deleteOwner(id) {
-        const d = getDB();
-        d.owners = d.owners.filter(o => o._id !== id);
-        saveDB(d);
+        await getDB().collection('owners').deleteOne({ _id: id });
     },
     async updateOwner(id, updates) {
-        const d = getDB();
-        const idx = d.owners.findIndex(o => o._id === id);
-        if (idx === -1) return null;
-        Object.assign(d.owners[idx], updates);
-        if (updates.password) d.owners[idx].password = await bcrypt.hash(updates.password, 10);
-        saveDB(d);
-        return d.owners[idx];
+        if (updates.password) {
+            updates.password = await bcrypt.hash(updates.password, 10);
+        }
+        await getDB().collection('owners').updateOne({ _id: id }, { $set: updates });
+        return await getDB().collection('owners').findOne({ _id: id });
     },
 
     // ---- Employees ----
     async findEmployees(query = {}) {
-        return getDB().employees.filter(e => {
-            for (const k in query) { if (e[k] !== query[k]) return false; }
-            return true;
-        });
+        return await getDB().collection('employees').find(query).toArray();
     },
     async findEmployeeByEmail(email) {
-        return getDB().employees.find(e => e.email === email.toLowerCase()) || null;
+        return await getDB().collection('employees').findOne({ email: email.toLowerCase() });
     },
     async createEmployee(data) {
-        const d = getDB();
         let pwd = null;
         if (data.password) {
             pwd = await bcrypt.hash(data.password, 10);
@@ -200,10 +202,9 @@ const db = {
             ...data,
             email: data.email ? data.email.toLowerCase() : '',
             password: pwd,
-            active: true
+            active: true,
         };
-        d.employees.push(emp);
-        saveDB(d);
+        await getDB().collection('employees').insertOne(emp);
         return emp;
     },
     async compareEmployeePassword(emp, password) {
@@ -216,67 +217,65 @@ const db = {
         return e;
     },
     async deleteEmployee(id) {
-        const d = getDB();
-        d.employees = d.employees.filter(e => e._id !== id);
-        saveDB(d);
+        await getDB().collection('employees').deleteOne({ _id: id });
     },
 
     // ---- Clients ----
     async findClients(query = {}) {
-        return getDB().clients.filter(c => {
-            for (const k in query) { if (c[k] !== query[k]) return false; }
-            return true;
-        });
+        return await getDB().collection('clients').find(query).toArray();
     },
     async findOrCreateClient(salonId, data) {
-        const d = getDB();
-        let client = d.clients.find(c => c.salon === salonId && (c.email === data.email || c.phone === data.phone));
+        const col = getDB().collection('clients');
+
+        // Build query conditions for matching existing client
+        const conditions = [];
+        if (data.email) conditions.push({ email: data.email });
+        if (data.phone) conditions.push({ phone: data.phone });
+
+        let client = null;
+        if (conditions.length > 0) {
+            client = await col.findOne({ salon: salonId, $or: conditions });
+        }
+
         if (!client) {
             client = { _id: genId(), salon: salonId, name: data.name, email: data.email || '', phone: data.phone || '', totalBookings: 0, totalSpent: 0 };
-            d.clients.push(client);
+            await col.insertOne(client);
         }
-        client.totalBookings++;
-        client.totalSpent += data.price || 0;
-        client.lastVisit = new Date().toISOString();
-        saveDB(d);
-        return client;
+
+        await col.updateOne({ _id: client._id }, {
+            $inc: { totalBookings: 1, totalSpent: data.price || 0 },
+            $set: { lastVisit: new Date().toISOString() },
+        });
+
+        return await col.findOne({ _id: client._id });
     },
     async countClients(query = {}) {
-        return (await this.findClients(query)).length;
+        return await getDB().collection('clients').countDocuments(query);
     },
 
     // ---- Bookings ----
     async findBookings(query = {}) {
-        return getDB().bookings.filter(b => {
-            for (const k in query) { if (b[k] !== query[k]) return false; }
-            return true;
-        }).sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+        return await getDB().collection('bookings').find(query).sort({ date: -1, time: -1 }).toArray();
     },
     async createBooking(data) {
-        const d = getDB();
         const booking = { _id: genId(), ...data, createdAt: new Date().toISOString() };
-        d.bookings.push(booking);
-        saveDB(d);
+        await getDB().collection('bookings').insertOne(booking);
         return booking;
     },
     async updateBooking(id, updates) {
-        const d = getDB();
-        const idx = d.bookings.findIndex(b => b._id === id);
-        if (idx === -1) return null;
-        Object.assign(d.bookings[idx], updates);
-        saveDB(d);
-        return d.bookings[idx];
+        await getDB().collection('bookings').updateOne({ _id: id }, { $set: updates });
+        return await getDB().collection('bookings').findOne({ _id: id });
     },
     async countBookings(query = {}) {
-        return (await this.findBookings(query)).length;
+        return await getDB().collection('bookings').countDocuments(query);
     },
 
     // ---- Counts ----
-    async countSalons() { return getDB().salons.length; },
-    async countOwners() { return getDB().owners.length; },
-    async countEmployees(query = {}) { return (await this.findEmployees(query)).length; },
-    async countAllBookings() { return getDB().bookings.length; },
-    async countAllClients() { return getDB().clients.length; },
+    async countSalons() { return await getDB().collection('salons').countDocuments(); },
+    async countOwners() { return await getDB().collection('owners').countDocuments(); },
+    async countEmployees(query = {}) { return await getDB().collection('employees').countDocuments(query); },
+    async countAllBookings() { return await getDB().collection('bookings').countDocuments(); },
+    async countAllClients() { return await getDB().collection('clients').countDocuments(); },
 };
 
 module.exports = db;
