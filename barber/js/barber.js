@@ -706,6 +706,59 @@ async function loadSettings() {
                 </div>
             </div>
 
+            <!-- GALERIE PHOTOS -->
+            <div class="card" style="margin-bottom:20px">
+                <div class="card-header"><h3>📸 Galerie Photos</h3></div>
+                <div class="card-body">
+                    <p style="font-size:.85rem;color:var(--text-sec);margin-bottom:12px">Ajoutez des photos de vos réalisations. Elles seront affichées sur votre site public.</p>
+                    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px">
+                        <div class="form-group" style="flex:2;margin-bottom:0">
+                            <label class="form-label">Image</label>
+                            <input type="file" id="galleryFile" accept="image/*" class="form-input form-input-full">
+                        </div>
+                        <div class="form-group" style="flex:1;margin-bottom:0">
+                            <label class="form-label">Titre (optionnel)</label>
+                            <input class="form-input form-input-full" id="galleryTitle" placeholder="Coupe Fade...">
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="uploadGalleryPhoto()" style="white-space:nowrap">📤 Ajouter</button>
+                    </div>
+                    <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
+                        ${(salon.gallery || []).map(p => `
+                            <div style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1;background:var(--bg-surface)">
+                                <img src="${p.url}" alt="${p.title}" style="width:100%;height:100%;object-fit:cover">
+                                <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:8px">
+                                    <div style="font-size:.75rem;color:#fff;font-weight:500">${p.title || ''}</div>
+                                </div>
+                                <button onclick="deleteGalleryPhoto('${p._id}')" style="position:absolute;top:6px;right:6px;background:rgba(239,68,68,.9);border:none;color:#fff;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:.7rem">✕</button>
+                            </div>
+                        `).join('') || '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-muted);font-size:.88rem">Aucune photo dans la galerie</div>'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- TÉMOIGNAGES -->
+            <div class="card" style="margin-bottom:20px">
+                <div class="card-header"><h3>⭐ Témoignages / Avis</h3><button class="btn btn-primary btn-sm" onclick="showAddTestimonial()">+ Ajouter un avis</button></div>
+                <div class="card-body">
+                    <p style="font-size:.85rem;color:var(--text-sec);margin-bottom:12px">Créez les avis qui seront affichés sur votre site. Vous contrôlez entièrement ce qui est visible.</p>
+                    <div id="testimonialsList">
+                        ${(salon.testimonials || []).map(t => `
+                            <div style="background:var(--bg-surface);border-radius:12px;padding:16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start">
+                                <div style="flex:1">
+                                    <div style="color:var(--primary);font-size:.9rem;margin-bottom:4px">${'★'.repeat(t.stars)}${'☆'.repeat(5 - t.stars)}</div>
+                                    <div style="font-size:.88rem;color:var(--text);margin-bottom:6px">"${t.text}"</div>
+                                    <div style="font-size:.8rem;color:var(--text-sec)"><strong>${t.name}</strong> — ${t.role}</div>
+                                </div>
+                                <div style="display:flex;gap:6px;margin-left:12px">
+                                    <button class="btn btn-sm btn-outline" onclick="editTestimonial('${t._id}')">✏️</button>
+                                    <button class="btn btn-sm btn-danger" onclick="deleteTestimonial('${t._id}')">✕</button>
+                                </div>
+                            </div>
+                        `).join('') || '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:.88rem">Aucun témoignage</div>'}
+                    </div>
+                </div>
+            </div>
+
             <!-- HORAIRES -->
             <div class="card" style="margin-bottom:20px">
                 <div class="card-header"><h3>🕐 Horaires d'ouverture</h3></div>
@@ -965,6 +1018,120 @@ async function deleteLogo() {
     await apiFetch(`${API}/api/barber/salon/${salonId}/logo`, { method: 'DELETE' });
     showToast('Logo supprimé');
     loadSettings();
+}
+
+// ---- Gallery ----
+async function uploadGalleryPhoto() {
+    const fileInput = document.getElementById('galleryFile');
+    if (!fileInput.files[0]) return showToast('Sélectionnez une image', 'error');
+
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+    formData.append('title', document.getElementById('galleryTitle').value || '');
+
+    try {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/gallery`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Photo ajoutée ! 📸');
+            loadSettings();
+        } else {
+            showToast(data.error || 'Erreur upload', 'error');
+        }
+    } catch (e) {
+        showToast('Erreur de connexion', 'error');
+    }
+}
+
+async function deleteGalleryPhoto(photoId) {
+    if (!confirm('Supprimer cette photo ?')) return;
+    try {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/gallery/${photoId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Photo supprimée');
+            loadSettings();
+        }
+    } catch (e) { showToast('Erreur', 'error'); }
+}
+
+// ---- Testimonials ----
+function showAddTestimonial(existing = null) {
+    const isEdit = !!existing;
+    const modal = document.getElementById('modal');
+    modal.querySelector('.modal-header h3').textContent = isEdit ? 'Modifier l\'avis' : 'Ajouter un avis';
+    modal.querySelector('.modal-body').innerHTML = `
+        <div class="form-group">
+            <label class="form-label">Nom du client</label>
+            <input class="form-input form-input-full" id="tName" value="${existing?.name || ''}" placeholder="Jean D.">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Avis / Témoignage</label>
+            <textarea class="form-input form-input-full" id="tText" rows="3" placeholder="Un service exceptionnel...">${existing?.text || ''}</textarea>
+        </div>
+        <div style="display:flex;gap:12px">
+            <div class="form-group" style="flex:1">
+                <label class="form-label">Étoiles</label>
+                <select class="form-input form-input-full" id="tStars">
+                    ${[5, 4, 3, 2, 1].map(n => `<option value="${n}" ${(existing?.stars || 5) === n ? 'selected' : ''}>${'★'.repeat(n)}${'☆'.repeat(5 - n)}</option>`).join('')}
+                </select>
+            </div>
+            <div class="form-group" style="flex:1">
+                <label class="form-label">Rôle / Description</label>
+                <input class="form-input form-input-full" id="tRole" value="${existing?.role || ''}" placeholder="Client régulier">
+            </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="submitTestimonial('${existing?._id || ''}')">${isEdit ? '💾 Modifier' : '➕ Ajouter'}</button>
+    `;
+    modal.classList.add('active');
+}
+
+async function submitTestimonial(id) {
+    const body = {
+        name: document.getElementById('tName').value.trim(),
+        text: document.getElementById('tText').value.trim(),
+        stars: parseInt(document.getElementById('tStars').value),
+        role: document.getElementById('tRole').value.trim() || 'Client',
+    };
+    if (!body.name || !body.text) return showToast('Remplissez le nom et l\'avis', 'error');
+
+    try {
+        const url = id ? `${API}/api/barber/salon/${salonId}/testimonials/${id}` : `${API}/api/barber/salon/${salonId}/testimonials`;
+        const method = id ? 'PUT' : 'POST';
+        const res = await apiFetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal();
+            showToast(id ? 'Avis modifié ✅' : 'Avis ajouté ✅');
+            loadSettings();
+        } else {
+            showToast(data.error || 'Erreur', 'error');
+        }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+function editTestimonial(id) {
+    const t = (currentSalon.testimonials || []).find(t => t._id === id);
+    if (t) showAddTestimonial(t);
+}
+
+async function deleteTestimonial(id) {
+    if (!confirm('Supprimer cet avis ?')) return;
+    try {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/testimonials/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Avis supprimé');
+            loadSettings();
+        }
+    } catch (e) { showToast('Erreur', 'error'); }
 }
 
 // ---- Utils ----

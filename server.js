@@ -451,6 +451,82 @@ route('PUT', '/api/barber/salon/:salonId/branding', async (req, res, params) => 
     json(res, 200, { success: true, data: updated });
 });
 
+// ---- Gallery ----
+route('POST', '/api/barber/salon/:salonId/gallery', async (req, res, params) => {
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false });
+
+    // Parse multipart for image upload
+    const { fields, filePath } = await parseMultipart(req);
+    if (!filePath) return json(res, 400, { success: false, error: 'Image requise' });
+
+    const gallery = salon.gallery || [];
+    const photo = {
+        _id: crypto.randomBytes(12).toString('hex'),
+        url: '/' + filePath.replace(/\\/g, '/'),
+        title: fields.title || '',
+        createdAt: new Date().toISOString(),
+    };
+    gallery.push(photo);
+    await db.updateSalon(params.salonId, { gallery });
+    json(res, 201, { success: true, data: photo });
+});
+
+route('DELETE', '/api/barber/salon/:salonId/gallery/:photoId', async (req, res, params) => {
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false });
+
+    const gallery = (salon.gallery || []).filter(p => p._id !== params.photoId);
+    await db.updateSalon(params.salonId, { gallery });
+    json(res, 200, { success: true, message: 'Photo supprimée' });
+});
+
+// ---- Testimonials ----
+route('GET', '/api/barber/salon/:salonId/testimonials', async (req, res, params) => {
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false });
+    json(res, 200, { success: true, data: salon.testimonials || [] });
+});
+
+route('POST', '/api/barber/salon/:salonId/testimonials', async (req, res, params) => {
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false });
+    const body = await parseBody(req);
+
+    const testimonials = salon.testimonials || [];
+    const testimonial = {
+        _id: crypto.randomBytes(12).toString('hex'),
+        name: body.name || 'Client',
+        text: body.text || '',
+        stars: Math.min(5, Math.max(1, parseInt(body.stars) || 5)),
+        role: body.role || 'Client',
+    };
+    testimonials.push(testimonial);
+    await db.updateSalon(params.salonId, { testimonials });
+    json(res, 201, { success: true, data: testimonial });
+});
+
+route('PUT', '/api/barber/salon/:salonId/testimonials/:tid', async (req, res, params) => {
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false });
+    const body = await parseBody(req);
+
+    const testimonials = (salon.testimonials || []).map(t =>
+        t._id === params.tid ? { ...t, ...body, stars: Math.min(5, Math.max(1, parseInt(body.stars) || t.stars)) } : t
+    );
+    await db.updateSalon(params.salonId, { testimonials });
+    json(res, 200, { success: true, data: testimonials.find(t => t._id === params.tid) });
+});
+
+route('DELETE', '/api/barber/salon/:salonId/testimonials/:tid', async (req, res, params) => {
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false });
+
+    const testimonials = (salon.testimonials || []).filter(t => t._id !== params.tid);
+    await db.updateSalon(params.salonId, { testimonials });
+    json(res, 200, { success: true, message: 'Avis supprimé' });
+});
+
 // Employees and Team Management
 route('GET', '/api/barber/salon/:salonId/employees', async (req, res, params) => {
     const employees = await db.findEmployees({ salon: params.salonId });

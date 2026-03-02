@@ -63,6 +63,46 @@ function applySalonBranding(salon) {
       `).join('');
     }
   }
+
+  // Dynamic Gallery
+  const gallerySection = document.getElementById('gallery');
+  if (gallerySection) {
+    if (salon.gallery?.length > 0) {
+      const galleryGrid = gallerySection.querySelector('.gallery-grid');
+      if (galleryGrid) {
+        galleryGrid.innerHTML = salon.gallery.map(p => `
+          <div class="gallery-item">
+            <img src="${p.url}" alt="${p.title || 'Photo'}" style="width:100%;height:100%;object-fit:cover">
+            <div class="gallery-item-overlay"><span>${p.title || ''}</span></div>
+          </div>
+        `).join('');
+      }
+    }
+  }
+
+  // Dynamic Testimonials
+  const testimonialsSection = document.getElementById('testimonials');
+  if (testimonialsSection && salon.testimonials?.length > 0) {
+    const testimonialsGrid = testimonialsSection.querySelector('.testimonials-grid');
+    if (testimonialsGrid) {
+      testimonialsGrid.innerHTML = salon.testimonials.map(t => `
+        <div class="testimonial-card reveal active">
+          <div class="testimonial-stars">${'★'.repeat(t.stars)}${'☆'.repeat(5 - t.stars)}</div>
+          <p class="testimonial-text">"${t.text}"</p>
+          <div class="testimonial-author">
+            <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">
+              ${t.name ? t.name[0].toUpperCase() : '?'}
+            </div>
+            <div>
+              <div class="testimonial-name">${t.name}</div>
+              <div class="testimonial-role">${t.role || 'Client'}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
   updateFooter(salon);
 }
 
