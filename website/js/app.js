@@ -559,12 +559,15 @@ function closeMyBookings() {
 
 function resetMyBookings() {
   document.getElementById('mbLookupView').style.display = 'block';
+  document.getElementById('mbOtpView').style.display = 'none';
   document.getElementById('mbListView').style.display = 'none';
   document.getElementById('mbEmail').value = '';
+  document.getElementById('mbOtp').value = '';
   document.getElementById('mbError').style.display = 'none';
+  document.getElementById('mbOtpError').style.display = 'none';
 }
 
-async function lookupMyBookings() {
+async function requestMyBookingsOtp() {
   const email = document.getElementById('mbEmail').value.trim();
   const errEl = document.getElementById('mbError');
   if (!email || !email.includes('@')) {
@@ -574,25 +577,84 @@ async function lookupMyBookings() {
   }
 
   const btn = document.getElementById('mbLookupBtn');
-  btn.textContent = 'Recherche...';
+  btn.textContent = 'Envoi en cours...';
   btn.disabled = true;
   errEl.style.display = 'none';
 
   try {
-    const res = await fetch(`/api/salon/${window.SALON_SLUG}/my-bookings?email=${encodeURIComponent(email)}`);
+    const res = await fetch(`/api/salon/${window.SALON_SLUG}/my-bookings/otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
     const data = await res.json();
-    btn.textContent = 'Rechercher';
+    btn.textContent = 'Recevoir mon code';
     btn.disabled = false;
 
     if (!data.success) {
-      errEl.textContent = data.error || 'Erreur lors de la recherche.';
+      errEl.textContent = data.error || 'Erreur lors de la demande.';
       errEl.style.display = 'block';
       return;
     }
 
+    // Move to OTP step
+    document.getElementById('mbLookupView').style.display = 'none';
+    document.getElementById('mbOtpView').style.display = 'block';
+    document.getElementById('mbOtpEmailDisplay').textContent = email;
+    document.getElementById('mbOtp').focus();
+
+    // TEMPORARY: Show code in toast for testing without email
+    if (data._devCode) {
+      showToast(`🔔 Pour tester, voici votre code : ${data._devCode}`);
+    } else {
+      showToast('Un code a été envoyé à votre adresse email.');
+    }
+
+  } catch (err) {
+    btn.textContent = 'Recevoir mon code';
+    btn.disabled = false;
+    errEl.textContent = 'Erreur de connexion.';
+    errEl.style.display = 'block';
+  }
+}
+
+async function verifyMyBookingsOtp() {
+  const email = document.getElementById('mbEmail').value.trim();
+  const code = document.getElementById('mbOtp').value.trim();
+  const errEl = document.getElementById('mbOtpError');
+
+  if (code.length !== 4) {
+    errEl.textContent = 'Veuillez entrer le code à 4 chiffres.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('mbVerifyBtn');
+  btn.textContent = 'Vérification...';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`/api/salon/${window.SALON_SLUG}/my-bookings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code })
+    });
+    const data = await res.json();
+    btn.textContent = 'Vérifier et accéder';
+    btn.disabled = false;
+
+    if (!data.success) {
+      errEl.textContent = data.error || 'Code invalide ou expiré.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    // Success: render bookings list
+    document.getElementById('mbOtpView').style.display = 'none';
     renderMyBookings(email, data.data);
   } catch (err) {
-    btn.textContent = 'Rechercher';
+    btn.textContent = 'Vérifier et accéder';
     btn.disabled = false;
     errEl.textContent = 'Erreur de connexion.';
     errEl.style.display = 'block';

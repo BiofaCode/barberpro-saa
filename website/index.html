@@ -463,16 +463,40 @@
         <!-- Step 1: Email Lookup -->
         <div id="mbLookupView">
           <p style="color:var(--color-text-secondary); margin-bottom:var(--space-md)">
-            Entrez l'adresse email utilisée lors de votre réservation pour retrouver vos rendez-vous.
+            Entrez l'adresse email utilisée lors de votre réservation pour recevoir un code d'accès sécurisé.
           </p>
           <div class="bm-form-group">
             <input type="email" id="mbEmail" placeholder="votre@email.com" class="bm-input"
-              onkeydown="if(event.key==='Enter') lookupMyBookings()">
+              onkeydown="if(event.key==='Enter') requestMyBookingsOtp()">
           </div>
-          <button class="btn btn-primary" style="width:100%" onclick="lookupMyBookings()"
-            id="mbLookupBtn">Rechercher</button>
+          <button class="btn btn-primary" style="width:100%" onclick="requestMyBookingsOtp()" id="mbLookupBtn">Recevoir
+            mon code</button>
           <div id="mbError"
             style="color:var(--color-error); margin-top:var(--space-sm); font-size:0.9rem; display:none"></div>
+        </div>
+
+        <!-- Step 1.5: OTP Verification -->
+        <div id="mbOtpView" style="display:none">
+          <p style="color:var(--color-text-secondary); margin-bottom:var(--space-md)">
+            Nous avons envoyé un code de sécurité à <strong id="mbOtpEmailDisplay"></strong>. Entrez les 4 chiffres
+            ci-dessous.
+          </p>
+          <div class="bm-form-group">
+            <input type="text" id="mbOtp" placeholder="1234" class="bm-input" maxlength="4"
+              style="font-size:1.5rem; letter-spacing:0.5rem; text-align:center"
+              onkeydown="if(event.key==='Enter') verifyMyBookingsOtp()">
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="verifyMyBookingsOtp()" id="mbVerifyBtn">Vérifier
+            et accéder</button>
+          <div
+            style="font-size:0.85rem; color:var(--color-text-secondary); margin-top:var(--space-md); text-align:center">
+            (Pour vos tests, le code s'affichera dans une notification 🔔)
+          </div>
+          <button class="btn btn-ghost" style="width:100%; margin-top:var(--space-sm)" onclick="resetMyBookings()">←
+            Revenir en arrière</button>
+          <div id="mbOtpError"
+            style="color:var(--color-error); margin-top:var(--space-sm); font-size:0.9rem; display:none; text-align:center">
+          </div>
         </div>
 
         <!-- Step 2: Bookings List -->

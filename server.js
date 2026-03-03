@@ -810,17 +810,54 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     if (booking.clientEmail) sendBookingConfirmation(booking, salon);
 });
 
-// Client: lookup my bookings by email
-route('GET', '/api/salon/:slug/my-bookings', async (req, res, params) => {
+// OTP Store (in memory) - email -> { code, expires }
+const otpStore = new Map();
+
+// Client: generate OTP for my bookings
+route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
-    const url = new URL(req.url, `http://localhost`);
-    const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+    const body = await parseBody(req);
+    const email = (body.email || '').trim().toLowerCase();
     if (!email) return json(res, 400, { success: false, error: 'Email requis' });
 
+    // Generate 4 digit code
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const expires = Date.now() + 10 * 60 * 1000; // 10 minutes valid
+    otpStore.set(email, { code, expires });
+
+    console.log(`  🔐 Code de sécurité pour ${email} : ${code}`);
+
+    // TODO: Send via email if SMTP is configured. 
+    // For now, we return it in the response so the user can test without email setup.
+    json(res, 200, {
+        success: true,
+        message: 'Code envoyé',
+        _devCode: process.env.NODE_ENV === 'production' ? null : code // Expose for testing if not PROD
+    });
+});
+
+// Client: verify OTP and lookup my bookings
+route('POST', '/api/salon/:slug/my-bookings', async (req, res, params) => {
+    const salon = await db.findSalonBySlug(params.slug);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const body = await parseBody(req);
+    const email = (body.email || '').trim().toLowerCase();
+    const code = (body.code || '').trim();
+    if (!email || !code) return json(res, 400, { success: false, error: 'Email et code requis' });
+
+    // Verify OTP
+    const stored = otpStore.get(email);
+    if (!stored || stored.code !== code || stored.expires < Date.now()) {
+        return json(res, 401, { success: false, error: 'Code invalide ou expiré' });
+    }
+
+    // Clear OTP after successful use
+    otpStore.delete(email);
+
     const bookings = await db.findBookings({ salon: salon._id, clientEmail: email });
-    // Sort by date descending (most recent first)
     bookings.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
 
     json(res, 200, { success: true, data: bookings });
