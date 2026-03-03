@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
+const { sendBookingConfirmation } = require('./email');
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'barberpro_dev_secret';
@@ -733,6 +734,10 @@ route('POST', '/api/barber/salon/:salonId/bookings', async (req, res, params) =>
 
     console.log(`  📅 RDV manuel: ${body.clientName} - ${body.serviceName} @ ${body.date} ${body.time}`);
     json(res, 201, { success: true, data: booking });
+
+    // Send confirmation email (non-blocking)
+    const salon = await db.findSalonById(params.salonId);
+    if (salon && booking.clientEmail) sendBookingConfirmation(booking, salon);
 });
 
 // Clients
@@ -800,6 +805,9 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
 
     console.log(`  📅 Nouveau RDV: ${body.clientName} - ${body.serviceName} @ ${salon.name} (${body.date} ${body.time})`);
     json(res, 201, { success: true, data: booking });
+
+    // Send confirmation email (non-blocking)
+    if (booking.clientEmail) sendBookingConfirmation(booking, salon);
 });
 
 // ==========================
