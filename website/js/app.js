@@ -549,12 +549,12 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
    MY BOOKINGS LOGIC
    ============================================ */
 function openMyBookings() {
-  document.getElementById('myBookingsModal').style.display = 'flex';
+  document.getElementById('myBookingsModal').classList.add('active');
   resetMyBookings();
 }
 
 function closeMyBookings() {
-  document.getElementById('myBookingsModal').style.display = 'none';
+  document.getElementById('myBookingsModal').classList.remove('active');
 }
 
 function resetMyBookings() {
