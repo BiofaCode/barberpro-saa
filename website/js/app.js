@@ -544,3 +544,126 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 });
+
+/* ============================================
+   MY BOOKINGS LOGIC
+   ============================================ */
+function openMyBookings() {
+  document.getElementById('myBookingsModal').style.display = 'flex';
+  resetMyBookings();
+}
+
+function closeMyBookings() {
+  document.getElementById('myBookingsModal').style.display = 'none';
+}
+
+function resetMyBookings() {
+  document.getElementById('mbLookupView').style.display = 'block';
+  document.getElementById('mbListView').style.display = 'none';
+  document.getElementById('mbEmail').value = '';
+  document.getElementById('mbError').style.display = 'none';
+}
+
+async function lookupMyBookings() {
+  const email = document.getElementById('mbEmail').value.trim();
+  const errEl = document.getElementById('mbError');
+  if (!email || !email.includes('@')) {
+    errEl.textContent = 'Veuillez entrer une adresse email valide.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('mbLookupBtn');
+  btn.textContent = 'Recherche...';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch(`/api/salon/${window.SALON_SLUG}/my-bookings?email=${encodeURIComponent(email)}`);
+    const data = await res.json();
+    btn.textContent = 'Rechercher';
+    btn.disabled = false;
+
+    if (!data.success) {
+      errEl.textContent = data.error || 'Erreur lors de la recherche.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    renderMyBookings(email, data.data);
+  } catch (err) {
+    btn.textContent = 'Rechercher';
+    btn.disabled = false;
+    errEl.textContent = 'Erreur de connexion.';
+    errEl.style.display = 'block';
+  }
+}
+
+function renderMyBookings(email, bookings) {
+  document.getElementById('mbLookupView').style.display = 'none';
+  document.getElementById('mbListView').style.display = 'block';
+  document.getElementById('mbListSubtitle').textContent = `Rendez-vous pour : ${email}`;
+
+  const container = document.getElementById('mbListContainer');
+  if (bookings.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:var(--space-xl) 0; color:var(--text-muted)">Aucun rendez-vous trouvé pour cet email.</div>';
+    return;
+  }
+
+  const statusMap = {
+    'confirmed': { label: 'Confirmé', color: 'var(--color-success)' },
+    'pending': { label: 'En attente', color: 'var(--color-warning)' },
+    'completed': { label: 'Terminé', color: 'var(--color-info)' },
+    'cancelled': { label: 'Annulé', color: 'var(--color-error)' }
+  };
+
+  container.innerHTML = bookings.map(b => {
+    const st = statusMap[b.status] || { label: b.status, color: 'gray' };
+    const canCancel = (b.status === 'confirmed' || b.status === 'pending');
+
+    // Format date string from YYYY-MM-DD to DD/MM/YYYY
+    let dateStr = b.date;
+    try {
+      const [y, m, d] = b.date.split('-');
+      if (y && m && d) dateStr = `${d}/${m}/${y}`;
+    } catch (e) { }
+
+    return `
+      <div style="border:1px solid var(--color-bg-elevated); border-radius:var(--radius-md); padding:var(--space-md); background:var(--color-bg-card)">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:var(--space-sm)">
+          <div>
+            <div style="font-weight:600; font-size:1.1rem; margin-bottom:4px">${b.serviceIcon} ${b.serviceName}</div>
+            <div style="font-size:0.9rem; color:var(--color-text-secondary)">Le ${dateStr} à ${b.time}</div>
+          </div>
+          <span style="font-size:0.75rem; font-weight:600; padding:4px 8px; border-radius:12px; border:1px solid ${st.color}40; color:${st.color}; background:${st.color}15">
+            ${st.label}
+          </span>
+        </div>
+        ${b.employeeName ? `<div style="font-size:0.85rem; color:var(--color-text-secondary); margin-bottom:8px">👤 Avec ${b.employeeName}</div>` : ''}
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.05)">
+          <div style="font-weight:700">${b.price} CHF</div>
+          ${canCancel ? `<button class="btn btn-sm" style="background:transparent; border:1px solid var(--color-error); color:var(--color-error); padding:6px 12px; font-size:0.8rem" onclick="cancelBooking('${b._id}')">Annuler</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function cancelBooking(id) {
+  if (!confirm('Êtes-vous sûr de vouloir annuler ce rendez-vous ?')) return;
+
+  try {
+    const res = await fetch(`/api/salon/${window.SALON_SLUG}/bookings/${id}/cancel`, { method: 'PUT' });
+    const data = await res.json();
+
+    if (data.success) {
+      showToast('Rendez-vous annulé');
+      lookupMyBookings(); // Refresh the list
+    } else {
+      showToast(data.error || 'Erreur lors de l\'annulation', 'error');
+    }
+  } catch (e) {
+    showToast('Erreur de connexion', 'error');
+  }
+}

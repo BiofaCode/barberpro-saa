@@ -810,6 +810,43 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     if (booking.clientEmail) sendBookingConfirmation(booking, salon);
 });
 
+// Client: lookup my bookings by email
+route('GET', '/api/salon/:slug/my-bookings', async (req, res, params) => {
+    const salon = await db.findSalonBySlug(params.slug);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const url = new URL(req.url, `http://localhost`);
+    const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+    if (!email) return json(res, 400, { success: false, error: 'Email requis' });
+
+    const bookings = await db.findBookings({ salon: salon._id, clientEmail: email });
+    // Sort by date descending (most recent first)
+    bookings.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+
+    json(res, 200, { success: true, data: bookings });
+});
+
+// Client: cancel a booking
+route('PUT', '/api/salon/:slug/bookings/:bookingId/cancel', async (req, res, params) => {
+    const salon = await db.findSalonBySlug(params.slug);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const booking = await db.findBookingById(params.bookingId);
+    if (!booking || booking.salon.toString() !== salon._id.toString()) {
+        return json(res, 404, { success: false, error: 'RDV non trouvé' });
+    }
+    if (booking.status === 'cancelled') {
+        return json(res, 400, { success: false, error: 'Ce RDV est déjà annulé' });
+    }
+    if (booking.status === 'completed') {
+        return json(res, 400, { success: false, error: 'Ce RDV est déjà terminé' });
+    }
+
+    const updated = await db.updateBooking(params.bookingId, { status: 'cancelled' });
+    console.log(`  ❌ RDV annulé par client: ${booking.clientName} - ${booking.serviceName} @ ${booking.date}`);
+    json(res, 200, { success: true, data: updated });
+});
+
 // ==========================
 //  HTTP SERVER
 // ==========================

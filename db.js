@@ -274,6 +274,9 @@ const db = {
     async findBookings(query = {}) {
         return await getDB().collection('bookings').find(query).sort({ date: -1, time: -1 }).toArray();
     },
+    async findBookingById(id) {
+        return await getDB().collection('bookings').findOne({ _id: id });
+    },
     async createBooking(data) {
         const booking = { _id: genId(), ...data, createdAt: new Date().toISOString() };
         await getDB().collection('bookings').insertOne(booking);

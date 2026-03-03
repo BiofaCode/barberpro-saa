@@ -27,6 +27,7 @@
       <a href="#gallery">Galerie</a>
       <a href="#testimonials">Avis</a>
       <a href="#contact">Contact</a>
+      <a href="javascript:void(0)" onclick="openMyBookings()">Mes RDV</a>
       <a href="javascript:void(0)" class="btn btn-primary nav-cta" onclick="openBooking()">Prendre RDV</a>
     </div>
     <div class="nav-hamburger" id="navHamburger">
@@ -444,6 +445,45 @@
         <button class="btn btn-ghost" id="bmPrev" style="display:none" onclick="bmPrevStep()">← Retour</button>
         <div></div>
         <button class="btn btn-primary" id="bmNext" onclick="bmNextStep()">Suivant →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       MY BOOKINGS MODAL (Popup)
+       ============================================ -->
+  <div class="booking-modal-overlay" id="myBookingsModal">
+    <div class="booking-modal" style="max-height:80vh; overflow-y:auto;">
+      <div class="booking-modal-header">
+        <h3 style="margin:0; font-family:var(--font-heading); font-size:1.5rem">Mes Rendez-vous</h3>
+        <button class="booking-modal-close" onclick="closeMyBookings()">✕</button>
+      </div>
+
+      <div class="booking-modal-body" style="padding:var(--space-xl)">
+        <!-- Step 1: Email Lookup -->
+        <div id="mbLookupView">
+          <p style="color:var(--color-text-secondary); margin-bottom:var(--space-md)">
+            Entrez l'adresse email utilisée lors de votre réservation pour retrouver vos rendez-vous.
+          </p>
+          <div class="bm-form-group">
+            <input type="email" id="mbEmail" placeholder="votre@email.com" class="bm-input"
+              onkeydown="if(event.key==='Enter') lookupMyBookings()">
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="lookupMyBookings()"
+            id="mbLookupBtn">Rechercher</button>
+          <div id="mbError"
+            style="color:var(--color-error); margin-top:var(--space-sm); font-size:0.9rem; display:none"></div>
+        </div>
+
+        <!-- Step 2: Bookings List -->
+        <div id="mbListView" style="display:none">
+          <p style="color:var(--color-text-secondary); margin-bottom:var(--space-md)" id="mbListSubtitle"></p>
+          <div id="mbListContainer" style="display:flex; flex-direction:column; gap:var(--space-md)">
+            <!-- Bookings will be loaded here -->
+          </div>
+          <button class="btn btn-ghost" style="margin-top:var(--space-xl); width:100%" onclick="resetMyBookings()">←
+            Autre recherche</button>
+        </div>
       </div>
     </div>
   </div>
