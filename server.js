@@ -10,6 +10,21 @@ const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
 const { sendBookingConfirmation } = require('./email');
+const cloudinary = require('cloudinary').v2;
+
+// Configure Cloudinary
+if (process.env.CLOUDINARY_URL) {
+    console.log('☁️ Cloudinary configuré via CLOUDINARY_URL');
+} else if (process.env.CLOUDINARY_CLOUD_NAME) {
+    cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET
+    });
+    console.log(`☁️ Cloudinary configuré pour le cloud: ${process.env.CLOUDINARY_CLOUD_NAME}`);
+} else {
+    console.log('⚠️ Cloudinary non configuré (les images seront stockées localement et perdues au redémarrage)');
+}
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'barberpro_dev_secret';
@@ -49,7 +64,7 @@ function parseMultipart(req) {
     return new Promise((resolve, reject) => {
         const contentType = req.headers['content-type'] || '';
         const boundaryMatch = contentType.match(/boundary=(.+)/);
-        if (!boundaryMatch) return resolve({ fields: {}, filePath: null });
+        if (!boundaryMatch) return resolve({ fields: {}, fileBuffer: null, fileExt: null });
 
         const boundary = boundaryMatch[1];
         const chunks = [];
@@ -59,7 +74,8 @@ function parseMultipart(req) {
                 const buffer = Buffer.concat(chunks);
                 const parts = buffer.toString('binary').split('--' + boundary).slice(1, -1);
                 const fields = {};
-                let filePath = null;
+                let fileBuffer = null;
+                let fileExt = null;
 
                 for (const part of parts) {
                     const headerEnd = part.indexOf('\r\n\r\n');
@@ -71,22 +87,45 @@ function parseMultipart(req) {
                     const filenameMatch = headers.match(/filename="([^"]+)"/);
 
                     if (filenameMatch && nameMatch) {
-                        const ext = path.extname(filenameMatch[1]) || '.jpg';
-                        const fileName = crypto.randomBytes(8).toString('hex') + ext;
-                        const dest = path.join(UPLOAD_DIR, fileName);
-                        fs.writeFileSync(dest, Buffer.from(body, 'binary'));
-                        filePath = path.join('uploads', fileName);
+                        fileExt = (path.extname(filenameMatch[1]) || '.jpg').toLowerCase();
+                        fileBuffer = Buffer.from(body, 'binary');
                     } else if (nameMatch) {
                         fields[nameMatch[1]] = body.trim();
                     }
                 }
-                resolve({ fields, filePath });
+                resolve({ fields, fileBuffer, fileExt });
             } catch (e) {
                 console.error('Multipart parse error:', e.message);
-                resolve({ fields: {}, filePath: null });
+                resolve({ fields: {}, fileBuffer: null, fileExt: null });
             }
         });
-        req.on('error', () => resolve({ fields: {}, filePath: null }));
+        req.on('error', () => resolve({ fields: {}, fileBuffer: null, fileExt: null }));
+    });
+}
+
+// Upload buffer to Cloudinary (or fallback to local if not configured)
+async function uploadImageBuffer(buffer, ext, folder = 'barbershop') {
+    return new Promise((resolve, reject) => {
+        if (!process.env.CLOUDINARY_URL && !process.env.CLOUDINARY_CLOUD_NAME) {
+            // Local fallback
+            const fileName = `${folder}_${crypto.randomBytes(8).toString('hex')}${ext}`;
+            const dest = path.join(UPLOAD_DIR, fileName);
+            fs.writeFileSync(dest, buffer);
+            return resolve(`/uploads/${fileName}`);
+        }
+
+        // Cloudinary upload
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { folder: `salonpro/${folder}` },
+            (error, result) => {
+                if (error) {
+                    console.error('Cloudinary upload error:', error);
+                    return reject(error);
+                }
+                resolve(result.secure_url);
+            }
+        );
+        uploadStream.end(buffer);
     });
 }
 
@@ -387,41 +426,23 @@ route('POST', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
         return json(res, 400, { success: false, error: 'Content-Type doit être multipart/form-data' });
     }
 
-    const boundary = contentType.split('boundary=')[1];
-    const chunks = [];
-    req.on('data', chunk => chunks.push(chunk));
-    req.on('end', async () => {
-        const buffer = Buffer.concat(chunks);
-        const parts = buffer.toString('binary').split(`--${boundary}`);
+    const { fileBuffer, fileExt } = await parseMultipart(req);
+    if (!fileBuffer) return json(res, 400, { success: false, error: 'Image requise' });
 
-        for (const part of parts) {
-            if (part.includes('filename=')) {
-                const filenameMatch = part.match(/filename="([^"]+)"/);
-                if (!filenameMatch) continue;
+    try {
+        const logoUrl = await uploadImageBuffer(fileBuffer, fileExt, 'logos');
 
-                const ext = path.extname(filenameMatch[1]).toLowerCase();
-                if (!['.jpg', '.jpeg', '.png', '.webp', '.svg'].includes(ext)) continue;
-
-                const headerEnd = part.indexOf('\r\n\r\n') + 4;
-                let fileData = part.substring(headerEnd);
-                fileData = fileData.substring(0, fileData.lastIndexOf('\r\n'));
-
-                const filename = `logo_${params.salonId}_${Date.now()}${ext}`;
-                const filePath = path.join(UPLOAD_DIR, filename);
-                fs.writeFileSync(filePath, fileData, 'binary');
-
-                // Delete old logo if exists
-                if (salon.logo && salon.logo.startsWith('/uploads/')) {
-                    const oldPath = path.join(__dirname, salon.logo);
-                    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-                }
-
-                await db.updateSalon(params.salonId, { logo: `/uploads/${filename}` });
-                return json(res, 200, { success: true, data: { logo: `/uploads/${filename}` } });
-            }
+        // Delete old local logo if exists (we don't delete from Cloudinary to keep it simple, or we could)
+        if (salon.logo && salon.logo.startsWith('/uploads/')) {
+            const oldPath = path.join(__dirname, salon.logo);
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
         }
-        json(res, 400, { success: false, error: 'Aucun fichier trouvé' });
-    });
+
+        await db.updateSalon(params.salonId, { logo: logoUrl });
+        return json(res, 200, { success: true, data: { logo: logoUrl } });
+    } catch (err) {
+        return json(res, 500, { success: false, error: 'Erreur pendant upload' });
+    }
 });
 
 route('DELETE', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
@@ -538,19 +559,25 @@ route('POST', '/api/barber/salon/:salonId/gallery', async (req, res, params) => 
     if (!salon) return json(res, 404, { success: false });
 
     // Parse multipart for image upload
-    const { fields, filePath } = await parseMultipart(req);
-    if (!filePath) return json(res, 400, { success: false, error: 'Image requise' });
+    const { fields, fileBuffer, fileExt } = await parseMultipart(req);
+    if (!fileBuffer) return json(res, 400, { success: false, error: 'Image requise' });
 
-    const gallery = salon.gallery || [];
-    const photo = {
-        _id: crypto.randomBytes(12).toString('hex'),
-        url: '/' + filePath.replace(/\\/g, '/'),
-        title: fields.title || '',
-        createdAt: new Date().toISOString(),
-    };
-    gallery.push(photo);
-    await db.updateSalon(params.salonId, { gallery });
-    json(res, 201, { success: true, data: photo });
+    try {
+        const photoUrl = await uploadImageBuffer(fileBuffer, fileExt, 'gallery');
+
+        const gallery = salon.gallery || [];
+        const photo = {
+            _id: crypto.randomBytes(12).toString('hex'),
+            url: photoUrl,
+            title: fields.title || '',
+            createdAt: new Date().toISOString(),
+        };
+        gallery.push(photo);
+        await db.updateSalon(params.salonId, { gallery });
+        json(res, 201, { success: true, data: photo });
+    } catch (err) {
+        return json(res, 500, { success: false, error: 'Erreur upload' });
+    }
 });
 
 route('DELETE', '/api/barber/salon/:salonId/gallery/:photoId', async (req, res, params) => {
@@ -562,22 +589,13 @@ route('DELETE', '/api/barber/salon/:salonId/gallery/:photoId', async (req, res, 
     json(res, 200, { success: true, message: 'Photo supprimée' });
 });
 
-// ---- Logo ----
-route('POST', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
-    const salon = await db.findSalonById(params.salonId);
-    if (!salon) return json(res, 404, { success: false });
-
-    const { filePath } = await parseMultipart(req);
-    if (!filePath) return json(res, 400, { success: false, error: 'Image requise' });
-
-    const logoUrl = '/' + filePath.replace(/\\/g, '/');
-    await db.updateSalon(params.salonId, { logo: logoUrl });
-    json(res, 200, { success: true, data: { logo: logoUrl } });
+// Retro-compatibility (old logo upload fallback just in case)
+route('POST', '/api/barber/salon/:salonId/logo_old', async (req, res, params) => {
+    json(res, 410, { success: false, error: 'Gone' });
 });
 
-route('DELETE', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
-    await db.updateSalon(params.salonId, { logo: '' });
-    json(res, 200, { success: true, message: 'Logo supprimé' });
+route('DELETE', '/api/barber/salon/:salonId/logo_old', async (req, res, params) => {
+    json(res, 410, { success: false, error: 'Gone' });
 });
 
 // ---- Testimonials ----
