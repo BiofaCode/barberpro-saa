@@ -1205,6 +1205,8 @@ h3 {
   -webkit-overflow-scrolling: touch;
   padding-bottom: var(--space-md);
   scrollbar-width: none;
+  scroll-behavior: smooth;
+  /* added smooth scrolling for JS */
 }
 
 .testimonials-grid::-webkit-scrollbar {
@@ -1218,8 +1220,9 @@ h3 {
   text-align: left;
   border: 1px solid rgba(201, 169, 110, 0.08);
   transition: all var(--transition-base);
-  min-width: 320px;
-  max-width: 380px;
+
+  /* Force exactly 3 cards visible with spaces between them */
+  min-width: calc(33.333% - (var(--space-xl) * 2 / 3));
   flex-shrink: 0;
   scroll-snap-align: start;
 }

@@ -100,10 +100,38 @@ function applySalonBranding(salon) {
           </div>
         </div>
       `).join('');
+      initTestimonialCarousel(testimonialsGrid);
     }
   }
 
   updateFooter(salon);
+}
+
+function initTestimonialCarousel(grid) {
+  let isHovered = false;
+
+  grid.addEventListener('mouseenter', () => isHovered = true);
+  grid.addEventListener('mouseleave', () => isHovered = false);
+
+  // Recalculate dimensions dynamically inside the interval
+  setInterval(() => {
+    if (isHovered) return;
+
+    const scrollMax = grid.scrollWidth - grid.clientWidth;
+    // Scroll by roughly one card width (assuming 3 cards visible)
+    const scrollStep = grid.clientWidth / 3;
+
+    if (scrollMax <= 0) return; // Not enough items to scroll
+
+    let newScroll = grid.scrollLeft + scrollStep;
+
+    // If we've hit the end (with a tiny threshold for rounding errors), reset to start
+    if (newScroll >= scrollMax - 5) {
+      setTimeout(() => { grid.scrollTo({ left: 0, behavior: 'smooth' }); }, 2000);
+    } else {
+      grid.scrollTo({ left: newScroll, behavior: 'smooth' });
+    }
+  }, 4000); // 4 seconds delay
 }
 
 function updateFooter(salon) {
