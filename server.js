@@ -115,17 +115,22 @@ async function uploadImageBuffer(buffer, ext, folder = 'barbershop') {
         }
 
         // Cloudinary upload
-        const uploadStream = cloudinary.uploader.upload_stream(
-            { folder: `salonpro/${folder}` },
-            (error, result) => {
-                if (error) {
-                    console.error('Cloudinary upload error:', error);
-                    return reject(error);
+        try {
+            const uploadStream = cloudinary.uploader.upload_stream(
+                { folder: `salonpro/${folder}` },
+                (error, result) => {
+                    if (error) {
+                        console.error('Cloudinary upload error:', error);
+                        return reject(error);
+                    }
+                    resolve(result.secure_url);
                 }
-                resolve(result.secure_url);
-            }
-        );
-        uploadStream.end(buffer);
+            );
+            uploadStream.end(buffer);
+        } catch (err) {
+            console.error('Cloudinary stream error:', err);
+            reject(err);
+        }
     });
 }
 
