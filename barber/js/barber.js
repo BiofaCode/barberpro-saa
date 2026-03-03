@@ -702,7 +702,17 @@ async function loadSettings() {
                     </div>
                     <div class="form-group"><label class="form-label">Titre principal du site (hero)</label><input class="form-input form-input-full" id="set-heroTitle" value="${salon.branding?.heroTitle || ''}" placeholder="L'Art de la Coiffure Masculine"></div>
                     <div class="form-group"><label class="form-label">Sous-titre du site</label><input class="form-input form-input-full" id="set-heroSubtitle" value="${salon.branding?.heroSubtitle || ''}" placeholder="Excellence, style et précision"></div>
-                    <button class="btn btn-primary" onclick="saveBranding()" style="margin-top:8px">🎨 Enregistrer le branding</button>
+                    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
+                        <div style="font-weight:600;margin-bottom:12px;font-size:.9rem">📱 Réseaux sociaux</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">📸 Instagram</label><input class="form-input form-input-full" id="set-instagram" value="${salon.branding?.instagram || ''}" placeholder="https://instagram.com/..."></div>
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">👥 Facebook</label><input class="form-input form-input-full" id="set-facebook" value="${salon.branding?.facebook || ''}" placeholder="https://facebook.com/..."></div>
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">🎵 TikTok</label><input class="form-input form-input-full" id="set-tiktok" value="${salon.branding?.tiktok || ''}" placeholder="https://tiktok.com/@..."></div>
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">🎬 YouTube</label><input class="form-input form-input-full" id="set-youtube" value="${salon.branding?.youtube || ''}" placeholder="https://youtube.com/..."></div>
+                        </div>
+                        <div style="font-size:.75rem;color:var(--text-muted);margin-top:8px">Laissez vide pour ne pas afficher le réseau sur votre site.</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveBranding()" style="margin-top:12px">🎨 Enregistrer le branding</button>
                 </div>
             </div>
 
@@ -858,6 +868,10 @@ async function saveBranding() {
         accentColor: document.getElementById('set-color2').value,
         heroTitle: document.getElementById('set-heroTitle').value.trim(),
         heroSubtitle: document.getElementById('set-heroSubtitle').value.trim(),
+        instagram: document.getElementById('set-instagram').value.trim(),
+        facebook: document.getElementById('set-facebook').value.trim(),
+        tiktok: document.getElementById('set-tiktok').value.trim(),
+        youtube: document.getElementById('set-youtube').value.trim(),
     };
     try {
         const res = await apiFetch(`${API}/api/barber/salon/${salonId}/branding`, {

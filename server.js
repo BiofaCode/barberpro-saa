@@ -520,7 +520,11 @@ route('PUT', '/api/barber/salon/:salonId/branding', async (req, res, params) => 
         primaryColor: body.primaryColor || salon.branding?.primaryColor || '#6366F1',
         accentColor: body.accentColor || salon.branding?.accentColor || '#818CF8',
         heroTitle: body.heroTitle || salon.branding?.heroTitle || `Bienvenue chez ${salon.name}`,
-        heroSubtitle: body.heroSubtitle || salon.branding?.heroSubtitle || 'Votre salon de coiffure premium'
+        heroSubtitle: body.heroSubtitle || salon.branding?.heroSubtitle || 'Votre salon de coiffure premium',
+        instagram: body.instagram !== undefined ? body.instagram : (salon.branding?.instagram || ''),
+        facebook: body.facebook !== undefined ? body.facebook : (salon.branding?.facebook || ''),
+        tiktok: body.tiktok !== undefined ? body.tiktok : (salon.branding?.tiktok || ''),
+        youtube: body.youtube !== undefined ? body.youtube : (salon.branding?.youtube || ''),
     };
 
     const updated = await db.updateSalon(params.salonId, { branding });
