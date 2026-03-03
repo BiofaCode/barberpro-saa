@@ -853,11 +853,11 @@ route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
     console.log(`  🔐 Code de sécurité pour ${email} : ${code}`);
 
     // TODO: Send via email if SMTP is configured. 
-    // For now, we return it in the response so the user can test without email setup.
+    // For now, we return it in the response so the user can test.
     json(res, 200, {
         success: true,
         message: 'Code envoyé',
-        _devCode: process.env.NODE_ENV === 'production' ? null : code // Expose for testing if not PROD
+        _devCode: code // Force return for testing purposes before SMTP is fully set up
     });
 });
 
