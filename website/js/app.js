@@ -556,12 +556,15 @@ function showBookingSuccess() {
 }
 
 /* ---- Toast ---- */
-function showToast(msg) {
+function showToast(msg, type = 'info') {
   const existing = document.querySelector('.toast'); if (existing) existing.remove();
   const t = document.createElement('div'); t.classList.add('toast');
-  t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--color-bg-elevated);color:var(--color-text-primary);padding:0.8rem 1.5rem;border-radius:var(--radius-md);border:1px solid var(--color-warning);box-shadow:var(--shadow-md);z-index:6000;animation:fadeInUp 0.3s ease-out;font-size:0.88rem;white-space:nowrap;';
-  t.innerHTML = `⚠️ ${msg}`; document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s ease'; setTimeout(() => t.remove(), 300); }, 3000);
+  const borderColor = type === 'error' ? 'var(--color-error)' : 'var(--color-success)';
+  const icon = type === 'error' ? '❌' : '✅';
+  const displayMsg = msg.startsWith('🔔') ? msg : `${icon} ${msg}`;
+  t.style.cssText = `position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--color-bg-elevated);color:var(--color-text-primary);padding:0.8rem 1.5rem;border-radius:var(--radius-md);border:1px solid ${borderColor};box-shadow:var(--shadow-lg);z-index:9999;animation:fadeInUp 0.3s ease-out;font-size:0.95rem;white-space:nowrap;font-weight:500;`;
+  t.innerHTML = displayMsg; document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s ease'; setTimeout(() => t.remove(), 300); }, 4000);
 }
 
 /* ---- Smooth Scroll ---- */
@@ -748,8 +751,8 @@ async function cancelBooking(id) {
     const data = await res.json();
 
     if (data.success) {
-      showToast('Rendez-vous annulé');
-      lookupMyBookings(); // Refresh the list
+      showToast('Rendez-vous annulé avec succès', 'success');
+      verifyMyBookingsOtp(); // Refresh the list using current email/code
     } else {
       showToast(data.error || 'Erreur lors de l\'annulation', 'error');
     }
