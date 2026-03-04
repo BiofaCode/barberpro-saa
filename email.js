@@ -3,41 +3,53 @@
    Uses Nodemailer with configurable SMTP
    ============================================ */
 
+// require('dotenv').config(); // Assuming dotenv is loaded in server.js
 const nodemailer = require('nodemailer');
+const brevoTransport = require('nodemailer-brevo-transport');
 
 // Create transporter from environment variables
 let transporter = null;
 
 function getTransporter() {
-    if (transporter) return transporter;
+  if (transporter) return transporter;
 
-    const host = process.env.SMTP_HOST;
-    const port = parseInt(process.env.SMTP_PORT || '587');
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
-
-    if (!host || !user || !pass) {
-        console.log('⚠️  Email non configuré (SMTP_HOST, SMTP_USER, SMTP_PASS manquants)');
-        return null;
-    }
-
-    transporter = nodemailer.createTransport({
-        host,
-        port,
-        secure: port === 465,
-        auth: { user, pass },
-    });
-
-    console.log(`📧 Email configuré: ${user} via ${host}:${port}`);
+  // Prefer Brevo API Key if available (better deliverability and simpler config)
+  if (process.env.BREVO_API_KEY) {
+    transporter = nodemailer.createTransport(
+      new brevoTransport({ apiKey: process.env.BREVO_API_KEY })
+    );
+    console.log(`📧 Email configuré via API Brevo V3`);
     return transporter;
+  }
+
+  // Fallback to standard SMTP
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || '587');
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) {
+    console.log('⚠️  Email non configuré (BREVO_API_KEY ou SMTP_HOST/USER/PASS manquants)');
+    return null;
+  }
+
+  transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+
+  console.log(`📧 Email configuré: ${user} via ${host}:${port}`);
+  return transporter;
 }
 
 // Beautiful HTML email template
 function buildConfirmationEmail(booking, salon) {
-    const primaryColor = salon.branding?.primaryColor || '#6366F1';
-    const salonName = salon.name || 'SalonPro';
+  const primaryColor = salon.branding?.primaryColor || '#6366F1';
+  const salonName = salon.name || 'SalonPro';
 
-    return `
+  return `
 <!DOCTYPE html>
 <html>
 <head>
@@ -116,40 +128,70 @@ function buildConfirmationEmail(booking, salon) {
 
 // Format date: 2026-03-15 → "Samedi 15 mars 2026"
 function formatDateFR(dateStr) {
-    try {
-        const d = new Date(dateStr + 'T12:00:00');
-        const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
-        const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-        return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
-    } catch { return dateStr; }
+  try {
+    const d = new Date(dateStr + 'T12:00:00');
+    const days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const months = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  } catch { return dateStr; }
 }
 
 // Send confirmation email (non-blocking)
 async function sendBookingConfirmation(booking, salon) {
-    const t = getTransporter();
-    if (!t) return; // Email not configured, skip silently
+  const t = getTransporter();
+  if (!t) return; // Email not configured, skip silently
 
-    const clientEmail = booking.clientEmail;
-    if (!clientEmail || !clientEmail.includes('@')) {
-        console.log('  ⚠️ Pas d\'email client, confirmation non envoyée');
-        return;
-    }
+  const clientEmail = booking.clientEmail;
+  if (!clientEmail || !clientEmail.includes('@')) {
+    console.log('  ⚠️ Pas d\'email client, confirmation non envoyée');
+    return;
+  }
 
-    const salonName = salon.name || 'SalonPro';
-    const fromName = process.env.SMTP_FROM_NAME || salonName;
-    const fromEmail = process.env.SMTP_USER;
+  const salonName = salon.name || 'SalonPro';
+  const fromName = process.env.SMTP_FROM_NAME || salonName;
+  const fromEmail = process.env.SMTP_USER;
 
-    try {
-        await t.sendMail({
-            from: `"${fromName}" <${fromEmail}>`,
-            to: clientEmail,
-            subject: `✅ RDV confirmé — ${booking.serviceName} le ${formatDateFR(booking.date)} à ${booking.time}`,
-            html: buildConfirmationEmail(booking, salon),
-        });
-        console.log(`  📧 Email de confirmation envoyé à ${clientEmail}`);
-    } catch (err) {
-        console.error(`  ❌ Erreur email: ${err.message}`);
-    }
+  try {
+    await t.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: clientEmail,
+      subject: `✅ RDV confirmé — ${booking.serviceName} le ${formatDateFR(booking.date)} à ${booking.time}`,
+      html: buildConfirmationEmail(booking, salon),
+    });
+    console.log(`  📧 Email de confirmation envoyé à ${clientEmail}`);
+  } catch (err) {
+    console.error(`  ❌ Erreur email: ${err.message}`);
+  }
 }
 
-module.exports = { sendBookingConfirmation };
+// Send OTP Email for "Mes RDV" access
+async function sendOTPEmail(email, code, salonName = 'SalonPro') {
+  const t = getTransporter();
+  if (!t) return;
+
+  const fromName = process.env.SMTP_FROM_NAME || salonName;
+  const fromEmail = process.env.SMTP_USER;
+
+  try {
+    await t.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: email,
+      subject: `🔐 Votre code d'accès — ${salonName}`,
+      html: `
+            <div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eaeaea;border-radius:10px;">
+                <h2 style="color:#333;text-align:center;">Code d'Accès</h2>
+                <p style="color:#555;font-size:16px;">Voici votre code sécurisé pour accéder à vos rendez-vous sur <strong>${salonName}</strong> :</p>
+                <div style="background:#f4f4f5;padding:15px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:4px;border-radius:8px;color:#111;margin:20px 0;">
+                    ${code}
+                </div>
+                <p style="color:#777;font-size:12px;text-align:center;">Ce code expirera dans 10 minutes.<br>Si vous n'avez pas demandé ce code, vous pouvez ignorer cet email.</p>
+            </div>
+            `,
+    });
+    console.log(`  📧 OTP envoyé à ${email}`);
+  } catch (err) {
+    console.error(`  ❌ Erreur email (OTP): ${err.message}`);
+  }
+}
+
+module.exports = { sendBookingConfirmation, sendOTPEmail };

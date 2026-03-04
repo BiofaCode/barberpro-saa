@@ -26,6 +26,7 @@
     "mongodb": "^7.1.0",
     "mongoose": "^9.2.2",
     "multer": "^2.0.2",
-    "nodemailer": "^8.0.1"
+    "nodemailer": "^8.0.1",
+    "nodemailer-brevo-transport": "^2.2.1"
   }
 }
