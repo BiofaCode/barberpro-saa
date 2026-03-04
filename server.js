@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 
 // Configure Cloudinary
@@ -850,14 +850,18 @@ route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
     const expires = Date.now() + 10 * 60 * 1000; // 10 minutes valid
     otpStore.set(email, { code, expires });
 
-    console.log(`  🔐 Code de sécurité pour ${email} : ${code}`);
+    // Send via email if SMTP is configured. 
+    const emailResult = await sendOTPEmail(email, code, salon.name).catch(e => ({ success: false, error: e.message }));
 
-    // TODO: Send via email if SMTP is configured. 
-    // For now, we return it in the response so the user can test.
+    if (emailResult && !emailResult.success) {
+        return json(res, 500, { success: false, error: "Erreur lors de l'envoi de l'email : " + emailResult.error });
+    }
+
+    // For now, we return it in the response so the user can test (in dev mode)
     json(res, 200, {
         success: true,
         message: 'Code envoyé',
-        _devCode: code // Force return for testing purposes before SMTP is fully set up
+        _devCode: process.env.NODE_ENV === 'production' ? null : code
     });
 });
 
@@ -987,6 +991,19 @@ const server = http.createServer(async (req, res) => {
         } else {
             filePath = path.join(__dirname, 'website', 'index.html');
         }
+    }
+    // ---- Routes pour le SaaS Landing Page ----
+    else if (pathname === '/' && req.method === 'GET') {
+        filePath = path.join(__dirname, 'saas/index.html');
+    }
+    else if (pathname.startsWith('/saas/')) {
+        const cleanUrl = pathname.split('?')[0];
+        filePath = path.join(__dirname, cleanUrl);
+    }
+    // Redirect old testing root to the saas page just in case
+    else if (pathname === '/website/index.html') {
+        res.writeHead(302, { Location: '/' });
+        return res.end();
     }
     else {
         filePath = path.join(__dirname, 'website', pathname === '/' ? 'index.html' : pathname);

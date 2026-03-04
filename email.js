@@ -1,48 +1,14 @@
 /* ============================================
    EMAIL - Booking Confirmation Module
-   Uses Nodemailer with configurable SMTP
+   Uses Resend API for transactional emails
    ============================================ */
 
-// require('dotenv').config(); // Assuming dotenv is loaded in server.js
-const nodemailer = require('nodemailer');
-const brevoTransport = require('nodemailer-brevo-transport');
+const { Resend } = require('resend');
 
-// Create transporter from environment variables
-let transporter = null;
+// Initialize Resend with the provided API key (from env)
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-function getTransporter() {
-  if (transporter) return transporter;
-
-  // Prefer Brevo API Key if available (better deliverability and simpler config)
-  if (process.env.BREVO_API_KEY) {
-    transporter = nodemailer.createTransport(
-      new brevoTransport({ apiKey: process.env.BREVO_API_KEY })
-    );
-    console.log(`📧 Email configuré via API Brevo V3`);
-    return transporter;
-  }
-
-  // Fallback to standard SMTP
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || '587');
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!host || !user || !pass) {
-    console.log('⚠️  Email non configuré (BREVO_API_KEY ou SMTP_HOST/USER/PASS manquants)');
-    return null;
-  }
-
-  transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-
-  console.log(`📧 Email configuré: ${user} via ${host}:${port}`);
-  return transporter;
-}
+console.log(`📧 Email configuré via API Resend`);
 
 // Beautiful HTML email template
 function buildConfirmationEmail(booking, salon) {
@@ -138,9 +104,6 @@ function formatDateFR(dateStr) {
 
 // Send confirmation email (non-blocking)
 async function sendBookingConfirmation(booking, salon) {
-  const t = getTransporter();
-  if (!t) return; // Email not configured, skip silently
-
   const clientEmail = booking.clientEmail;
   if (!clientEmail || !clientEmail.includes('@')) {
     console.log('  ⚠️ Pas d\'email client, confirmation non envoyée');
@@ -149,33 +112,38 @@ async function sendBookingConfirmation(booking, salon) {
 
   const salonName = salon.name || 'SalonPro';
   const fromName = process.env.SMTP_FROM_NAME || salonName;
-  const fromEmail = process.env.SMTP_USER;
+  // Resend requires verified domains or the default testing domain for "from"
+  // For testing without a verified domain, we can use onboarding@resend.dev
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
   try {
-    await t.sendMail({
-      from: `"${fromName}" <${fromEmail}>`,
-      to: clientEmail,
+    const { data, error } = await resend.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: [clientEmail], // Resend expects an array for multiple recipients, or string for one. Array is safer.
       subject: `✅ RDV confirmé — ${booking.serviceName} le ${formatDateFR(booking.date)} à ${booking.time}`,
       html: buildConfirmationEmail(booking, salon),
     });
-    console.log(`  📧 Email de confirmation envoyé à ${clientEmail}`);
+
+    if (error) {
+      console.error(`  ❌ Erreur Resend: ${error.message}`);
+      return;
+    }
+
+    console.log(`  📧 Email de confirmation envoyé à ${clientEmail} (ID: ${data.id})`);
   } catch (err) {
-    console.error(`  ❌ Erreur email: ${err.message}`);
+    console.error(`  ❌ Erreur critique email: ${err.message}`);
   }
 }
 
 // Send OTP Email for "Mes RDV" access
 async function sendOTPEmail(email, code, salonName = 'SalonPro') {
-  const t = getTransporter();
-  if (!t) return;
-
   const fromName = process.env.SMTP_FROM_NAME || salonName;
-  const fromEmail = process.env.SMTP_USER;
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
   try {
-    await t.sendMail({
-      from: `"${fromName}" <${fromEmail}>`,
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: [email],
       subject: `🔐 Votre code d'accès — ${salonName}`,
       html: `
             <div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eaeaea;border-radius:10px;">
@@ -188,9 +156,17 @@ async function sendOTPEmail(email, code, salonName = 'SalonPro') {
             </div>
             `,
     });
-    console.log(`  📧 OTP envoyé à ${email}`);
+
+    if (error) {
+      console.error(`  ❌ Erreur Resend (OTP): ${error.message}`);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`  📧 OTP envoyé à ${email} (ID: ${data.id})`);
+    return { success: true, data };
   } catch (err) {
-    console.error(`  ❌ Erreur email (OTP): ${err.message}`);
+    console.error(`  ❌ Erreur critique email (OTP): ${err.message}`);
+    return { success: false, error: err.message };
   }
 }
 
