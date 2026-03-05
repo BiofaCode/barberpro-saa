@@ -374,6 +374,38 @@ async function loadEmployees() {
         const data = await res.json();
         const emps = data.data || [];
 
+        const plan = currentSalon?.subscription?.plan || 'pro';
+        const isOwner = currentUser?.role === 'owner';
+
+        let limit = 999;
+        if (plan === 'starter') limit = 2;
+        if (plan === 'pro') limit = 5;
+
+        const addBtn = document.querySelector('#page-employees .page-header button');
+        const headerTitle = document.querySelector('#page-employees .page-header h2');
+
+        if (headerTitle) {
+            headerTitle.innerHTML = `💇 Mon Équipe <span class="badge badge-${plan === 'premium' ? 'confirmed' : plan === 'starter' ? 'pending' : 'active'}" style="margin-left: 10px; font-size: 0.8rem; vertical-align: middle;">Pack ${plan.toUpperCase()}</span>`;
+        }
+
+        if (isOwner) {
+            if (emps.length >= limit) {
+                if (addBtn) {
+                    addBtn.style.display = 'none';
+                    // Optional: show a small info text next to title
+                    if (!document.getElementById('upgradeMsg')) {
+                        headerTitle.insertAdjacentHTML('afterend', `<div id="upgradeMsg" style="color:var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Limite de ${limit} employés atteinte. Mettez à niveau votre pack pour en ajouter plus.</div>`);
+                    }
+                }
+            } else {
+                if (addBtn) addBtn.style.display = 'inline-flex';
+                const msg = document.getElementById('upgradeMsg');
+                if (msg) msg.remove();
+            }
+        } else if (addBtn) {
+            addBtn.style.display = 'none';
+        }
+
         const container = document.getElementById('employeesList');
         if (emps.length === 0) {
             container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💇</div><div class="empty-state-text">Aucun employé</div></div>';
@@ -432,11 +464,18 @@ async function addEmployee() {
     const specs = role === 'owner' ? [] : document.getElementById('empSpecs').value.split(',').map(s => s.trim()).filter(Boolean);
     if (!name) return;
 
-    await apiFetch(`${API}/api/barber/salon/${salonId}/employees`, {
+    const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, phone, role, specialties: specs })
     });
+
+    const data = await res.json();
+    if (!data.success) {
+        alert(data.error || "Erreur lors de l'ajout");
+        return;
+    }
+
     closeModal();
     loadEmployees();
     showToast('Membre ajouté ✅');

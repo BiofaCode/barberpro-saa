@@ -54,22 +54,61 @@
                 <a href="#demo" class="btn btn-outline btn-lg">Voir la démo</a>
             </div>
             <div class="hero-image-wrapper reveal">
-                <!-- Placeholder for a beautiful dashboard mockup -->
-                <div class="mockup-window">
-                    <div class="mockup-header">
-                        <span class="dot red"></span>
-                        <span class="dot yellow"></span>
-                        <span class="dot green"></span>
+                <!-- Modern Abstract UI Mockup (No Coder Vibe) -->
+                <div class="abstract-dashboard reveal">
+                    <!-- Sidebar -->
+                    <div class="ui-sidebar">
+                        <div class="ui-avatar"></div>
+                        <div class="ui-nav-item active"></div>
+                        <div class="ui-nav-item"></div>
+                        <div class="ui-nav-item"></div>
+                        <div class="ui-nav-item"></div>
                     </div>
-                    <div class="mockup-body">
-                        <div class="mockup-sidebar"></div>
-                        <div class="mockup-content">
-                            <div class="mockup-card line-short"></div>
-                            <div class="mockup-card line-long"></div>
-                            <div class="mockup-grid">
-                                <div class="mockup-box col-2"></div>
-                                <div class="mockup-box col-1"></div>
+                    <!-- Main Content -->
+                    <div class="ui-main">
+                        <div class="ui-header">
+                            <div class="ui-title"></div>
+                            <div class="ui-btn"></div>
+                        </div>
+                        <div class="ui-stats-grid">
+                            <div class="ui-stat-card">
+                                <div class="ui-icon-circle blue"></div>
+                                <div class="ui-stat-lines">
+                                    <div class="ui-line sh"></div>
+                                    <div class="ui-line md"></div>
+                                </div>
                             </div>
+                            <div class="ui-stat-card">
+                                <div class="ui-icon-circle purple"></div>
+                                <div class="ui-stat-lines">
+                                    <div class="ui-line sh"></div>
+                                    <div class="ui-line lg"></div>
+                                </div>
+                            </div>
+                            <div class="ui-stat-card">
+                                <div class="ui-icon-circle green"></div>
+                                <div class="ui-stat-lines">
+                                    <div class="ui-line sh"></div>
+                                    <div class="ui-line md"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ui-chart-area">
+                            <div class="ui-chart-bar h30"></div>
+                            <div class="ui-chart-bar h70"></div>
+                            <div class="ui-chart-bar h50"></div>
+                            <div class="ui-chart-bar h90"></div>
+                            <div class="ui-chart-bar h40"></div>
+                            <div class="ui-chart-bar h80"></div>
+                            <div class="ui-chart-bar h60"></div>
+                        </div>
+                    </div>
+                    <!-- Floating Element Overlay -->
+                    <div class="ui-floating-card">
+                        <div class="ui-floating-icon">✨</div>
+                        <div>
+                            <div class="ui-line sm w-full"></div>
+                            <div class="ui-line xs w-half"></div>
                         </div>
                     </div>
                 </div>
@@ -137,25 +176,70 @@
                 <p>Boostez votre salon sans payer de frais cachés sur vos réservations.</p>
             </div>
 
-            <div class="pricing-card reveal">
-                <div class="pricing-header">
-                    <h3>Abonnement Pro</h3>
-                    <div class="price">
-                        <span class="currency">CHF</span>
-                        <span class="amount">49</span>
-                        <span class="period">/mois</span>
+            <div class="pricing-grid reveal">
+                <!-- Starter -->
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Pack Starter</h3>
+                        <div class="price">
+                            <span class="currency">CHF</span>
+                            <span class="amount">39</span>
+                            <span class="period">/mois</span>
+                        </div>
+                        <p>Idéal pour les indépendants et petits espaces.</p>
                     </div>
-                    <p>Tout inclus pour faire décoller votre activité.</p>
+                    <ul class="pricing-features">
+                        <li>✔️ Zéro commission</li>
+                        <li>✔️ <b>1 à 2 employés</b></li>
+                        <li>✔️ Site vitrine & Réservations en ligne</li>
+                        <li>✔️ Emails automatiques</li>
+                        <li class="disabled">❌ Statistiques & Avis</li>
+                    </ul>
+                    <a href="#register" class="btn btn-secondary btn-full">Commencer</a>
                 </div>
-                <ul class="pricing-features">
-                    <li>✔️ <b>Zéro commission</b> sur les réservations</li>
-                    <li>✔️ Site vitrine personnalisé (Galerie, Avis)</li>
-                    <li>✔️ Application mobile illimitée</li>
-                    <li>✔️ Emails transactionnels automatiques</li>
-                    <li>✔️ Collaborateurs illimités</li>
-                    <li>✔️ Assistance VIP 7j/7</li>
-                </ul>
-                <a href="#register" class="btn btn-primary btn-full">Commencer l'essai de 14 jours</a>
+
+                <!-- Pro (Featured) -->
+                <div class="pricing-card featured">
+                    <div class="pricing-header">
+                        <div class="badge">Le plus populaire</div>
+                        <h3>Pack Pro</h3>
+                        <div class="price">
+                            <span class="currency">CHF</span>
+                            <span class="amount">49</span>
+                            <span class="period">/mois</span>
+                        </div>
+                        <p>Tout inclus pour faire décoller votre activité.</p>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✔️ Zéro commission</li>
+                        <li>✔️ <b>Jusqu'à 5 employés</b></li>
+                        <li>✔️ Site avec Galerie et Avis clients</li>
+                        <li>✔️ Emails automatiques</li>
+                        <li>✔️ Statistiques complètes</li>
+                    </ul>
+                    <a href="#register" class="btn btn-primary btn-full">Essai gratuit 14 jours</a>
+                </div>
+
+                <!-- Premium -->
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Pack Premium</h3>
+                        <div class="price">
+                            <span class="currency">CHF</span>
+                            <span class="amount">89</span>
+                            <span class="period">/mois</span>
+                        </div>
+                        <p>Pour les grands salons et franchises.</p>
+                    </div>
+                    <ul class="pricing-features">
+                        <li>✔️ Zéro commission</li>
+                        <li>✔️ <b>Employés illimités</b></li>
+                        <li>✔️ Site Marque Blanche (sans logo SalonPro)</li>
+                        <li>✔️ Rappels SMS (Prochainement)</li>
+                        <li>✔️ Assistance VIP Prioritaire</li>
+                    </ul>
+                    <a href="#register" class="btn btn-secondary btn-full">Essai gratuit 14 jours</a>
+                </div>
             </div>
         </div>
     </section>

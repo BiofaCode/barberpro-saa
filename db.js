@@ -74,30 +74,31 @@ async function seedIfEmpty() {
     const ownerId = genId();
     const emp1Id = genId();
     const emp2Id = genId();
-    const hashedPassword = await bcrypt.hash('barber123', 10);
+    const hashedPassword = await bcrypt.hash('salon123', 10);
 
     await db.collection('salons').insertOne({
         _id: salonId,
-        slug: 'elite-barber-paris',
-        name: 'Elite Barber Paris',
-        description: 'Salon de coiffure premium au cœur de Paris',
-        address: '12 Rue du Style, 75001 Paris',
+        slug: 'salon-premium-paris',
+        name: 'Salon Premium Paris',
+        description: 'Institut de beauté et coiffure premium au cœur de Paris',
+        address: '12 Rue de la Beauté, 75001 Paris',
         phone: '06 12 34 56 78',
-        email: 'contact@elitebarber.fr',
+        email: 'contact@salon.fr',
+        plan: 'pro', // starter, pro, premium
         logo: '',
         branding: {
             primaryColor: '#6366F1',
             accentColor: '#818CF8',
-            heroTitle: "L'Art de la Coiffure Masculine",
-            heroSubtitle: 'Excellence, style et précision depuis 2018',
+            heroTitle: "L'Art de la Beauté & du Bien-être",
+            heroSubtitle: 'Excellence, style et précision',
         },
         services: [
-            { _id: genId(), name: 'Coupe Classique', icon: '✂️', price: 25, duration: 30, description: 'Coupe précise et élégante', active: true },
-            { _id: genId(), name: 'Taille de Barbe', icon: '🪒', price: 15, duration: 20, description: 'Sculpture et entretien barbe', active: true },
-            { _id: genId(), name: 'Pack Premium', icon: '💎', price: 55, duration: 60, description: 'Coupe + barbe + soin visage', active: true },
-            { _id: genId(), name: 'Coloration', icon: '🎨', price: 40, duration: 45, description: 'Coloration professionnelle', active: true },
-            { _id: genId(), name: 'Soin Capillaire', icon: '🧴', price: 30, duration: 35, description: 'Traitement profond cheveux', active: true },
-            { _id: genId(), name: 'Coupe Enfant', icon: '👶', price: 18, duration: 25, description: 'Coupe moins de 12 ans', active: true },
+            { _id: genId(), name: 'Coupe & Brushing', icon: '💆‍♀️', price: 45, duration: 45, description: 'Soin, coupe sur mesure et brushing', active: true },
+            { _id: genId(), name: 'Coloration', icon: '🎨', price: 65, duration: 60, description: 'Coloration professionnelle', active: true },
+            { _id: genId(), name: 'Manucure Premium', icon: '💅', price: 35, duration: 45, description: 'Soin complet des mains', active: true },
+            { _id: genId(), name: 'Coupe Homme', icon: '✂️', price: 25, duration: 30, description: 'Coupe classique', active: true },
+            { _id: genId(), name: 'Soin Visage', icon: '✨', price: 50, duration: 45, description: 'Traitement éclat et hydratation', active: true },
+            { _id: genId(), name: 'Épilation', icon: '🌸', price: 20, duration: 25, description: 'Zone au choix', active: true },
         ],
         hours: {
             lundi: { open: '09:00', close: '19:00' },
@@ -119,7 +120,7 @@ async function seedIfEmpty() {
         _id: ownerId,
         salon: salonId,
         name: 'Ahmed Mansouri',
-        email: 'ahmed@elitebarber.fr',
+        email: 'demo@salon.ch',
         password: hashedPassword,
         phone: '06 12 34 56 78',
         role: 'owner',

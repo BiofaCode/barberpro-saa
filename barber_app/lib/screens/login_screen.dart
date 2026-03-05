@@ -12,8 +12,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
-  final _emailController = TextEditingController(text: 'ahmed@elitebarber.fr');
-  final _passwordController = TextEditingController(text: 'barber123');
+  final _emailController = TextEditingController(text: 'demo@salon.ch');
+  final _passwordController = TextEditingController(text: 'salon123');
   bool _loading = false;
   String? _error;
   late AnimationController _animController;
@@ -98,14 +98,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ],
                   ),
                   child: const Center(
-                    child: Text('✂️', style: TextStyle(fontSize: 36)),
+                    child: Text('✨', style: TextStyle(fontSize: 36)),
                   ),
                 ),
 
                 const SizedBox(height: 24),
 
                 Text(
-                  'BarberPro',
+                  'SalonPro',
                   style: GoogleFonts.playfairDisplay(
                     fontSize: 32,
                     fontWeight: FontWeight.w700,
@@ -226,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Email: ahmed@elitebarber.fr\nMot de passe: barber123',
+                        'Email: demo@salon.ch\nMot de passe: salon123',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.outfit(
                           fontSize: 12,

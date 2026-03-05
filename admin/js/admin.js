@@ -112,6 +112,17 @@ async function submitEditSalon(salonId) {
   }
 }
 
+async function changePlan(salonId, newPlan) {
+  const res = await api(`/api/admin/salons/${salonId}/plan`, 'PUT', { plan: newPlan });
+  if (res.success) {
+    alert(`Plan mis à jour : ${newPlan.toUpperCase()}`);
+    loadDashboard();
+    loadSalons();
+  } else {
+    alert(res.error || 'Erreur lors de la mise à jour du plan');
+  }
+}
+
 // ---- Navigation ----
 document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', e => {
@@ -218,7 +229,11 @@ async function loadSalons() {
                     <div class="salon-card-name">${s.name}</div>
                     <div style="font-size:.8rem;color:var(--text-muted);margin-top:2px">/${s.slug}</div>
                 </div>
-                <span class="badge badge-${(s.subscription?.plan || 'pro') === 'premium' ? 'confirmed' : (s.subscription?.plan || 'pro') === 'starter' ? 'pending' : 'active'}">${s.subscription?.plan || 'pro'}</span>
+                <select class="plan-selector" onchange="changePlan('${s._id}', this.value)" style="padding:4px 8px; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-color); font-size:0.85rem; font-weight:600;">
+                    <option value="starter" ${(s.subscription?.plan || 'pro') === 'starter' ? 'selected' : ''}>Starter</option>
+                    <option value="pro" ${(s.subscription?.plan || 'pro') === 'pro' ? 'selected' : ''}>Pro</option>
+                    <option value="premium" ${(s.subscription?.plan || 'pro') === 'premium' ? 'selected' : ''}>Premium</option>
+                </select>
             </div>
             <div class="salon-card-info">
                 <div>👤 <strong>${s.owner?.name || '—'}</strong></div>

@@ -249,7 +249,7 @@ route('POST', '/api/admin/salons', async (req, res) => {
         salon: salon._id,
         name: body.ownerName || 'Propriétaire',
         email: body.ownerEmail || '',
-        password: body.ownerPassword || 'barber123',
+        password: body.ownerPassword || 'salon123',
         phone: body.ownerPhone || '',
         role: 'owner',
     });
@@ -281,6 +281,20 @@ route('PUT', '/api/admin/salons/:id', async (req, res, params) => {
         await db.updateSalon(params.id, updates);
     }
     json(res, 200, { success: true, message: 'Salon mis à jour' });
+});
+
+route('PUT', '/api/admin/salons/:id/plan', async (req, res, params) => {
+    const body = await parseBody(req);
+    const salon = await db.findSalonById(params.id);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    if (!['starter', 'pro', 'premium'].includes(body.plan)) {
+        return json(res, 400, { success: false, error: 'Plan invalide' });
+    }
+
+    const subscription = { ...(salon.subscription || {}), plan: body.plan };
+    await db.updateSalon(params.id, { subscription });
+    json(res, 200, { success: true, message: 'Plan mis à jour', data: subscription });
 });
 
 route('PUT', '/api/admin/salons/:salonId/owners/:ownerId/password', async (req, res, params) => {
@@ -663,13 +677,27 @@ route('GET', '/api/barber/salon/:salonId/employees', async (req, res, params) =>
 
 route('POST', '/api/barber/salon/:salonId/employees', async (req, res, params) => {
     const body = await parseBody(req);
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon introuvable' });
+
+    const plan = salon.subscription?.plan || 'pro';
+    const empCount = await db.countEmployees({ salon: params.salonId });
+
+    if (body.role !== 'owner') {
+        if (plan === 'starter' && empCount >= 2) {
+            return json(res, 403, { success: false, error: 'Limite de 2 employés atteinte pour le pack Starter. Veuillez upgrader votre abonnement.' });
+        }
+        if (plan === 'pro' && empCount >= 5) {
+            return json(res, 403, { success: false, error: 'Limite de 5 employés atteinte pour le pack Pro. Veuillez upgrader vers Premium.' });
+        }
+    }
 
     if (body.role === 'owner') {
         const owner = await db.createOwner({
             salon: params.salonId,
             name: body.name,
             email: body.email || '',
-            password: body.password || 'barber123',
+            password: body.password || 'salon123',
             phone: body.phone || '',
             role: 'owner'
         });
