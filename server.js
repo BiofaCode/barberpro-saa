@@ -862,6 +862,126 @@ route('GET', '/api/stripe/public-key', async (req, res) => {
     json(res, 200, { success: true, data: { publicKey: process.env.STRIPE_PUBLIC_KEY || '' } });
 });
 
+// Register + Checkout in one step
+route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
+    const body = await parseBody(req);
+    const { salonName, ownerName, email, password, phone, plan } = body;
+
+    // Validation
+    if (!salonName || !ownerName || !email || !password) {
+        return json(res, 400, { success: false, error: 'Tous les champs obligatoires doivent être remplis.' });
+    }
+    if (password.length < 6) {
+        return json(res, 400, { success: false, error: 'Le mot de passe doit contenir au moins 6 caractères.' });
+    }
+
+    const planInfo = PLAN_PRICES[plan || 'pro'];
+    if (!planInfo) return json(res, 400, { success: false, error: 'Plan invalide.' });
+
+    // Check if email already exists
+    const existingOwner = await db.findOwnerByEmail(email);
+    if (existingOwner) {
+        return json(res, 400, { success: false, error: 'Un compte avec cet email existe déjà. Connectez-vous sur l\'Espace Pro.' });
+    }
+
+    // Generate slug from salon name
+    const slug = salonName.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+        + '-' + Date.now().toString(36);
+
+    try {
+        // Create salon
+        const salon = await db.createSalon({
+            slug,
+            name: salonName,
+            description: '',
+            address: '',
+            phone: phone || '',
+            email: email,
+            plan: plan || 'pro',
+            logo: '',
+            branding: {
+                primaryColor: '#6366F1',
+                accentColor: '#818CF8',
+                heroTitle: `Bienvenue chez ${salonName}`,
+                heroSubtitle: 'Excellence, style et précision',
+            },
+            services: [
+                { _id: require('./db').genId ? require('crypto').randomBytes(12).toString('hex') : Date.now().toString(), name: 'Coupe', icon: '✂️', price: 30, duration: 30, description: 'Coupe classique', active: true },
+                { _id: require('crypto').randomBytes(12).toString('hex'), name: 'Coupe & Brushing', icon: '💇‍♀️', price: 45, duration: 45, description: 'Coupe et brushing', active: true },
+            ],
+            hours: {
+                lundi: { open: '09:00', close: '19:00' },
+                mardi: { open: '09:00', close: '19:00' },
+                mercredi: { open: '09:00', close: '19:00' },
+                jeudi: { open: '09:00', close: '19:00' },
+                vendredi: { open: '09:00', close: '19:00' },
+                samedi: { open: '09:00', close: '18:00' },
+            },
+            subscription: { plan: plan || 'pro', status: 'trial', trialEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() },
+            smsReminders: { enabled: false, status: 'En développement' },
+            rating: 0,
+            reviewCount: 0,
+            active: true,
+        });
+
+        // Create owner
+        await db.createOwner({
+            salon: salon._id,
+            name: ownerName,
+            email: email.toLowerCase(),
+            password: password,
+            phone: phone || '',
+            role: 'owner',
+        });
+
+        // Send welcome email (non-blocking)
+        try {
+            const { sendWelcomeEmail } = require('./email');
+            if (sendWelcomeEmail) {
+                sendWelcomeEmail(email, ownerName, salonName, plan || 'pro');
+            }
+        } catch (e) { console.log('Welcome email skipped:', e.message); }
+
+        console.log(`✅ Nouveau salon créé: ${salonName} (${plan}) par ${ownerName}`);
+
+        // Create Stripe Checkout Session
+        if (stripe) {
+            const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+            const session = await stripe.checkout.sessions.create({
+                payment_method_types: ['card'],
+                mode: 'subscription',
+                line_items: [{
+                    price_data: {
+                        currency: 'chf',
+                        product_data: {
+                            name: planInfo.name,
+                            description: `SalonPro ${planInfo.name} — ${planInfo.employees === 999 ? 'employés illimités' : `jusqu'à ${planInfo.employees} employés`}`
+                        },
+                        unit_amount: planInfo.amount,
+                        recurring: { interval: 'month' }
+                    },
+                    quantity: 1
+                }],
+                metadata: { plan: plan || 'pro', salonId: salon._id, salonName, ownerEmail: email },
+                customer_email: email,
+                subscription_data: { trial_period_days: 14 },
+                success_url: `${baseUrl}/saas/index.html?checkout=success&plan=${plan || 'pro'}`,
+                cancel_url: `${baseUrl}/saas/index.html?checkout=cancel`
+            });
+
+            return json(res, 200, { success: true, data: { url: session.url, sessionId: session.id, salonSlug: slug } });
+        } else {
+            // Stripe not configured, just return success
+            return json(res, 200, { success: true, data: { salonSlug: slug, message: 'Salon créé (Stripe non configuré)' } });
+        }
+    } catch (err) {
+        console.error('Register error:', err.message);
+        json(res, 500, { success: false, error: 'Erreur lors de la création du salon.' });
+    }
+});
+
 // ==========================
 //  PUBLIC SALON API
 // ==========================

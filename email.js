@@ -169,5 +169,77 @@ async function sendOTPEmail(email, code, salonName = 'SalonPro') {
     return { success: false, error: err.message };
   }
 }
+// Send welcome email after signup
+async function sendWelcomeEmail(email, ownerName, salonName, plan) {
+  const fromName = process.env.SMTP_FROM_NAME || 'SalonPro';
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const planNames = { starter: 'Starter', pro: 'Pro', premium: 'Premium' };
 
-module.exports = { sendBookingConfirmation, sendOTPEmail };
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: [email],
+      subject: `🎉 Bienvenue sur SalonPro, ${ownerName} !`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+
+    <div style="background:#6366F1;padding:32px 28px;text-align:center">
+      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">✨ Bienvenue sur SalonPro !</h1>
+      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">Votre espace est prêt</p>
+    </div>
+
+    <div style="padding:28px">
+      <p style="font-size:15px;color:#27272a;margin:0 0 20px">
+        Bonjour <strong>${ownerName}</strong>,<br>
+        Votre salon <strong>${salonName}</strong> a été créé avec succès sur le pack <strong>${planNames[plan] || plan}</strong>.
+      </p>
+
+      <div style="background:#fafafa;border-radius:12px;padding:20px;border:1px solid #e4e4e7;margin-bottom:20px">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3f3f46">
+          <tr>
+            <td style="padding:8px 0;color:#71717a;width:100px">Email</td>
+            <td style="padding:8px 0;font-weight:600">${email}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Mot de passe</td>
+            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">Celui que vous avez choisi lors de l'inscription</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Pack</td>
+            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">${planNames[plan] || plan} (essai 14 jours)</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="text-align:center;margin:24px 0">
+        <a href="${process.env.BASE_URL || 'http://localhost:3000'}/pro" style="display:inline-block;background:#6366F1;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px">Accéder à mon Espace Pro →</a>
+      </div>
+
+      <p style="font-size:13px;color:#71717a;margin:20px 0 0;line-height:1.6">
+        Personnalisez votre salon, ajoutez vos services et commencez à recevoir des réservations en ligne dès aujourd'hui !
+      </p>
+    </div>
+
+    <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
+      <p style="font-size:12px;color:#a1a1aa;margin:0">SalonPro — Propulsé par Osmo Digital</p>
+    </div>
+  </div>
+</body>
+</html>`
+    });
+
+    if (error) {
+      console.error(`  ❌ Erreur Resend (Welcome): ${error.message}`);
+      return;
+    }
+    console.log(`  📧 Email de bienvenue envoyé à ${email} (ID: ${data.id})`);
+  } catch (err) {
+    console.error(`  ❌ Erreur critique email (Welcome): ${err.message}`);
+  }
+}
+
+module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail };

@@ -122,19 +122,12 @@
                             <div class="ui-chart-bar h60"></div>
                         </div>
                     </div>
-                    <!-- Floating Elements -->
+                    <!-- Floating Notification Card -->
                     <div class="ui-floating-card">
-                        <div class="ui-floating-icon">📅</div>
-                        <div>
-                            <div class="ui-line sm w-full"></div>
-                            <div class="ui-line xs w-half"></div>
-                        </div>
-                    </div>
-                    <div class="ui-floating-card-2">
-                        <div class="ui-floating-icon">💰</div>
-                        <div>
-                            <div class="ui-line sm w-full"></div>
-                            <div class="ui-line xs w-half"></div>
+                        <div class="ui-notif-dot"></div>
+                        <div class="ui-notif-content">
+                            <div class="ui-notif-title">Nouveau RDV</div>
+                            <div class="ui-notif-sub">Marie D. — 14h30</div>
                         </div>
                     </div>
                 </div>
@@ -389,11 +382,10 @@
 
     <!-- CTA Footer -->
     <section class="cta-footer reveal">
-        <div class="container">
-            <div class="cta-glow"></div>
+        <div class="container cta-container">
             <h2>Prêt à digitaliser votre salon ?</h2>
             <p>Créez votre espace en 5 minutes. Essai gratuit de 14 jours, aucune carte bancaire requise.</p>
-            <a href="#pricing" class="btn btn-white btn-lg shine-effect">Démarrer maintenant →</a>
+            <a href="#pricing" class="btn btn-white btn-lg">Démarrer maintenant →</a>
         </div>
     </section>
 
@@ -423,6 +415,47 @@
         </div>
     </footer>
 
+    <!-- Signup Modal -->
+    <div id="signupModal" class="modal-overlay" style="display:none;">
+        <div class="modal-card">
+            <button class="modal-close" onclick="closeSignupModal()">&times;</button>
+            <div class="modal-header">
+                <span class="modal-icon">✨</span>
+                <h2>Créer votre salon</h2>
+                <p id="modalPlanLabel">Pack Pro — 49 CHF/mois</p>
+            </div>
+            <form id="signupForm" onsubmit="submitSignup(event)">
+                <div class="form-group">
+                    <label for="signupSalonName">Nom du salon</label>
+                    <input type="text" id="signupSalonName" placeholder="ex: Beauty Lounge Lausanne" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="signupOwnerName">Votre nom</label>
+                        <input type="text" id="signupOwnerName" placeholder="Prénom Nom" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="signupPhone">Téléphone</label>
+                        <input type="tel" id="signupPhone" placeholder="+41 79 123 45 67">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email (sera votre login)</label>
+                    <input type="email" id="signupEmail" placeholder="vous@exemple.ch" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Mot de passe</label>
+                    <input type="password" id="signupPassword" placeholder="Minimum 6 caractères" minlength="6"
+                        required>
+                </div>
+                <input type="hidden" id="signupPlan" value="pro">
+                <button type="submit" id="signupSubmitBtn" class="btn btn-primary btn-full btn-lg">Continuer vers le
+                    paiement →</button>
+                <p class="modal-note">Essai gratuit 14 jours. Vous pouvez annuler à tout moment.</p>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast -->
     <div id="checkoutToast" class="checkout-toast" style="display:none;">
         <span id="toastMsg"></span>
@@ -430,6 +463,13 @@
 
     <!-- Scripts -->
     <script>
+        let selectedPlan = 'pro';
+        const planLabels = {
+            starter: 'Pack Starter — 39 CHF/mois',
+            pro: 'Pack Pro — 49 CHF/mois',
+            premium: 'Pack Premium — 89 CHF/mois'
+        };
+
         // Scroll reveal
         document.addEventListener('DOMContentLoaded', () => {
             const observer = new IntersectionObserver((entries) => {
@@ -444,37 +484,75 @@
             // Check checkout status from URL
             const params = new URLSearchParams(window.location.search);
             if (params.get('checkout') === 'success') {
-                showToast('🎉 Paiement réussi ! Bienvenue sur SalonPro. On vous contacte très vite.', 'success');
+                showToast('🎉 Paiement réussi ! Vérifiez votre email pour vos accès.', 'success');
                 window.history.replaceState({}, '', '/saas/index.html');
             } else if (params.get('checkout') === 'cancel') {
-                showToast('Paiement annulé. N\'hésitez pas à nous contacter si besoin.', 'info');
+                showToast('Paiement annulé. Votre compte est créé, vous pourrez payer plus tard.', 'info');
                 window.history.replaceState({}, '', '/saas/index.html');
             }
         });
 
-        // Stripe Checkout
-        async function startCheckout(plan) {
-            const btn = event.target;
+        // Open signup modal
+        function startCheckout(plan) {
+            selectedPlan = plan;
+            document.getElementById('signupPlan').value = plan;
+            document.getElementById('modalPlanLabel').textContent = planLabels[plan] || plan;
+            document.getElementById('signupModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSignupModal() {
+            document.getElementById('signupModal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // Close modal on overlay click
+        document.addEventListener('click', (e) => {
+            if (e.target.id === 'signupModal') closeSignupModal();
+        });
+
+        // Submit signup form → create salon → redirect to Stripe
+        async function submitSignup(e) {
+            e.preventDefault();
+            const btn = document.getElementById('signupSubmitBtn');
             const originalText = btn.textContent;
-            btn.textContent = 'Redirection...';
+            btn.textContent = 'Création en cours...';
             btn.disabled = true;
 
+            const salonName = document.getElementById('signupSalonName').value.trim();
+            const ownerName = document.getElementById('signupOwnerName').value.trim();
+            const email = document.getElementById('signupEmail').value.trim();
+            const password = document.getElementById('signupPassword').value;
+            const phone = document.getElementById('signupPhone').value.trim();
+            const plan = document.getElementById('signupPlan').value;
+
             try {
-                const res = await fetch('/api/stripe/create-checkout', {
+                // Step 1: Create salon + owner account
+                const createRes = await fetch('/api/stripe/register-and-checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ plan })
+                    body: JSON.stringify({ salonName, ownerName, email, password, phone, plan })
                 });
-                const data = await res.json();
-                if (data.success && data.data?.url) {
-                    window.location.href = data.data.url;
-                } else {
-                    showToast(data.error || 'Erreur lors de la redirection Stripe', 'error');
+                const createData = await createRes.json();
+
+                if (!createData.success) {
+                    showToast(createData.error || 'Erreur lors de la création', 'error');
                     btn.textContent = originalText;
                     btn.disabled = false;
+                    return;
+                }
+
+                // Step 2: Redirect to Stripe
+                if (createData.data?.url) {
+                    window.location.href = createData.data.url;
+                } else {
+                    showToast('Salon créé ! Redirection...', 'success');
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    closeSignupModal();
                 }
             } catch (err) {
-                showToast('Impossible de se connecter au serveur', 'error');
+                showToast('Erreur de connexion au serveur', 'error');
                 btn.textContent = originalText;
                 btn.disabled = false;
             }
