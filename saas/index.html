@@ -513,11 +513,13 @@
 
         // Submit signup form → create salon → redirect to Stripe
         async function submitSignup(e) {
-            e.preventDefault();
+            if (e) e.preventDefault();
             const btn = document.getElementById('signupSubmitBtn');
+            const errDiv = document.getElementById('signupError');
             const originalText = btn.textContent;
             btn.textContent = 'Création en cours...';
             btn.disabled = true;
+            if (errDiv) errDiv.style.display = 'none';
 
             const salonName = document.getElementById('signupSalonName').value.trim();
             const ownerName = document.getElementById('signupOwnerName').value.trim();
@@ -526,14 +528,36 @@
             const phone = document.getElementById('signupPhone').value.trim();
             const plan = document.getElementById('signupPlan').value;
 
+            if (!salonName || !ownerName || !email || !password) {
+                showToast('Veuillez remplir tous les champs obligatoires', 'error');
+                btn.textContent = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            console.log('📤 Signup data:', { salonName, ownerName, email, plan });
+
             try {
-                // Step 1: Create salon + owner account
                 const createRes = await fetch('/api/stripe/register-and-checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ salonName, ownerName, email, password, phone, plan })
                 });
-                const createData = await createRes.json();
+
+                console.log('📥 Response status:', createRes.status);
+                const text = await createRes.text();
+                console.log('📥 Response body:', text);
+
+                let createData;
+                try {
+                    createData = JSON.parse(text);
+                } catch (parseErr) {
+                    console.error('❌ JSON parse error:', parseErr);
+                    showToast('Erreur serveur (réponse invalide)', 'error');
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                    return;
+                }
 
                 if (!createData.success) {
                     showToast(createData.error || 'Erreur lors de la création', 'error');
@@ -542,17 +566,31 @@
                     return;
                 }
 
-                // Step 2: Redirect to Stripe
-                if (createData.data?.url) {
-                    window.location.href = createData.data.url;
+                // Redirect to Stripe
+                const stripeUrl = createData.data?.url;
+                console.log('🔗 Stripe URL:', stripeUrl);
+
+                if (stripeUrl) {
+                    btn.textContent = 'Redirection vers Stripe...';
+                    // Try direct redirect
+                    window.location.href = stripeUrl;
+                    // Fallback after 3s if redirect didn't work
+                    setTimeout(() => {
+                        if (document.getElementById('signupModal')?.style.display !== 'none') {
+                            console.log('⚠️ Redirect fallback triggered');
+                            btn.innerHTML = `<a href="${stripeUrl}" style="color:white;text-decoration:none" target="_blank">Cliquez ici pour accéder au paiement →</a>`;
+                            btn.disabled = false;
+                        }
+                    }, 3000);
                 } else {
-                    showToast('Salon créé ! Redirection...', 'success');
+                    showToast('✅ Salon créé avec succès !', 'success');
                     btn.textContent = originalText;
                     btn.disabled = false;
                     closeSignupModal();
                 }
             } catch (err) {
-                showToast('Erreur de connexion au serveur', 'error');
+                console.error('❌ Fetch error:', err);
+                showToast('Erreur de connexion au serveur: ' + err.message, 'error');
                 btn.textContent = originalText;
                 btn.disabled = false;
             }
