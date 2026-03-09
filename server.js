@@ -376,7 +376,8 @@ route('POST', '/api/barber/login', async (req, res) => {
                 success: true,
                 token,
                 user: { id: owner._id, salonId: owner.salon, name: owner.name, email: owner.email, role: 'owner' },
-                salon: salon || null
+                salon: salon || null,
+                subscription: salon?.subscription || null
             });
         }
     }
@@ -919,11 +920,11 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
                 vendredi: { open: '09:00', close: '19:00' },
                 samedi: { open: '09:00', close: '18:00' },
             },
-            subscription: { plan: plan || 'pro', status: 'trial', trialEnd: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() },
+            subscription: { plan: plan || 'pro', status: 'pending_payment' },
             smsReminders: { enabled: false, status: 'En développement' },
             rating: 0,
             reviewCount: 0,
-            active: true,
+            active: false,
         });
 
         // Create owner
@@ -936,13 +937,7 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
             role: 'owner',
         });
 
-        // Send welcome email (non-blocking)
-        try {
-            const { sendWelcomeEmail } = require('./email');
-            if (sendWelcomeEmail) {
-                sendWelcomeEmail(email, ownerName, salonName, plan || 'pro');
-            }
-        } catch (e) { console.log('Welcome email skipped:', e.message); }
+        // Welcome email will be sent after Stripe payment confirmation (via webhook)
 
         console.log(`✅ Nouveau salon créé: ${salonName} (${plan}) par ${ownerName}`);
 
@@ -967,7 +962,7 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
                 metadata: { plan: plan || 'pro', salonId: salon._id, salonName, ownerEmail: email },
                 customer_email: email,
                 subscription_data: { trial_period_days: 14 },
-                success_url: `${baseUrl}/saas/index.html?checkout=success&plan=${plan || 'pro'}`,
+                success_url: `${baseUrl}/saas/success.html?plan=${plan || 'pro'}&salon=${encodeURIComponent(salonName)}`,
                 cancel_url: `${baseUrl}/saas/index.html?checkout=cancel`
             });
 
@@ -980,6 +975,80 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
         console.error('Register error:', err.message);
         json(res, 500, { success: false, error: 'Erreur lors de la création du salon.' });
     }
+});
+
+// Stripe Webhook - activate subscription after payment
+route('POST', '/api/stripe/webhook', async (req, res) => {
+    // Get raw body for Stripe signature verification
+    const rawBody = await new Promise((resolve, reject) => {
+        let data = '';
+        req.on('data', chunk => data += chunk);
+        req.on('end', () => resolve(data));
+        req.on('error', reject);
+    });
+
+    let event;
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (endpointSecret && stripe) {
+        try {
+            const sig = req.headers['stripe-signature'];
+            event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
+        } catch (err) {
+            console.error('⚠️ Webhook signature verification failed:', err.message);
+            return json(res, 400, { error: 'Webhook signature invalide' });
+        }
+    } else {
+        // In dev/test without webhook secret, parse manually
+        try {
+            event = JSON.parse(rawBody);
+        } catch (err) {
+            return json(res, 400, { error: 'Invalid JSON' });
+        }
+    }
+
+    console.log(`📩 Stripe Webhook: ${event.type}`);
+
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const salonId = session.metadata?.salonId;
+        const plan = session.metadata?.plan || 'pro';
+        const ownerEmail = session.metadata?.ownerEmail;
+        const salonName = session.metadata?.salonName;
+
+        if (salonId) {
+            const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+            await db.updateSalon(salonId, {
+                active: true,
+                'subscription.status': 'trial',
+                'subscription.trialEnd': trialEnd,
+                'subscription.stripeCustomerId': session.customer,
+                'subscription.stripeSubscriptionId': session.subscription,
+            });
+            console.log(`✅ Salon ${salonId} activé (plan: ${plan}, trial jusqu'au ${trialEnd})`);
+
+            // Now send welcome email
+            try {
+                const { sendWelcomeEmail } = require('./email');
+                if (sendWelcomeEmail && ownerEmail) {
+                    sendWelcomeEmail(ownerEmail, session.metadata?.salonName || 'Votre salon', salonName || 'Votre salon', plan);
+                }
+            } catch (e) { console.log('Welcome email error:', e.message); }
+        }
+    } else if (event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object;
+        // Find salon by Stripe subscription ID and deactivate
+        const salons = await db.findSalons({ 'subscription.stripeSubscriptionId': subscription.id });
+        if (salons.length > 0) {
+            await db.updateSalon(salons[0]._id, {
+                active: false,
+                'subscription.status': 'cancelled',
+            });
+            console.log(`⛔ Salon ${salons[0]._id} désactivé (abonnement annulé)`);
+        }
+    }
+
+    json(res, 200, { received: true });
 });
 
 // ==========================

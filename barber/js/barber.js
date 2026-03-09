@@ -43,6 +43,30 @@ async function doLogin() {
             salonId = data.user.salonId;
             currentSalon = data.salon;
             errEl.style.display = 'none';
+
+            // Check subscription status
+            const sub = data.subscription || data.salon?.subscription;
+            if (sub && sub.status === 'pending_payment') {
+                // Show payment required screen
+                document.getElementById('loginScreen').innerHTML = `
+                    <div class="login-card" style="max-width:480px;text-align:center">
+                        <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+                        <h2 style="margin-bottom:8px;font-size:22px">Paiement en attente</h2>
+                        <p style="color:var(--text-muted);margin-bottom:24px;line-height:1.6;font-size:14px">
+                            Votre salon <strong>${currentSalon?.name || 'Mon Salon'}</strong> a été créé, mais votre abonnement n'est pas encore actif.
+                            <br><br>Veuillez compléter votre paiement pour accéder à l'Espace Pro.
+                        </p>
+                        <a href="/" class="btn btn-primary" style="width:100%;text-decoration:none;display:block;padding:14px;text-align:center">
+                            Compléter le paiement →
+                        </a>
+                        <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="location.reload()">
+                            Réessayer
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'flex';
             initApp();
@@ -155,7 +179,34 @@ async function loadDashboard() {
         const stats = (await statsRes.json()).data || {};
         const bookings = (await bookingsRes.json()).data || [];
 
-        document.getElementById('dashStats').innerHTML = `
+        // Subscription banner
+        let subBanner = '';
+        const sub = currentSalon?.subscription;
+        if (sub) {
+            const planNames = { starter: 'Starter', pro: 'Pro', premium: 'Premium' };
+            const statusLabels = {
+                trial: '🟢 Essai gratuit',
+                active: '🟢 Actif',
+                pending_payment: '🟠 En attente de paiement',
+                cancelled: '🔴 Annulé'
+            };
+            let trialInfo = '';
+            if (sub.status === 'trial' && sub.trialEnd) {
+                const daysLeft = Math.max(0, Math.ceil((new Date(sub.trialEnd) - Date.now()) / (1000 * 60 * 60 * 24)));
+                trialInfo = ` — ${daysLeft} jour${daysLeft > 1 ? 's' : ''} restant${daysLeft > 1 ? 's' : ''}`;
+            }
+            subBanner = `
+                <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span style="font-size:13px;color:var(--text-muted)">Abonnement :</span>
+                        <span style="font-weight:600;font-size:14px">${planNames[sub.plan] || sub.plan}</span>
+                        <span style="font-size:13px;color:var(--text-muted)">${statusLabels[sub.status] || sub.status}${trialInfo}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        document.getElementById('dashStats').innerHTML = subBanner + `
             <div class="stat-card gold">
                 <div class="stat-icon">📅</div>
                 <div class="stat-value">${stats.todayBookings ?? bookings.length}</div>
