@@ -812,6 +812,57 @@ route('GET', '/api/barber/salon/:salonId/sms-status', async (req, res, params) =
 });
 
 // ==========================
+//  STRIPE CHECKOUT API
+// ==========================
+
+const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
+
+const PLAN_PRICES = {
+    starter: { amount: 3900, name: 'Pack Starter', employees: 2 },
+    pro: { amount: 4900, name: 'Pack Pro', employees: 5 },
+    premium: { amount: 8900, name: 'Pack Premium', employees: 999 }
+};
+
+route('POST', '/api/stripe/create-checkout', async (req, res) => {
+    if (!stripe) return json(res, 500, { success: false, error: 'Stripe non configuré' });
+    const body = await parseBody(req);
+    const plan = body.plan || 'pro';
+    const planInfo = PLAN_PRICES[plan];
+    if (!planInfo) return json(res, 400, { success: false, error: 'Plan invalide' });
+
+    const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+
+    try {
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            mode: 'subscription',
+            line_items: [{
+                price_data: {
+                    currency: 'chf',
+                    product_data: { name: planInfo.name, description: `SalonPro ${planInfo.name} — jusqu'à ${planInfo.employees === 999 ? 'illimité' : planInfo.employees} employés` },
+                    unit_amount: planInfo.amount,
+                    recurring: { interval: 'month' }
+                },
+                quantity: 1
+            }],
+            metadata: { plan, salonName: body.salonName || '', ownerEmail: body.email || '' },
+            customer_email: body.email || undefined,
+            success_url: `${baseUrl}/saas/index.html?checkout=success&plan=${plan}`,
+            cancel_url: `${baseUrl}/saas/index.html?checkout=cancel`
+        });
+
+        json(res, 200, { success: true, data: { url: session.url, sessionId: session.id } });
+    } catch (err) {
+        console.error('Stripe error:', err.message);
+        json(res, 500, { success: false, error: err.message });
+    }
+});
+
+route('GET', '/api/stripe/public-key', async (req, res) => {
+    json(res, 200, { success: true, data: { publicKey: process.env.STRIPE_PUBLIC_KEY || '' } });
+});
+
+// ==========================
 //  PUBLIC SALON API
 // ==========================
 

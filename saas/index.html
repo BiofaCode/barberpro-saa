@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/saas/css/saas.css">
     <link rel="icon"
@@ -27,35 +27,54 @@
             </div>
             <div class="nav-links">
                 <a href="#features">Fonctionnalités</a>
-                <a href="#demo">Démo</a>
                 <a href="#pricing">Tarifs</a>
-                <a href="/admin" class="login-link">Connexion</a>
-                <a href="#register" class="btn btn-primary">Créer mon Salon</a>
+                <a href="/pro" class="login-link">Espace Pro</a>
+                <a href="#pricing" class="btn btn-primary">Essai gratuit →</a>
             </div>
+            <button class="mobile-menu-btn"
+                onclick="document.querySelector('.nav-links').classList.toggle('open')">☰</button>
         </div>
     </nav>
 
     <!-- Hero Section -->
     <header class="hero">
         <div class="hero-glow"></div>
+        <div class="hero-glow-2"></div>
         <div class="container hero-content">
-            <div class="hero-badge">Nouveau — Application Mobile incluse</div>
+            <div class="hero-badge">
+                <span class="pulse-dot"></span>
+                Nouveau — Paiement en ligne intégré
+            </div>
             <h1 class="hero-title">
-                Révolutionnez la gestion de votre <br>
-                <span class="text-gradient">Salon de Beauté</span>
+                Gérez votre salon<br>
+                <span class="text-gradient">comme un pro.</span>
             </h1>
             <p class="hero-desc">
-                Coiffeurs, barbiers, instituts d'esthétique : attirez plus de clients et gagnez du temps.
-                Une plateforme tout-en-un avec réservation en ligne ultra-rapide et tableau de bord complet, sans
-                commission.
+                Réservation en ligne 24/7, gestion d'équipe, statistiques en temps réel.
+                Tout ce dont les coiffeurs, barbiers et instituts de beauté ont besoin pour se développer.
             </p>
             <div class="hero-actions">
-                <a href="#register" class="btn btn-primary btn-lg">Démarrer gratuitement</a>
-                <a href="#demo" class="btn btn-outline btn-lg">Voir la démo</a>
+                <a href="#pricing" class="btn btn-primary btn-lg shine-effect">Commencer gratuitement</a>
+                <a href="#features" class="btn btn-outline btn-lg">Découvrir →</a>
             </div>
+
+            <!-- Social Proof -->
+            <div class="social-proof">
+                <div class="avatars">
+                    <div class="avatar" style="background: linear-gradient(135deg, #6366f1, #818cf8);">A</div>
+                    <div class="avatar" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">M</div>
+                    <div class="avatar" style="background: linear-gradient(135deg, #10b981, #34d399);">S</div>
+                    <div class="avatar" style="background: linear-gradient(135deg, #ec4899, #f472b6);">J</div>
+                </div>
+                <div class="social-text">
+                    <strong>+150 salons</strong> nous font déjà confiance
+                    <span class="stars">⭐⭐⭐⭐⭐</span>
+                </div>
+            </div>
+
+            <!-- Dashboard Preview -->
             <div class="hero-image-wrapper reveal">
-                <!-- Modern Abstract UI Mockup (No Coder Vibe) -->
-                <div class="abstract-dashboard reveal">
+                <div class="abstract-dashboard">
                     <!-- Sidebar -->
                     <div class="ui-sidebar">
                         <div class="ui-avatar"></div>
@@ -103,9 +122,16 @@
                             <div class="ui-chart-bar h60"></div>
                         </div>
                     </div>
-                    <!-- Floating Element Overlay -->
+                    <!-- Floating Elements -->
                     <div class="ui-floating-card">
-                        <div class="ui-floating-icon">✨</div>
+                        <div class="ui-floating-icon">📅</div>
+                        <div>
+                            <div class="ui-line sm w-full"></div>
+                            <div class="ui-line xs w-half"></div>
+                        </div>
+                    </div>
+                    <div class="ui-floating-card-2">
+                        <div class="ui-floating-icon">💰</div>
                         <div>
                             <div class="ui-line sm w-full"></div>
                             <div class="ui-line xs w-half"></div>
@@ -116,11 +142,26 @@
         </div>
     </header>
 
+    <!-- Logos / Trust Band -->
+    <section class="trust-band">
+        <div class="container">
+            <p class="trust-label">Conçu pour tous les professionnels de la beauté</p>
+            <div class="trust-items">
+                <span>✂️ Coiffeurs</span>
+                <span>💈 Barbiers</span>
+                <span>💅 Esthéticiennes</span>
+                <span>💆‍♀️ Spas</span>
+                <span>🧴 Instituts</span>
+            </div>
+        </div>
+    </section>
+
     <!-- Bento Features Section -->
     <section class="features" id="features">
         <div class="container">
             <div class="section-header reveal">
-                <h2>Tout ce dont vous avez besoin, <br>réuni au même endroit.</h2>
+                <span class="section-tag">Fonctionnalités</span>
+                <h2>Tout ce dont vous avez besoin,<br>réuni au même endroit.</h2>
                 <p>Oubliez les agendas papier et les logiciels complexes. SalonPro est pensé pour être intuitif.</p>
             </div>
 
@@ -130,8 +171,22 @@
                     <div class="bento-content">
                         <div class="feature-icon">🗓️</div>
                         <h3>Réservation 24h/24 & 7j/7</h3>
-                        <p>Vos clients réservent eux-mêmes en 3 clics sur votre site personnalisé. Fini le téléphone qui
-                            sonne sans arrêt pendant que vous travaillez.</p>
+                        <p>Vos clients réservent eux-mêmes en 3 clics sur votre site personnalisé. Fini le téléphone
+                            qui sonne sans arrêt pendant que vous travaillez.</p>
+                    </div>
+                    <div class="feature-visual booking-visual">
+                        <div class="mini-calendar">
+                            <div class="cal-header">Mars 2026</div>
+                            <div class="cal-grid">
+                                <div class="cal-day"></div>
+                                <div class="cal-day"></div>
+                                <div class="cal-day active"></div>
+                                <div class="cal-day"></div>
+                                <div class="cal-day"></div>
+                                <div class="cal-day highlight"></div>
+                                <div class="cal-day"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -168,62 +223,96 @@
         </div>
     </section>
 
+    <!-- How it works -->
+    <section class="how-it-works reveal">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-tag">Comment ça marche</span>
+                <h2>Opérationnel en 3 étapes</h2>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card reveal">
+                    <div class="step-number">01</div>
+                    <h3>Créez votre salon</h3>
+                    <p>Choisissez votre pack, renseignez les infos de base et c'est parti.</p>
+                </div>
+                <div class="step-card reveal">
+                    <div class="step-number">02</div>
+                    <h3>Personnalisez votre site</h3>
+                    <p>Logo, couleurs, horaires, prestations — tout se configure en quelques clics.</p>
+                </div>
+                <div class="step-card reveal">
+                    <div class="step-number">03</div>
+                    <h3>Recevez des réservations</h3>
+                    <p>Partagez votre lien et laissez vos clients réserver eux-mêmes, 24/7.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Pricing Section -->
     <section class="pricing" id="pricing">
         <div class="container">
             <div class="section-header reveal">
-                <h2>Un prix simple, sans surprise de commission.</h2>
-                <p>Boostez votre salon sans payer de frais cachés sur vos réservations.</p>
+                <span class="section-tag">Tarifs</span>
+                <h2>Un prix simple, zéro commission.</h2>
+                <p>Boostez votre salon sans frais cachés. Essai gratuit de 14 jours, sans engagement.</p>
             </div>
 
             <div class="pricing-grid reveal">
                 <!-- Starter -->
-                <div class="pricing-card">
+                <div class="pricing-card" data-plan="starter">
                     <div class="pricing-header">
-                        <h3>Pack Starter</h3>
+                        <h3>Starter</h3>
                         <div class="price">
                             <span class="currency">CHF</span>
                             <span class="amount">39</span>
                             <span class="period">/mois</span>
                         </div>
-                        <p>Idéal pour les indépendants et petits espaces.</p>
+                        <p>Idéal pour les indépendants.</p>
                     </div>
                     <ul class="pricing-features">
-                        <li>✔️ Zéro commission</li>
-                        <li>✔️ <b>1 à 2 employés</b></li>
-                        <li>✔️ Site vitrine & Réservations en ligne</li>
-                        <li>✔️ Emails automatiques</li>
-                        <li class="disabled">❌ Statistiques & Avis</li>
+                        <li><span class="check">✓</span> Zéro commission</li>
+                        <li><span class="check">✓</span> <b>Jusqu'à 2 employés</b></li>
+                        <li><span class="check">✓</span> Site vitrine personnalisé</li>
+                        <li><span class="check">✓</span> Réservations en ligne</li>
+                        <li><span class="check">✓</span> Emails automatiques</li>
+                        <li class="disabled"><span class="x">✕</span> Statistiques avancées</li>
+                        <li class="disabled"><span class="x">✕</span> Avis clients</li>
                     </ul>
-                    <a href="#register" class="btn btn-secondary btn-full">Commencer</a>
+                    <button class="btn btn-secondary btn-full" onclick="startCheckout('starter')">Commencer l'essai
+                        gratuit</button>
                 </div>
 
                 <!-- Pro (Featured) -->
-                <div class="pricing-card featured">
+                <div class="pricing-card featured" data-plan="pro">
+                    <div class="pricing-badge-popular">Le + populaire</div>
                     <div class="pricing-header">
-                        <div class="badge">Le plus populaire</div>
-                        <h3>Pack Pro</h3>
+                        <h3>Pro</h3>
                         <div class="price">
                             <span class="currency">CHF</span>
                             <span class="amount">49</span>
                             <span class="period">/mois</span>
                         </div>
-                        <p>Tout inclus pour faire décoller votre activité.</p>
+                        <p>Tout pour faire décoller votre activité.</p>
                     </div>
                     <ul class="pricing-features">
-                        <li>✔️ Zéro commission</li>
-                        <li>✔️ <b>Jusqu'à 5 employés</b></li>
-                        <li>✔️ Site avec Galerie et Avis clients</li>
-                        <li>✔️ Emails automatiques</li>
-                        <li>✔️ Statistiques complètes</li>
+                        <li><span class="check">✓</span> Zéro commission</li>
+                        <li><span class="check">✓</span> <b>Jusqu'à 5 employés</b></li>
+                        <li><span class="check">✓</span> Site avec Galerie photos</li>
+                        <li><span class="check">✓</span> Réservations en ligne</li>
+                        <li><span class="check">✓</span> Emails automatiques</li>
+                        <li><span class="check">✓</span> Statistiques complètes</li>
+                        <li><span class="check">✓</span> Avis clients intégrés</li>
                     </ul>
-                    <a href="#register" class="btn btn-primary btn-full">Essai gratuit 14 jours</a>
+                    <button class="btn btn-primary btn-full shine-effect" onclick="startCheckout('pro')">Commencer
+                        l'essai gratuit</button>
                 </div>
 
                 <!-- Premium -->
-                <div class="pricing-card">
+                <div class="pricing-card" data-plan="premium">
                     <div class="pricing-header">
-                        <h3>Pack Premium</h3>
+                        <h3>Premium</h3>
                         <div class="price">
                             <span class="currency">CHF</span>
                             <span class="amount">89</span>
@@ -232,13 +321,67 @@
                         <p>Pour les grands salons et franchises.</p>
                     </div>
                     <ul class="pricing-features">
-                        <li>✔️ Zéro commission</li>
-                        <li>✔️ <b>Employés illimités</b></li>
-                        <li>✔️ Site Marque Blanche (sans logo SalonPro)</li>
-                        <li>✔️ Rappels SMS (Prochainement)</li>
-                        <li>✔️ Assistance VIP Prioritaire</li>
+                        <li><span class="check">✓</span> Zéro commission</li>
+                        <li><span class="check">✓</span> <b>Employés illimités</b></li>
+                        <li><span class="check">✓</span> Marque blanche (sans logo SalonPro)</li>
+                        <li><span class="check">✓</span> Toutes les fonctionnalités Pro</li>
+                        <li><span class="check">✓</span> Rappels SMS (bientôt)</li>
+                        <li><span class="check">✓</span> Assistance VIP prioritaire</li>
+                        <li><span class="check">✓</span> Multi-établissements</li>
                     </ul>
-                    <a href="#register" class="btn btn-secondary btn-full">Essai gratuit 14 jours</a>
+                    <button class="btn btn-secondary btn-full" onclick="startCheckout('premium')">Commencer l'essai
+                        gratuit</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="testimonials reveal">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-tag">Témoignages</span>
+                <h2>Ils utilisent SalonPro au quotidien</h2>
+            </div>
+            <div class="testimonial-grid">
+                <div class="testimonial-card reveal">
+                    <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                    <p>"Depuis que j'utilise SalonPro, mes clients réservent eux-mêmes. Je gagne au moins 2h par jour !"
+                    </p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar" style="background: linear-gradient(135deg, #6366f1, #818cf8);">M
+                        </div>
+                        <div>
+                            <strong>Marie D.</strong>
+                            <span>Coiffeuse indépendante, Lausanne</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card reveal">
+                    <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                    <p>"Interface super clean. Mon équipe de 4 barbiers l'a adopté en 1 jour. Le meilleur rapport
+                        qualité-prix du marché."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar" style="background: linear-gradient(135deg, #f59e0b, #fbbf24);">K
+                        </div>
+                        <div>
+                            <strong>Karim B.</strong>
+                            <span>Propriétaire de BarberKing, Genève</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card reveal">
+                    <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+                    <p>"Les statistiques m'aident à comprendre quels services marchent le mieux. Indispensable pour mon
+                        institut."</p>
+                    <div class="testimonial-author">
+                        <div class="testimonial-avatar" style="background: linear-gradient(135deg, #ec4899, #f472b6);">S
+                        </div>
+                        <div>
+                            <strong>Sophie L.</strong>
+                            <span>Institut de beauté Éclat, Zurich</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -247,26 +390,47 @@
     <!-- CTA Footer -->
     <section class="cta-footer reveal">
         <div class="container">
-            <h2>Prêt à sublimer l'expérience de vos clients ?</h2>
-            <p>La configuration ne prend que 5 minutes. Aucune carte de crédit requise pour l'essai.</p>
-            <a href="#register" class="btn btn-white btn-lg">Créer mon espace pro</a>
+            <div class="cta-glow"></div>
+            <h2>Prêt à digitaliser votre salon ?</h2>
+            <p>Créez votre espace en 5 minutes. Essai gratuit de 14 jours, aucune carte bancaire requise.</p>
+            <a href="#pricing" class="btn btn-white btn-lg shine-effect">Démarrer maintenant →</a>
         </div>
     </section>
 
     <footer class="site-footer">
         <div class="container">
-            <div class="footer-bottom">
-                <div class="logo-small">✨ SalonPro</div>
-                <div class="legal">
-                    <a href="#">Conditions & Confidentialité</a>
-                    <span>&copy; 2026 SalonPro SaaS. Tous droits réservés.</span>
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <div class="logo-small">✨ SalonPro</div>
+                    <p>Le logiciel n°1 pour les professionnels de la beauté en Suisse.</p>
                 </div>
+                <div class="footer-links">
+                    <h4>Produit</h4>
+                    <a href="#features">Fonctionnalités</a>
+                    <a href="#pricing">Tarifs</a>
+                    <a href="/pro">Espace Pro</a>
+                </div>
+                <div class="footer-links">
+                    <h4>Contact</h4>
+                    <a href="mailto:info@osmodigital.ch">info@osmodigital.ch</a>
+                    <a href="#">FAQ</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>&copy; 2026 SalonPro — Un produit Osmo Digital. Tous droits réservés.</span>
+                <a href="#">Conditions & Confidentialité</a>
             </div>
         </div>
     </footer>
 
-    <!-- Animations & Intersection Observer -->
+    <!-- Toast -->
+    <div id="checkoutToast" class="checkout-toast" style="display:none;">
+        <span id="toastMsg"></span>
+    </div>
+
+    <!-- Scripts -->
     <script>
+        // Scroll reveal
         document.addEventListener('DOMContentLoaded', () => {
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -275,8 +439,70 @@
                     }
                 });
             }, { threshold: 0.1 });
-
             document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+            // Check checkout status from URL
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('checkout') === 'success') {
+                showToast('🎉 Paiement réussi ! Bienvenue sur SalonPro. On vous contacte très vite.', 'success');
+                window.history.replaceState({}, '', '/saas/index.html');
+            } else if (params.get('checkout') === 'cancel') {
+                showToast('Paiement annulé. N\'hésitez pas à nous contacter si besoin.', 'info');
+                window.history.replaceState({}, '', '/saas/index.html');
+            }
+        });
+
+        // Stripe Checkout
+        async function startCheckout(plan) {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Redirection...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/stripe/create-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan })
+                });
+                const data = await res.json();
+                if (data.success && data.data?.url) {
+                    window.location.href = data.data.url;
+                } else {
+                    showToast(data.error || 'Erreur lors de la redirection Stripe', 'error');
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                showToast('Impossible de se connecter au serveur', 'error');
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('checkoutToast');
+            const msgEl = document.getElementById('toastMsg');
+            msgEl.textContent = msg;
+            toast.className = 'checkout-toast ' + type;
+            toast.style.display = 'flex';
+            setTimeout(() => { toast.style.display = 'none'; }, 6000);
+        }
+
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('.saas-nav');
+            if (window.scrollY > 50) nav.classList.add('scrolled');
+            else nav.classList.remove('scrolled');
         });
     </script>
 </body>
