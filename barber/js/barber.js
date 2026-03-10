@@ -1,4 +1,4 @@
-﻿/* ============================================
+/* ============================================
    BARBER PRO - Espace Barbier JS
    ============================================ */
 
@@ -962,6 +962,13 @@ async function loadSettings() {
                         <div class="info-tile"><span class="info-tile-icon">✅</span><div><div class="info-tile-label">Statut</div><div class="info-tile-value"><span class="badge badge-active">${salon.subscription?.status || 'active'}</span></div></div></div>
                         <div class="info-tile"><span class="info-tile-icon">💰</span><div><div class="info-tile-label">Prix</div><div class="info-tile-value">${salon.subscription?.price ?? 49.90} CHF/mois</div></div></div>
                     </div>
+                    ${salon.subscription?.stripeCustomerId ? `
+                    <div style="margin-top: 20px;">
+                        <button class="btn btn-outline" onclick="manageSubscription()" style="width:100%; justify-content:center;">
+                            ⚙️ Gérer mon abonnement sur Stripe
+                        </button>
+                    </div>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -1023,6 +1030,28 @@ async function saveBranding() {
             showToast('Erreur', 'error');
         }
     } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+async function manageSubscription() {
+    try {
+        const btn = event.currentTarget;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ Chargement...';
+        btn.disabled = true;
+
+        const res = await apiFetch(`${API}/api/stripe/portal/session`, { method: 'POST' });
+        const data = await res.json();
+        
+        if (data.success && data.data?.url) {
+            window.location.href = data.data.url;
+        } else {
+            showToast(data.error || 'Erreur lors de la connexion à Stripe', 'error');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    } catch (err) {
+        showToast('Erreur de connexion', 'error');
+    }
 }
 
 function updateColorPreview() {

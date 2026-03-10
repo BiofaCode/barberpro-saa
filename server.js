@@ -870,6 +870,33 @@ route('GET', '/api/stripe/public-key', async (req, res) => {
     json(res, 200, { success: true, data: { publicKey: process.env.STRIPE_PUBLIC_KEY || '' } });
 });
 
+// Stripe Customer Portal Session
+route('POST', '/api/stripe/portal/session', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Unauthorized' });
+
+    const salon = await db.findSalonById(user.salonId);
+    if (!salon || !salon.subscription?.stripeCustomerId) {
+        return json(res, 400, { success: false, error: 'Ce salon n\'a pas de client Stripe actif' });
+    }
+
+    if (!stripe) {
+        return json(res, 500, { success: false, error: 'Stripe API not configured' });
+    }
+
+    try {
+        const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+        const session = await stripe.billingPortal.sessions.create({
+            customer: salon.subscription.stripeCustomerId,
+            return_url: `${baseUrl}/barber/index.html`,
+        });
+        return json(res, 200, { success: true, data: { url: session.url } });
+    } catch (err) {
+        console.error('Stripe Portal error:', err.message);
+        return json(res, 500, { success: false, error: err.message });
+    }
+});
+
 // Register + Checkout in one step
 route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
     const body = await parseBody(req);
