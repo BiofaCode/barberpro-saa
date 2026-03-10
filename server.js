@@ -966,9 +966,11 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
                 cancel_url: `${baseUrl}/saas/index.html?checkout=cancel`
             });
 
+            console.log(`[API Stripe] Session créée: ${session.id}, URL: ${session.url}`);
             return json(res, 200, { success: true, data: { url: session.url, sessionId: session.id, salonSlug: slug } });
         } else {
             // Stripe not configured, just return success
+            console.warn('[API Stripe] Stripe non configuré, retour URL vide');
             return json(res, 200, { success: true, data: { salonSlug: slug, message: 'Salon créé (Stripe non configuré)' } });
         }
     } catch (err) {

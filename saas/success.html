@@ -224,8 +224,8 @@
         .actions {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 0;
+            gap: 12px;
+            margin-top: 24px;
         }
 
         .confetti {
@@ -290,44 +290,33 @@
 
         <h1>Paiement confirmé !</h1>
         <p class="subtitle">
-            Votre salon <span class="salon-name" id="salonNameDisplay"></span> est maintenant actif.
-            <br>Vous allez recevoir un email avec vos accès.
+            Génial ! Votre salon <span class="salon-name" id="salonNameDisplay"></span> est tout prêt.
+            <br>Vos accès personnels vous ont été envoyés par email.
         </p>
 
         <div class="info-card">
             <div class="info-row">
-                <span class="info-label">Pack</span>
+                <span class="info-label">Abonnement</span>
                 <span class="info-value" id="planDisplay">Pro</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Essai gratuit</span>
-                <span class="info-value green">14 jours</span>
+                <span class="info-value green">14 jours restants</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Statut</span>
+                <span class="info-label">Statut du compte</span>
                 <span class="info-value green">✅ Actif</span>
             </div>
         </div>
 
-        <h3 style="font-size:14px; color:#a1a1aa; margin-bottom:16px; font-weight:500;">Prochaines étapes</h3>
-        <div class="steps">
-            <div class="step">
-                <div class="step-num">1</div>
-                <div class="step-text">Connectez-vous à l'Espace Pro</div>
-            </div>
-            <div class="step">
-                <div class="step-num">2</div>
-                <div class="step-text">Personnalisez votre salon</div>
-            </div>
-            <div class="step">
-                <div class="step-num">3</div>
-                <div class="step-text">Recevez des réservations</div>
-            </div>
-        </div>
-
         <div class="actions">
-            <a href="/pro" class="btn btn-primary">Accéder à mon Espace Pro →</a>
-            <a href="/" class="btn btn-secondary">Retour à l'accueil</a>
+            <!-- BIG PROMINENT BUTTON TO PRO DASHBOARD -->
+            <a href="/pro" class="btn btn-primary"
+                style="width: 100%; justify-content: center; font-size: 18px; padding: 18px;">
+                Accéder à mon Espace Pro →
+            </a>
+            <a href="/" class="btn btn-secondary" style="width: 100%; justify-content: center;">Retour au site
+                vitrine</a>
         </div>
     </div>
 
