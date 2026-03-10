@@ -888,7 +888,7 @@ route('POST', '/api/stripe/portal/session', async (req, res) => {
         const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
         const session = await stripe.billingPortal.sessions.create({
             customer: salon.subscription.stripeCustomerId,
-            return_url: `${baseUrl}/barber/index.html`,
+            return_url: `${baseUrl}/pro`,
         });
         return json(res, 200, { success: true, data: { url: session.url } });
     } catch (err) {
