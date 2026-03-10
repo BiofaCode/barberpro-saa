@@ -512,26 +512,40 @@
         });
 
         // Submit signup form → create salon → redirect to Stripe
-        async function submitSignup(e) {
-            if (e) e.preventDefault();
+        async function submitSignup() {
             const btn = document.getElementById('signupSubmitBtn');
             const errDiv = document.getElementById('signupError');
-            const originalText = btn.textContent;
-            btn.textContent = 'Création en cours...';
-            btn.disabled = true;
+            const originalText = btn ? btn.textContent : 'Continuer vers le paiement →';
+
+            if (btn) {
+                btn.textContent = 'Création en cours...';
+                btn.disabled = true;
+            }
             if (errDiv) errDiv.style.display = 'none';
 
-            const salonName = document.getElementById('signupSalonName').value.trim();
-            const ownerName = document.getElementById('signupOwnerName').value.trim();
-            const email = document.getElementById('signupEmail').value.trim();
-            const password = document.getElementById('signupPassword').value;
-            const phone = document.getElementById('signupPhone').value.trim();
-            const plan = document.getElementById('signupPlan').value;
+            // Safely get values
+            const getName = (id) => {
+                const el = document.getElementById(id);
+                return el ? el.value.trim() : '';
+            };
+
+            const salonName = getName('signupSalonName');
+            const ownerName = getName('signupOwnerName');
+            const email = getName('signupEmail');
+            const password = document.getElementById('signupPassword') ? document.getElementById('signupPassword').value : '';
+            const phone = getName('signupPhone');
+            const plan = getName('signupPlan');
 
             if (!salonName || !ownerName || !email || !password) {
                 showToast('Veuillez remplir tous les champs obligatoires', 'error');
-                btn.textContent = originalText;
-                btn.disabled = false;
+                if (errDiv) {
+                    errDiv.style.display = 'block';
+                    errDiv.textContent = 'Veuillez remplir tous les champs obligatoires';
+                }
+                if (btn) {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
                 return;
             }
 
@@ -554,15 +568,23 @@
                 } catch (parseErr) {
                     console.error('❌ JSON parse error:', parseErr);
                     showToast('Erreur serveur (réponse invalide)', 'error');
-                    btn.textContent = originalText;
-                    btn.disabled = false;
+                    if (btn) {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }
                     return;
                 }
 
                 if (!createData.success) {
                     showToast(createData.error || 'Erreur lors de la création', 'error');
-                    btn.textContent = originalText;
-                    btn.disabled = false;
+                    if (errDiv) {
+                        errDiv.style.display = 'block';
+                        errDiv.textContent = createData.error || 'Erreur lors de la création';
+                    }
+                    if (btn) {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }
                     return;
                 }
 
@@ -571,28 +593,43 @@
                 console.log('🔗 Stripe URL:', stripeUrl);
 
                 if (stripeUrl) {
-                    btn.textContent = 'Redirection vers Stripe...';
+                    if (btn) btn.textContent = 'Redirection vers Stripe...';
                     // Try direct redirect
                     window.location.href = stripeUrl;
-                    // Fallback after 3s if redirect didn't work
+
+                    // Fallback after 3s if redirect didn't work (e.g., popup blocker, iOS Safari strict mode)
                     setTimeout(() => {
-                        if (document.getElementById('signupModal')?.style.display !== 'none') {
+                        const modal = document.getElementById('signupModal');
+                        if (modal && modal.style.display !== 'none' && btn) {
                             console.log('⚠️ Redirect fallback triggered');
-                            btn.innerHTML = `<a href="${stripeUrl}" style="color:white;text-decoration:none" target="_blank">Cliquez ici pour accéder au paiement →</a>`;
+                            btn.innerHTML = `<a href="${stripeUrl}" style="color:white;text-decoration:none;display:block;width:100%;height:100%">Cliquez ici pour payer →</a>`;
                             btn.disabled = false;
+
+                            // Also show a highly visible message
+                            if (errDiv) {
+                                errDiv.style.display = 'block';
+                                errDiv.style.backgroundColor = 'rgba(34, 197, 94, 0.12)';
+                                errDiv.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+                                errDiv.style.color = '#4ade80';
+                                errDiv.innerHTML = `Le salon a été créé ! Si la redirection automatique ne fonctionne pas, <a href="${stripeUrl}" style="color:#fff;text-decoration:underline">cliquez ici pour finaliser le paiement</a>.`;
+                            }
                         }
-                    }, 3000);
+                    }, 2500);
                 } else {
                     showToast('✅ Salon créé avec succès !', 'success');
-                    btn.textContent = originalText;
-                    btn.disabled = false;
+                    if (btn) {
+                        btn.textContent = originalText;
+                        btn.disabled = false;
+                    }
                     closeSignupModal();
                 }
             } catch (err) {
                 console.error('❌ Fetch error:', err);
                 showToast('Erreur de connexion au serveur: ' + err.message, 'error');
-                btn.textContent = originalText;
-                btn.disabled = false;
+                if (btn) {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
             }
         }
 
