@@ -196,11 +196,15 @@ async function loadDashboard() {
                 trialInfo = ` — ${daysLeft} jour${daysLeft > 1 ? 's' : ''} restant${daysLeft > 1 ? 's' : ''}`;
             }
             subBanner = `
-                <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-                    <div style="display:flex;align-items:center;gap:12px">
-                        <span style="font-size:13px;color:var(--text-muted)">Abonnement :</span>
-                        <span style="font-weight:600;font-size:14px">${planNames[sub.plan] || sub.plan}</span>
-                        <span style="font-size:13px;color:var(--text-muted)">${statusLabels[sub.status] || sub.status}${trialInfo}</span>
+                <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:15px">
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                        <span style="font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Abonnement</span>
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <span style="font-weight:700;font-size:18px;color:#fff">${planNames[sub.plan] || sub.plan}</span>
+                            <span style="font-size:13px;background:rgba(255,255,255,0.05);padding:4px 10px;border-radius:20px;color:var(--text-muted)">
+                                ${statusLabels[sub.status] || sub.status}${trialInfo}
+                            </span>
+                        </div>
                     </div>
                 </div>
             `;
