@@ -577,6 +577,7 @@ route('PUT', '/api/barber/salon/:salonId/branding', async (req, res, params) => 
 route('POST', '/api/barber/salon/:salonId/gallery', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
+    if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
 
     // Parse multipart for image upload
     const { fields, fileBuffer, fileExt } = await parseMultipart(req);
@@ -603,6 +604,7 @@ route('POST', '/api/barber/salon/:salonId/gallery', async (req, res, params) => 
 route('DELETE', '/api/barber/salon/:salonId/gallery/:photoId', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
+    if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
 
     const gallery = (salon.gallery || []).filter(p => p._id !== params.photoId);
     await db.updateSalon(params.salonId, { gallery });
@@ -628,6 +630,7 @@ route('GET', '/api/barber/salon/:salonId/testimonials', async (req, res, params)
 route('POST', '/api/barber/salon/:salonId/testimonials', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
+    if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
     const body = await parseBody(req);
 
     const testimonials = salon.testimonials || [];
@@ -646,6 +649,7 @@ route('POST', '/api/barber/salon/:salonId/testimonials', async (req, res, params
 route('PUT', '/api/barber/salon/:salonId/testimonials/:tid', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
+    if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
     const body = await parseBody(req);
 
     const testimonials = (salon.testimonials || []).map(t =>
@@ -658,6 +662,7 @@ route('PUT', '/api/barber/salon/:salonId/testimonials/:tid', async (req, res, pa
 route('DELETE', '/api/barber/salon/:salonId/testimonials/:tid', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
+    if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
 
     const testimonials = (salon.testimonials || []).filter(t => t._id !== params.tid);
     await db.updateSalon(params.salonId, { testimonials });

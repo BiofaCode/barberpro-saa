@@ -811,6 +811,23 @@ async function loadSettings() {
             </div>
 
             <!-- GALERIE PHOTOS -->
+            ${salon.subscription?.plan === 'starter' ? `
+            <div class="card" style="margin-bottom:20px; position:relative; overflow:hidden">
+                <div class="card-header"><h3>📸 Galerie Photos</h3></div>
+                <div class="card-body" style="filter: blur(4px); opacity: 0.5; pointer-events: none;">
+                    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px">
+                        <div class="form-group" style="flex:2;margin-bottom:0"><label class="form-label">Image</label><input type="file" class="form-input form-input-full"></div>
+                        <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">Titre (optionnel)</label><input class="form-input form-input-full" placeholder="Coupe Fade..."></div>
+                        <button class="btn btn-primary btn-sm" style="white-space:nowrap">📤 Ajouter</button>
+                    </div>
+                </div>
+                <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(10,10,15,0.7); z-index:10;">
+                    <span style="font-size:2rem; margin-bottom:8px">🔒</span>
+                    <h4 style="margin-bottom:8px">Fonctionnalité Premium</h4>
+                    <p style="font-size:.85rem; color:var(--text-sec); text-align:center; max-width:80%; margin-bottom:16px">Passez au Pack Pro pour créer votre propre galerie de réalisations.</p>
+                </div>
+            </div>
+            ` : `
             <div class="card" style="margin-bottom:20px">
                 <div class="card-header"><h3>📸 Galerie Photos</h3></div>
                 <div class="card-body">
@@ -839,8 +856,25 @@ async function loadSettings() {
                     </div>
                 </div>
             </div>
+            `}
 
             <!-- TÉMOIGNAGES -->
+            ${salon.subscription?.plan === 'starter' ? `
+            <div class="card" style="margin-bottom:20px; position:relative; overflow:hidden">
+                <div class="card-header"><h3>⭐ Témoignages / Avis</h3></div>
+                <div class="card-body" style="filter: blur(4px); opacity: 0.5; pointer-events: none;">
+                    <div style="background:var(--bg-surface);border-radius:12px;padding:16px;margin-bottom:10px;">
+                        <div style="color:var(--primary);margin-bottom:4px">★★★★★</div>
+                        <div style="font-size:.88rem;color:var(--text);margin-bottom:6px">"Super salon !"</div>
+                    </div>
+                </div>
+                <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(10,10,15,0.7); z-index:10;">
+                    <span style="font-size:2rem; margin-bottom:8px">🔒</span>
+                    <h4 style="margin-bottom:8px">Fonctionnalité Premium</h4>
+                    <p style="font-size:.85rem; color:var(--text-sec); text-align:center; max-width:80%; margin-bottom:16px">Passez au Pack Pro pour intégrer vos propres avis clients sur votre site vitrine.</p>
+                </div>
+            </div>
+            ` : `
             <div class="card" style="margin-bottom:20px">
                 <div class="card-header"><h3>⭐ Témoignages / Avis</h3><button class="btn btn-primary btn-sm" onclick="showAddTestimonial()">+ Ajouter un avis</button></div>
                 <div class="card-body">
@@ -858,10 +892,11 @@ async function loadSettings() {
                                     <button class="btn btn-sm btn-danger" onclick="deleteTestimonial('${t._id}')">✕</button>
                                 </div>
                             </div>
-                        `).join('') || '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:.88rem">Aucun témoignage</div>'}
+                        `).join('') || '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:.88rem">Aucun avis configuré</div>'}
                     </div>
                 </div>
             </div>
+            `}
 
             <!-- HORAIRES -->
             <div class="card" style="margin-bottom:20px">
