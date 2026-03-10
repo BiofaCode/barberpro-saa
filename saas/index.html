@@ -424,7 +424,7 @@
                 <h2>Créer votre salon</h2>
                 <p id="modalPlanLabel">Pack Pro — 49 CHF/mois</p>
             </div>
-            <form id="signupForm" onsubmit="submitSignup(event)">
+            <form id="signupForm" onsubmit="event.preventDefault(); submitSignup();">
                 <div class="form-group">
                     <label for="signupSalonName">Nom du salon</label>
                     <input type="text" id="signupSalonName" placeholder="ex: Beauty Lounge Lausanne" required>
