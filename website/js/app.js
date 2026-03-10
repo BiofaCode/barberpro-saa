@@ -34,6 +34,9 @@ function applySalonBranding(salon) {
     const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), bl = parseInt(hex.slice(5, 7), 16);
     document.documentElement.style.setProperty('--color-primary-glow', `rgba(${r},${g},${bl},0.3)`);
     document.documentElement.style.setProperty('--color-primary-dark', b.accentColor || '#A88B52');
+    if (b.textColor) {
+      document.documentElement.style.setProperty('--color-text-primary', b.textColor);
+    }
   }
 
   const logoEl = document.querySelector('.nav-logo-text');

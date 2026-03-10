@@ -351,6 +351,7 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
             employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties })),
             rating: salon.rating,
             reviewCount: salon.reviewCount,
+            plan: salon.subscription?.plan || salon.plan || 'pro',
         }
     });
 });
@@ -563,6 +564,7 @@ route('PUT', '/api/barber/salon/:salonId/branding', async (req, res, params) => 
         accentColor: body.accentColor || salon.branding?.accentColor || '#818CF8',
         heroTitle: body.heroTitle || salon.branding?.heroTitle || `Bienvenue chez ${salon.name}`,
         heroSubtitle: body.heroSubtitle || salon.branding?.heroSubtitle || 'Votre salon de coiffure premium',
+        textColor: body.textColor || salon.branding?.textColor || '#F5F0E8',
         instagram: body.instagram !== undefined ? body.instagram : (salon.branding?.instagram || ''),
         facebook: body.facebook !== undefined ? body.facebook : (salon.branding?.facebook || ''),
         tiktok: body.tiktok !== undefined ? body.tiktok : (salon.branding?.tiktok || ''),

@@ -790,8 +790,15 @@ async function loadSettings() {
                                 <span id="colorLabel2" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.accentColor || '#818CF8'}</span>
                             </div>
                         </div>
+                        <div class="form-group" style="flex:1">
+                            <label class="form-label">Couleur du texte</label>
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <input type="color" id="set-color-text" value="${salon.branding?.textColor || '#F5F0E8'}" style="width:50px;height:40px;border:none;border-radius:8px;cursor:pointer" oninput="updateColorPreview()">
+                                <span id="colorLabelText" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.textColor || '#F5F0E8'}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div id="colorPreview" style="padding:16px;border-radius:12px;margin-bottom:16px;text-align:center;font-weight:700;font-size:1rem;background:linear-gradient(135deg,${salon.branding?.primaryColor || '#6366F1'},${salon.branding?.accentColor || '#818CF8'});color:#fff">
+                    <div id="colorPreview" style="padding:16px;border-radius:12px;margin-bottom:16px;text-align:center;font-weight:700;font-size:1rem;background:linear-gradient(135deg,${salon.branding?.primaryColor || '#6366F1'},${salon.branding?.accentColor || '#818CF8'});color:${salon.branding?.textColor || '#F5F0E8'}">
                         Aperçu de vos couleurs
                     </div>
                     <div class="form-group"><label class="form-label">Titre principal du site (hero)</label><input class="form-input form-input-full" id="set-heroTitle" value="${salon.branding?.heroTitle || ''}" placeholder="L'Art de la Coiffure Masculine"></div>
@@ -997,6 +1004,7 @@ async function saveBranding() {
         accentColor: document.getElementById('set-color2').value,
         heroTitle: document.getElementById('set-heroTitle').value.trim(),
         heroSubtitle: document.getElementById('set-heroSubtitle').value.trim(),
+        textColor: document.getElementById('set-color-text').value,
         instagram: document.getElementById('set-instagram').value.trim(),
         facebook: document.getElementById('set-facebook').value.trim(),
         tiktok: document.getElementById('set-tiktok').value.trim(),
@@ -1020,9 +1028,13 @@ async function saveBranding() {
 function updateColorPreview() {
     const c1 = document.getElementById('set-color1').value;
     const c2 = document.getElementById('set-color2').value;
+    const cText = document.getElementById('set-color-text').value;
     document.getElementById('colorLabel1').textContent = c1;
     document.getElementById('colorLabel2').textContent = c2;
-    document.getElementById('colorPreview').style.background = `linear-gradient(135deg,${c1},${c2})`;
+    document.getElementById('colorLabelText').textContent = cText;
+    const prev = document.getElementById('colorPreview');
+    prev.style.background = `linear-gradient(135deg,${c1},${c2})`;
+    prev.style.color = cText;
 }
 
 // ---- Save Hours ----
