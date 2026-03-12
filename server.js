@@ -348,7 +348,7 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
             hours: salon.hours,
             gallery: salon.gallery || [],
             testimonials: salon.testimonials || [],
-            employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties })),
+            employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties, hours: e.hours })),
             rating: salon.rating,
             reviewCount: salon.reviewCount,
             plan: salon.subscription?.plan || salon.plan || 'pro',
@@ -756,6 +756,23 @@ route('DELETE', '/api/barber/salon/:salonId/employees/:empId', async (req, res, 
         await db.deleteEmployee(params.empId);
     }
     json(res, 200, { success: true, message: 'Membre supprimé' });
+});
+
+route('PUT', '/api/barber/salon/:salonId/employees/:empId/hours', async (req, res, params) => {
+    const body = await parseBody(req);
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    
+    // Authorization
+    const user = verifyToken(req);
+    if (!user || (user.role !== 'owner' && user.employeeId !== params.empId)) {
+        return json(res, 403, { success: false, error: 'Non autorisé' });
+    }
+
+    if (!body.hours) return json(res, 400, { success: false, error: 'Heures requises' });
+
+    await db.updateEmployee(params.empId, { hours: body.hours });
+    json(res, 200, { success: true, message: 'Horaires mis à jour' });
 });
 
 // Bookings

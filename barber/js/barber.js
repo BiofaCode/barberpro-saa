@@ -1,5 +1,5 @@
 /* ============================================
-   BARBER PRO - Espace Barbier JS
+  * BARBER PRO - Espace Pro JS
    ============================================ */
 
 const API = '';
@@ -478,8 +478,9 @@ async function loadEmployees() {
                         <div class="data-card-sub">${(e.specialties || []).join(', ')}</div>
                     </div>
                     <div><span class="badge badge-active">${e.role === 'owner' ? 'Propriétaire' : 'Employé'}</span></div>
-                    <div>
-                        <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e._id}', '${e.role || 'employee'}')">🗑</button>
+                    <div style="display:flex;gap:5px;">
+                        <button class="btn btn-outline btn-sm" onclick='showEditSchedule(${JSON.stringify(e).replace(/'/g, "&#39;")})' title="Modifier les horaires">🕐</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e._id}', '${e.role || 'employee'}')" title="Supprimer">🗑</button>
                     </div>
                 </div>
             `).join('') + '</div>';
@@ -551,6 +552,84 @@ async function deleteEmployee(id, role) {
     }
     loadEmployees();
     showToast('Membre supprimé');
+}
+
+function showEditSchedule(emp) {
+    const hours = emp.hours || {};
+    const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    const dayLabels = { lundi: 'Lundi', mardi: 'Mardi', mercredi: 'Mercredi', jeudi: 'Jeudi', vendredi: 'Vendredi', samedi: 'Samedi', dimanche: 'Dimanche' };
+
+    const hoursRows = days.map(d => {
+        const h = hours[d];
+        const isClosed = !h || !h.open;
+        return `
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+                <div style="width:100px;font-weight:600;font-size:.88rem">${dayLabels[d]}</div>
+                <label style="display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-sec);cursor:pointer;min-width:70px">
+                    <input type="checkbox" class="hours-check-emp" data-day="${d}" ${!isClosed ? 'checked' : ''} onchange="toggleDayEmp('${d}', this.checked)" style="accent-color:var(--primary)">
+                    ${!isClosed ? 'Ouvert' : 'Fermé'}
+                </label>
+                <input type="time" id="emp-hours-${d}-open" value="${h?.openTime || '09:00'}" class="form-input" style="width:110px;${isClosed ? 'opacity:.3;pointer-events:none' : ''}" />
+                <span style="color:var(--text-muted)">→</span>
+                <input type="time" id="emp-hours-${d}-close" value="${h?.closeTime || '19:00'}" class="form-input" style="width:110px;${isClosed ? 'opacity:.3;pointer-events:none' : ''}" />
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('modalTitle').textContent = `Horaires de ${emp.name}`;
+    document.getElementById('modalBody').innerHTML = `
+        <div style="margin-bottom: 12px; font-size: 0.85rem; color: var(--text-sec);">
+            Personnalisez les horaires pour cet employé. Ces horaires sont prioritaires sur ceux du salon.
+        </div>
+        ${hoursRows}
+    `;
+    document.getElementById('modalFooter').innerHTML = `
+        <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="saveEmployeeSchedule('${emp._id}')">💾 Enregistrer</button>
+    `;
+    document.getElementById('modal').classList.add('active');
+}
+
+function toggleDayEmp(day, checked) {
+    const open = document.getElementById(`emp-hours-${day}-open`);
+    const close = document.getElementById(`emp-hours-${day}-close`);
+    const label = event.currentTarget.parentElement;
+    open.style.opacity = checked ? '1' : '.3';
+    open.style.pointerEvents = checked ? 'auto' : 'none';
+    close.style.opacity = checked ? '1' : '.3';
+    close.style.pointerEvents = checked ? 'auto' : 'none';
+    label.querySelector('input').nextSibling.textContent = checked ? ' Ouvert' : ' Fermé';
+}
+
+async function saveEmployeeSchedule(empId) {
+    const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    const newHours = {};
+    days.forEach(d => {
+        const cb = document.querySelector(`.hours-check-emp[data-day="${d}"]`);
+        const isOpen = cb && cb.checked;
+        newHours[d] = {
+            open: isOpen,
+            openTime: isOpen ? document.getElementById(`emp-hours-${d}-open`).value : '09:00',
+            closeTime: isOpen ? document.getElementById(`emp-hours-${d}-close`).value : '19:00',
+        };
+    });
+
+    try {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees/${empId}/hours`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hours: newHours })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal();
+            loadEmployees();
+            showToast('Horaires mis à jour ✅');
+        } else {
+            showToast(data.error || 'Erreur', 'error');
+        }
+    } catch (e) {
+        showToast('Erreur de connexion', 'error');
+    }
 }
 
 // ---- Services ----

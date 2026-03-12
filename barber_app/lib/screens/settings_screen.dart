@@ -1,5 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
@@ -128,6 +130,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildWebsiteLink(),
                       const SizedBox(height: 24),
 
+                      // Subscription
+                      _buildSectionTitle('Abonnement'),
+                      const SizedBox(height: 12),
+                      _buildSubscriptionCard(),
+                      const SizedBox(height: 24),
+
+                      // Branding
+                      _buildSectionTitle('Personnalisation'),
+                      const SizedBox(height: 12),
+                      _buildBrandingCard(),
+                      const SizedBox(height: 24),
+
                       // Employees
                       _buildSectionTitle('Mon équipe (${_employees.length})'),
                       const SizedBox(height: 12),
@@ -141,6 +155,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildSectionTitle('Prestations (${_services.length})'),
                       const SizedBox(height: 12),
                       ..._services.map((s) => _buildServiceTile(s)),
+                      const SizedBox(height: 24),
+
+                      // Gallery
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Galerie Photos',
+                            style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_photo_alternate_outlined, color: AppTheme.primary),
+                            onPressed: _pickAndUploadPhoto,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildGalleryList(),
+                      const SizedBox(height: 24),
+
+                      // Testimonials
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Avis & Témoignages',
+                            style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
+                            onPressed: () => _showTestimonialSheet(null),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _buildTestimonialsList(),
                       const SizedBox(height: 24),
 
                       // Hours
@@ -167,7 +217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // Version
                       Center(
                         child: Text(
-                          'BarberPro v2.0.0\nPlateforme SaaS pour barbiers',
+                          'SalonPro v2.0.0\nPlateforme SaaS pour professionnels',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted, height: 1.6),
                         ),
@@ -461,5 +511,521 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildSubscriptionCard() {
+    final sub = _salon?['subscription'];
+    final plan = sub?['plan'] ?? 'pro';
+    final status = sub?['status'] ?? 'active';
+    final price = sub?['price'] ?? 49.90;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withAlpha(10)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Plan professionnel', style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textMuted)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.success.withAlpha(26),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(status.toString().toUpperCase(), style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Pack ${plan.toString().toUpperCase()}',
+            style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.primary),
+          ),
+          Text('$price CHF / mois', style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary)),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () {
+              // Normally this calls an endpoint to generate Stripe Billing Portal link
+              // and opens it in external browser.
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez utiliser la version Web pour gérer votre abonnement sur Stripe.')));
+            },
+            icon: const Icon(Icons.credit_card_rounded, size: 18),
+            label: const Text('Gérer sur Stripe'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white.withAlpha(10),
+              foregroundColor: AppTheme.textPrimary,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBrandingCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withAlpha(10)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: AppTheme.primary.withAlpha(26), borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.palette_rounded, color: AppTheme.primary, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Couleurs et Textes', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                    Text('Personnalisez votre site public', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _showBrandingBottomSheet,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary.withAlpha(26),
+              foregroundColor: AppTheme.primary,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Modifier le design'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBrandingBottomSheet() {
+    final branding = _salon?['branding'] as Map<String, dynamic>? ?? {};
+    final titleCtrl = TextEditingController(text: branding['heroTitle'] ?? '');
+    final subtitleCtrl = TextEditingController(text: branding['heroSubtitle'] ?? '');
+    final primaryColorCtrl = TextEditingController(text: branding['primaryColor'] ?? '#6366F1');
+    final accentColorCtrl = TextEditingController(text: branding['accentColor'] ?? '#818CF8');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 24),
+        decoration: const BoxDecoration(
+          color: AppTheme.bgCard,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Personnalisation', style: GoogleFonts.playfairDisplay(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+              const SizedBox(height: 20),
+              _buildTextField('Titre principal', titleCtrl),
+              const SizedBox(height: 16),
+              _buildTextField('Sous-titre', subtitleCtrl),
+              const SizedBox(height: 16),
+              _buildTextField('Couleur Primaire (HEX)', primaryColorCtrl),
+              const SizedBox(height: 16),
+              _buildTextField('Couleur Accent (HEX)', accentColorCtrl),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    setState(() => _loading = true);
+                    final newBranding = {
+                      ...branding,
+                      'heroTitle': titleCtrl.text.trim(),
+                      'heroSubtitle': subtitleCtrl.text.trim(),
+                      'primaryColor': primaryColorCtrl.text.trim(),
+                      'accentColor': accentColorCtrl.text.trim(),
+                    };
+                    final success = await ApiService.updateBranding(newBranding);
+                    if (success) {
+                      await _loadSalonData();
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Design mis à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.success));
+                    } else {
+                      setState(() => _loading = false);
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur de mise à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.error));
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text('Enregistrer', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.bgDark)),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, TextEditingController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMuted)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppTheme.bgDark,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTestimonialsList() {
+    final testimonials = _salon?['testimonials'] as List? ?? [];
+    if (testimonials.isEmpty) {
+      return _buildEmptyCard('Aucun avis', 'Ajoutez les témoignages de vos clients');
+    }
+    return Column(
+      children: testimonials.map((t) => _buildTestimonialTile(t)).toList(),
+    );
+  }
+
+  Widget _buildTestimonialTile(Map<String, dynamic> t) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.bgDark.withAlpha(50),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withAlpha(10)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(t['name'] ?? '', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.primary),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _showTestimonialSheet(t),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 18, color: AppTheme.error),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _deleteTestimonial(t['_id']),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(t['role'] ?? 'Client', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+          const SizedBox(height: 8),
+          Text(t['text'] ?? '', style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary)),
+          const SizedBox(height: 8),
+          Row(
+            children: List.generate(5, (i) => Icon(
+              i < (t['stars'] ?? 5) ? Icons.star : Icons.star_border,
+              color: Colors.amber, size: 16,
+            )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTestimonialSheet(Map<String, dynamic>? t) {
+    final sub = _salon?['subscription'];
+    final plan = sub?['plan'] ?? 'pro';
+    if (plan == 'starter') {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Le Pack Pro est requis pour personnaliser les témoignages.')));
+      return;
+    }
+
+    final isEdit = t != null;
+    final nameCtrl = TextEditingController(text: t?['name'] ?? '');
+    final textCtrl = TextEditingController(text: t?['text'] ?? '');
+    final roleCtrl = TextEditingController(text: t?['role'] ?? 'Client');
+    int stars = t?['stars'] ?? 5;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setStateSheet) => Container(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 24),
+            decoration: const BoxDecoration(
+              color: AppTheme.bgCard,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(isEdit ? 'Modifier l\'avis' : 'Ajouter un avis', style: GoogleFonts.playfairDisplay(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  const SizedBox(height: 20),
+                  _buildTextField('Nom du client', nameCtrl),
+                  const SizedBox(height: 16),
+                  _buildTextField('Rôle / Description', roleCtrl),
+                  const SizedBox(height: 16),
+                  Text('Étoiles ($stars)', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMuted)),
+                  Slider(
+                    value: stars.toDouble(),
+                    min: 1, max: 5, divisions: 4,
+                    activeColor: Colors.amber,
+                    onChanged: (v) => setStateSheet(() => stars = v.toInt()),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildTextField('Avis / Témoignage', textCtrl),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (nameCtrl.text.isEmpty || textCtrl.text.isEmpty) return;
+                        Navigator.pop(ctx);
+                        setState(() => _loading = true);
+                        final payload = {
+                          'name': nameCtrl.text.trim(),
+                          'text': textCtrl.text.trim(),
+                          'role': roleCtrl.text.trim(),
+                          'stars': stars,
+                        };
+                        final success = isEdit
+                            ? await ApiService.updateTestimonial(t!['_id'], payload)
+                            : await ApiService.addTestimonial(payload);
+
+                        if (success) {
+                          await _loadSalonData();
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Avis enregistré', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.success));
+                        } else {
+                          setState(() => _loading = false);
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.error));
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text('Enregistrer', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.bgDark)),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _deleteTestimonial(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bgCard,
+        title: const Text('Confirmer', style: TextStyle(color: AppTheme.textPrimary)),
+        content: const Text('Supprimer cet avis ?', style: TextStyle(color: AppTheme.textMuted)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler', style: TextStyle(color: Colors.white70))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() => _loading = true);
+    final success = await ApiService.deleteTestimonial(id);
+    if (success) {
+      await _loadSalonData();
+    } else {
+      setState(() => _loading = false);
+    }
+  }
+
+  Widget _buildGalleryList() {
+    final gallery = _salon?['gallery'] as List? ?? [];
+    if (gallery.isEmpty) {
+      return _buildEmptyCard('Aucune photo', 'Ajoutez des photos de vos réalisations');
+    }
+    return SizedBox(
+      height: 140,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: gallery.length,
+        itemBuilder: (ctx, i) => _buildGalleryTile(gallery[i]),
+      ),
+    );
+  }
+
+  Widget _buildGalleryTile(Map<String, dynamic> photo) {
+    return Container(
+      width: 140,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.bgDark.withAlpha(50),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withAlpha(10)),
+        image: DecorationImage(
+          image: NetworkImage(photo['url'] ?? ''),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: Stack(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [Colors.transparent, Colors.black.withAlpha(180)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 4, right: 4,
+            child: IconButton(
+              icon: const Icon(Icons.delete, color: Colors.white, size: 20),
+              onPressed: () => _deleteGalleryPhoto(photo['_id']),
+            ),
+          ),
+          if (photo['title'] != null && photo['title'].toString().isNotEmpty)
+            Positioned(
+              bottom: 12, left: 12, right: 12,
+              child: Text(
+                photo['title'],
+                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadPhoto() async {
+    final sub = _salon?['subscription'];
+    final plan = sub?['plan'] ?? 'pro';
+    if (plan == 'starter') {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Le Pack Pro est requis pour la galerie photo.')));
+      return;
+    }
+
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1080, maxHeight: 1080, imageQuality: 80);
+    if (pickedFile == null) return;
+
+    final titleCtrl = TextEditingController();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bgCard,
+        title: const Text('Titre de la photo', style: TextStyle(color: AppTheme.textPrimary)),
+        content: TextField(
+          controller: titleCtrl,
+          style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Ex: Taper Fade',
+            hintStyle: TextStyle(color: AppTheme.textMuted),
+            filled: true,
+            fillColor: AppTheme.bgDark,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler', style: TextStyle(color: Colors.white70))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+            child: const Text('Envoyer', style: TextStyle(color: AppTheme.bgDark)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _loading = true);
+    final success = await ApiService.addGalleryPhoto(titleCtrl.text.trim(), File(pickedFile.path));
+    if (success) {
+      await _loadSalonData();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo ajoutée', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.success));
+    } else {
+      setState(() => _loading = false);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur d\\'upload', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.error));
+    }
+  }
+
+  void _deleteGalleryPhoto(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bgCard,
+        title: const Text('Confirmer', style: TextStyle(color: AppTheme.textPrimary)),
+        content: const Text('Supprimer cette photo ?', style: TextStyle(color: AppTheme.textMuted)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler', style: TextStyle(color: Colors.white70))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() => _loading = true);
+    final success = await ApiService.deleteGalleryPhoto(id);
+    if (success) {
+      await _loadSalonData();
+    } else {
+      setState(() => _loading = false);
+    }
   }
 }

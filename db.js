@@ -215,15 +215,39 @@ const db = {
         if (data.password) {
             pwd = await bcrypt.hash(data.password, 10);
         }
+        
+        let defaultHours = {
+            lundi: { open: '09:00', close: '19:00' },
+            mardi: { open: '09:00', close: '19:00' },
+            mercredi: { open: '09:00', close: '19:00' },
+            jeudi: { open: '09:00', close: '19:00' },
+            vendredi: { open: '09:00', close: '19:00' },
+            samedi: { open: '09:00', close: '18:00' },
+        };
+        try {
+            const salon = await getDB().collection('salons').findOne({ _id: data.salon });
+            if (salon && salon.hours) {
+                defaultHours = salon.hours;
+            }
+        } catch (err) {}
+
         const emp = {
             _id: genId(),
             ...data,
+            hours: data.hours || defaultHours,
             email: data.email ? data.email.toLowerCase() : '',
             password: pwd,
             active: true,
         };
         await getDB().collection('employees').insertOne(emp);
         return emp;
+    },
+    async updateEmployee(id, updates) {
+        if (updates.password) {
+            updates.password = await bcrypt.hash(updates.password, 10);
+        }
+        await getDB().collection('employees').updateOne({ _id: id }, { $set: updates });
+        return await getDB().collection('employees').findOne({ _id: id });
     },
     async compareEmployeePassword(emp, password) {
         if (!emp.password) return false;

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -288,6 +289,102 @@ class ApiService {
       return data['success'] == true;
     } catch (e) {
       debugPrint('API Error (deleteService): $e');
+    }
+    return false;
+  }
+
+  // ---- Branding ----
+  static Future<bool> updateBranding(Map<String, dynamic> branding) async {
+    if (_salonId == null) return false;
+    try {
+      final res = await http.put(
+        Uri.parse('$_url/api/barber/salon/$_salonId/branding'),
+        headers: _authHeaders,
+        body: jsonEncode(branding),
+      );
+      final data = jsonDecode(res.body);
+      return data['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (updateBranding): $e');
+    }
+  // ---- Testimonials ----
+  static Future<bool> addTestimonial(Map<String, dynamic> data) async {
+    if (_salonId == null) return false;
+    try {
+      final res = await http.post(
+        Uri.parse('$_url/api/barber/salon/$_salonId/testimonials'),
+        headers: _authHeaders,
+        body: jsonEncode(data),
+      );
+      final decoded = jsonDecode(res.body);
+      return decoded['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (addTestimonial): $e');
+    }
+    return false;
+  }
+
+  static Future<bool> updateTestimonial(String id, Map<String, dynamic> data) async {
+    if (_salonId == null) return false;
+    try {
+      final res = await http.put(
+        Uri.parse('$_url/api/barber/salon/$_salonId/testimonials/$id'),
+        headers: _authHeaders,
+        body: jsonEncode(data),
+      );
+      final decoded = jsonDecode(res.body);
+      return decoded['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (updateTestimonial): $e');
+    }
+    return false;
+  }
+
+  static Future<bool> deleteTestimonial(String id) async {
+    if (_salonId == null) return false;
+    try {
+      final res = await http.delete(
+        Uri.parse('$_url/api/barber/salon/$_salonId/testimonials/$id'),
+        headers: _authHeaders,
+      );
+      final decoded = jsonDecode(res.body);
+      return decoded['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (deleteTestimonial): $e');
+    }
+    return false;
+  }
+
+  // ---- Gallery ----
+  static Future<bool> addGalleryPhoto(String title, File image) async {
+    if (_salonId == null || _token == null) return false;
+    try {
+      final request = http.MultipartRequest('POST', Uri.parse('$_url/api/barber/salon/$_salonId/gallery'));
+      request.headers['Authorization'] = 'Bearer $_token';
+      request.fields['title'] = title;
+      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final decoded = jsonDecode(response.body);
+      return decoded['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (addGalleryPhoto): $e');
+    }
+    return false;
+  }
+
+  static Future<bool> deleteGalleryPhoto(String id) async {
+    if (_salonId == null) return false;
+    try {
+      final res = await http.delete(
+        Uri.parse('$_url/api/barber/salon/$_salonId/gallery/$id'),
+        headers: _authHeaders,
+      );
+      final decoded = jsonDecode(res.body);
+      return decoded['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (deleteGalleryPhoto): $e');
     }
     return false;
   }

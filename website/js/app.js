@@ -434,13 +434,29 @@ function isDateClosed(date) {
 
 function isDayClosed(date) {
   if (isDateClosed(date)) return true;
+  const dayName = DAY_MAP[date.getDay()];
+
+  if (bmState.employee && bmState.employee.id) {
+    const emp = (SALON_DATA?.employees || []).find(e => e._id === bmState.employee.id);
+    if (emp && emp.hours) return !(emp.hours[dayName]?.open);
+  }
+
   if (!SALON_DATA?.hours) return date.getDay() === 0;
-  return !(SALON_DATA.hours[DAY_MAP[date.getDay()]]?.open);
+  return !(SALON_DATA.hours[dayName]?.open);
 }
 
 function getOpenHours(date) {
+  const dayName = DAY_MAP[date.getDay()];
+
+  if (bmState.employee && bmState.employee.id) {
+    const emp = (SALON_DATA?.employees || []).find(e => e._id === bmState.employee.id);
+    if (emp && emp.hours && emp.hours[dayName]?.open) {
+      return emp.hours[dayName];
+    }
+  }
+
   if (!SALON_DATA?.hours) return { open: '09:00', close: '19:00' };
-  return SALON_DATA.hours[DAY_MAP[date.getDay()]] || { open: '09:00', close: '19:00' };
+  return SALON_DATA.hours[dayName] || { open: '09:00', close: '19:00' };
 }
 
 function renderBmCalendar() {
