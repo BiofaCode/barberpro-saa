@@ -1,4 +1,4 @@
-﻿/* ============================================
+/* ============================================
    SALON PRO SaaS - Super Admin Dashboard JS
    Gestion de tes clients (salons/instituts)
    ============================================ */
@@ -402,6 +402,21 @@ function copySalonInfo(salonId) {
     // Fallback
     showModal('Infos de connexion', `<pre style="color:var(--text);white-space:pre-wrap;font-size:.85rem">${info}</pre>`, () => closeModal());
   });
+}
+
+async function resetOwnerPassword(salonId, ownerId) {
+  if (!ownerId || ownerId === 'undefined') {
+    return toast('Aucun propriétaire associé à ce salon !', 'error');
+  }
+  const newPass = prompt("Entrez le nouveau mot de passe pour le propriétaire :");
+  if (!newPass) return;
+
+  const res = await api(`/api/admin/salons/${salonId}/owners/${ownerId}/password`, 'PUT', { password: newPass });
+  if (res.success) {
+    toast('Mot de passe mis à jour avec succès !');
+  } else {
+    toast(res.error || 'Erreur lors de la mise à jour', 'error');
+  }
 }
 
 async function deleteSalon(id) {

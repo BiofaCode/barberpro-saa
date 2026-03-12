@@ -362,15 +362,20 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
 
 route('POST', '/api/barber/login', async (req, res) => {
     const body = await parseBody(req);
+    console.log(`\n🔑 Login attempt for email: "${body.email}"`);
+
     if (!body.email || !body.password) {
+        console.log(`❌ Login failed: Missing email or password`);
         return json(res, 400, { success: false, error: 'Email et mot de passe requis' });
     }
 
     // Check Owner First
     const owner = await db.findOwnerByEmail(body.email);
     if (owner) {
+        console.log(`👤 Found owner with email: ${owner.email}`);
         const match = await db.comparePassword(owner, body.password);
         if (match) {
+            console.log(`✅ Password match for owner`);
             const salon = await db.findSalonById(owner.salon);
             const token = createToken({ ownerId: owner._id, salonId: owner.salon, role: 'owner' });
             return json(res, 200, {
@@ -380,20 +385,28 @@ route('POST', '/api/barber/login', async (req, res) => {
                 salon: salon || null,
                 subscription: salon?.subscription || null
             });
+        } else {
+            console.log(`❌ Password mismatch for owner`);
         }
+    } else {
+        console.log(`❓ No owner found for email: ${body.email}`);
     }
 
     // Check Employee Second
     const employee = await db.findEmployeeByEmail(body.email);
     if (employee) {
+        console.log(`✂️ Found employee with email: ${employee.email}`);
         if (!employee.active) {
+            console.log(`❌ Login failed: Employee inactive`);
             return json(res, 403, { success: false, error: 'Accès désactivé pour cet employé' });
         }
         const match = await db.compareEmployeePassword(employee, body.password);
         if (match) {
+            console.log(`✅ Password match for employee`);
             const salon = await db.findSalonById(employee.salon);
             // Verify if salon active
             if (!salon || !salon.active) {
+                console.log(`❌ Login failed: Salon inactive`);
                 return json(res, 403, { success: false, error: 'Le salon associé est inactif' });
             }
             const token = createToken({ employeeId: employee._id, salonId: employee.salon, role: 'employee' });
@@ -403,10 +416,15 @@ route('POST', '/api/barber/login', async (req, res) => {
                 user: { id: employee._id, salonId: employee.salon, name: employee.name, email: employee.email, role: 'employee' },
                 salon: salon || null
             });
+        } else {
+            console.log(`❌ Password mismatch for employee`);
         }
+    } else {
+        console.log(`❓ No employee found for email: ${body.email}`);
     }
 
     // If neither matched
+    console.log(`❌ Login failed: No matching credentials found`);
     json(res, 401, { success: false, error: 'Email ou mot de passe incorrect' });
 });
 
