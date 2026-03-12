@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/booking_model.dart';
 
 class ApiService {
@@ -25,6 +26,29 @@ class ApiService {
   static Map<String, dynamic>? get currentSalon => _currentSalon;
   static bool get isLoggedIn => _token != null && _salonId != null;
 
+  // ---- Initialiser la session ----
+  static Future<bool> loadSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+      final userStr = prefs.getString('currentUser');
+      final salonStr = prefs.getString('currentSalon');
+
+      if (token != null && userStr != null) {
+        _token = token;
+        _currentUser = jsonDecode(userStr);
+        if (salonStr != null) {
+          _currentSalon = jsonDecode(salonStr);
+        }
+        _salonId = _currentUser?['salonId'];
+        return true;
+      }
+    } catch (e) {
+      debugPrint('Error loading session: $e');
+    }
+    return false;
+  }
+
   // ---- Login barbier ----
   static Future<bool> login(String email, String password) async {
     try {
@@ -39,6 +63,15 @@ class ApiService {
         _currentUser = Map<String, dynamic>.from(data['user']);
         _currentSalon = data['salon'] != null ? Map<String, dynamic>.from(data['salon']) : null;
         _salonId = _currentUser?['salonId'];
+
+        // Sauvegarder dans SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', _token!);
+        await prefs.setString('currentUser', jsonEncode(_currentUser));
+        if (_currentSalon != null) {
+          await prefs.setString('currentSalon', jsonEncode(_currentSalon));
+        }
+
         return true;
       }
     } catch (e) {
@@ -47,18 +80,28 @@ class ApiService {
     return false;
   }
 
-  static void logout() {
+  static Future<void> logout() async {
     _token = null;
     _salonId = null;
     _currentUser = null;
     _currentSalon = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+
+  // ---- Helper pour injecter le token ----
+  static Map<String, String> get _authHeaders {
+    return {
+      'Content-Type': 'application/json',
+      if (_token != null) 'Authorization': 'Bearer $_token',
+    };
   }
 
   // ---- Mon salon ----
   static Future<Map<String, dynamic>?> getMySalon() async {
     if (_salonId == null) return null;
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId'));
+      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) {
         _currentSalon = Map<String, dynamic>.from(data['data']);
@@ -75,7 +118,7 @@ class ApiService {
     try {
       final res = await http.put(
         Uri.parse('$_url/api/barber/salon/$_salonId'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders,
         body: jsonEncode(updates),
       );
       final data = jsonDecode(res.body);
@@ -93,7 +136,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getMyStats() async {
     if (_salonId == null) return {};
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/stats'));
+      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/stats'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) return Map<String, dynamic>.from(data['data']);
     } catch (e) {
@@ -111,7 +154,7 @@ class ApiService {
       if (status != null) params['status'] = status;
       final uri = Uri.parse('$_url/api/barber/salon/$_salonId/bookings')
           .replace(queryParameters: params.isEmpty ? null : params);
-      final res = await http.get(uri);
+      final res = await http.get(uri, headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) {
         return (data['data'] as List).map((j) => BookingModel.fromApi(j)).toList();
@@ -127,7 +170,7 @@ class ApiService {
     try {
       final res = await http.put(
         Uri.parse('$_url/api/barber/salon/$_salonId/bookings/$bookingId'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders,
         body: jsonEncode({'status': status}),
       );
       final data = jsonDecode(res.body);
@@ -142,7 +185,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getMyClients() async {
     if (_salonId == null) return [];
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/clients'));
+      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/clients'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
     } catch (e) {
@@ -155,7 +198,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getMyEmployees() async {
     if (_salonId == null) return [];
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/employees'));
+      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/employees'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
     } catch (e) {
@@ -169,7 +212,7 @@ class ApiService {
     try {
       final res = await http.post(
         Uri.parse('$_url/api/barber/salon/$_salonId/employees'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders,
         body: jsonEncode(empData),
       );
       final data = jsonDecode(res.body);
@@ -183,7 +226,7 @@ class ApiService {
   static Future<bool> deleteEmployee(String empId) async {
     if (_salonId == null) return false;
     try {
-      final res = await http.delete(Uri.parse('$_url/api/barber/salon/$_salonId/employees/$empId'));
+      final res = await http.delete(Uri.parse('$_url/api/barber/salon/$_salonId/employees/$empId'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       return data['success'] == true;
     } catch (e) {
@@ -196,7 +239,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getMyServices() async {
     if (_salonId == null) return [];
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/services'));
+      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/services'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
     } catch (e) {
@@ -210,7 +253,7 @@ class ApiService {
     try {
       final res = await http.post(
         Uri.parse('$_url/api/barber/salon/$_salonId/services'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders,
         body: jsonEncode(svcData),
       );
       final data = jsonDecode(res.body);
@@ -226,7 +269,7 @@ class ApiService {
     try {
       final res = await http.put(
         Uri.parse('$_url/api/barber/salon/$_salonId/services/$svcId'),
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders,
         body: jsonEncode(updates),
       );
       final data = jsonDecode(res.body);
@@ -240,7 +283,7 @@ class ApiService {
   static Future<bool> deleteService(String svcId) async {
     if (_salonId == null) return false;
     try {
-      final res = await http.delete(Uri.parse('$_url/api/barber/salon/$_salonId/services/$svcId'));
+      final res = await http.delete(Uri.parse('$_url/api/barber/salon/$_salonId/services/$svcId'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       return data['success'] == true;
     } catch (e) {

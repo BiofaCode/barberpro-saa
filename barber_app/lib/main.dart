@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'screens/login_screen.dart';
+import 'screens/home_screen.dart';
 import 'theme/app_theme.dart';
+import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,11 +17,16 @@ void main() async {
       statusBarIconBrightness: Brightness.light,
     ),
   );
-  runApp(const BarberProApp());
+  
+  // Checking for persistent login
+  final isLoggedIn = await ApiService.loadSession();
+
+  runApp(BarberProApp(isLoggedIn: isLoggedIn));
 }
 
 class BarberProApp extends StatelessWidget {
-  const BarberProApp({super.key});
+  final bool isLoggedIn;
+  const BarberProApp({super.key, this.isLoggedIn = false});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +34,7 @@ class BarberProApp extends StatelessWidget {
       title: 'BarberPro',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const LoginScreen(),
+      home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
     );
   }
 }
