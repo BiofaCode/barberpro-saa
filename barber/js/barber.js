@@ -69,6 +69,10 @@ async function doLogin() {
 
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'flex';
+            
+            // Save session
+            localStorage.setItem('barberSession', JSON.stringify({ token, user: currentUser, salonId, salon: currentSalon }));
+            
             initApp();
         } else {
             errEl.style.display = 'block';
@@ -82,6 +86,7 @@ async function doLogin() {
 
 function doLogout() {
     token = null; salonId = null; currentUser = null; currentSalon = null;
+    localStorage.removeItem('barberSession');
     document.getElementById('appScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
 }
@@ -1348,9 +1353,11 @@ document.getElementById('loginEmail').addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
 });
 
-// Magic Login from Admin
+// Magic Login & Persistent Session
 document.addEventListener('DOMContentLoaded', () => {
     const magic = localStorage.getItem('magic_login');
+    const sessionStr = localStorage.getItem('barberSession');
+    
     if (magic) {
         localStorage.removeItem('magic_login');
         try {
@@ -1359,11 +1366,30 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = data.user;
             salonId = data.user.salonId;
             currentSalon = data.salon;
+            
+            // Overwrite normal session with magic user
+            localStorage.setItem('barberSession', JSON.stringify({ token, user: currentUser, salonId, salon: currentSalon }));
+            
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'flex';
             initApp();
         } catch (e) {
             console.error('Magic login failed', e);
+        }
+    } else if (sessionStr) {
+        try {
+            const data = JSON.parse(sessionStr);
+            token = data.token;
+            currentUser = data.user;
+            salonId = data.user.salonId;
+            currentSalon = data.salon;
+            
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appScreen').style.display = 'flex';
+            initApp();
+        } catch (e) {
+            console.error('Session restore failed', e);
+            localStorage.removeItem('barberSession');
         }
     }
 });

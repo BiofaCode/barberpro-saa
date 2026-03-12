@@ -962,7 +962,7 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
         });
 
         // Create owner
-        await db.createOwner({
+        const owner = await db.createOwner({
             salon: salon._id,
             name: ownerName,
             email: email.toLowerCase(),
@@ -974,6 +974,13 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
         // Welcome email will be sent after Stripe payment confirmation (via webhook)
 
         console.log(`✅ Nouveau salon créé: ${salonName} (${plan}) par ${ownerName}`);
+
+        const token = createToken({ ownerId: owner._id, salonId: salon._id, role: 'owner' });
+        const sessionData = {
+            token,
+            user: { id: owner._id, salonId: salon._id, name: owner.name, email: owner.email, role: 'owner' },
+            salon: salon
+        };
 
         // Create Stripe Checkout Session
         if (stripe) {
@@ -1001,11 +1008,11 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
             });
 
             console.log(`[API Stripe] Session créée: ${session.id}, URL: ${session.url}`);
-            return json(res, 200, { success: true, data: { url: session.url, sessionId: session.id, salonSlug: slug } });
+            return json(res, 200, { success: true, data: { url: session.url, sessionId: session.id, salonSlug: slug, sessionData } });
         } else {
             // Stripe not configured, just return success
             console.warn('[API Stripe] Stripe non configuré, retour URL vide');
-            return json(res, 200, { success: true, data: { salonSlug: slug, message: 'Salon créé (Stripe non configuré)' } });
+            return json(res, 200, { success: true, data: { salonSlug: slug, message: 'Salon créé (Stripe non configuré)', sessionData } });
         }
     } catch (err) {
         console.error('Register error:', err.message);
