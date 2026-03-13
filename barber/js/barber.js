@@ -887,6 +887,29 @@ async function loadSettings() {
                     </div>
                     <div class="form-group"><label class="form-label">Titre principal du site (hero)</label><input class="form-input form-input-full" id="set-heroTitle" value="${salon.branding?.heroTitle || ''}" placeholder="L'Art de la Coiffure Masculine"></div>
                     <div class="form-group"><label class="form-label">Sous-titre du site</label><input class="form-input form-input-full" id="set-heroSubtitle" value="${salon.branding?.heroSubtitle || ''}" placeholder="Excellence, style et précision"></div>
+                    
+                    <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <div style="font-weight:600;font-size:.9rem">📊 Statistiques d'accroche (Hero)</div>
+                            <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text-sec);cursor:pointer">
+                                <input type="checkbox" id="set-heroStatsHide" ${salon.branding?.heroStats?.hide ? 'checked' : ''}>
+                                Masquer ces statistiques
+                            </label>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">Valeur 1</label><input class="form-input form-input-full" id="set-stat1Value" value="${salon.branding?.heroStats?.stat1Value || '2500+'}" placeholder="2500+"></div>
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">Texte 1</label><input class="form-input form-input-full" id="set-stat1Label" value="${salon.branding?.heroStats?.stat1Label || 'Clients satisfaits'}" placeholder="Clients satisfaits"></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">Valeur 2</label><input class="form-input form-input-full" id="set-stat2Value" value="${salon.branding?.heroStats?.stat2Value || '8+'}" placeholder="8+"></div>
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">Texte 2</label><input class="form-input form-input-full" id="set-stat2Label" value="${salon.branding?.heroStats?.stat2Label || 'Années d\\'expérience'}" placeholder="Années d'expérience"></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">Valeur 3</label><input class="form-input form-input-full" id="set-stat3Value" value="${salon.branding?.heroStats?.stat3Value || '15+'}" placeholder="15+"></div>
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">Texte 3</label><input class="form-input form-input-full" id="set-stat3Label" value="${salon.branding?.heroStats?.stat3Label || 'Services uniques'}" placeholder="Services uniques"></div>
+                        </div>
+                    </div>
+
                     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
                         <div style="font-weight:600;margin-bottom:12px;font-size:.9rem">📱 Réseaux sociaux</div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -1100,6 +1123,15 @@ async function saveBranding() {
         facebook: document.getElementById('set-facebook').value.trim(),
         tiktok: document.getElementById('set-tiktok').value.trim(),
         youtube: document.getElementById('set-youtube').value.trim(),
+        heroStats: {
+            stat1Value: document.getElementById('set-stat1Value').value.trim() || '2500+',
+            stat1Label: document.getElementById('set-stat1Label').value.trim() || 'Clients satisfaits',
+            stat2Value: document.getElementById('set-stat2Value').value.trim() || '8+',
+            stat2Label: document.getElementById('set-stat2Label').value.trim() || 'Années d\\'expérience',
+            stat3Value: document.getElementById('set-stat3Value').value.trim() || '15+',
+            stat3Label: document.getElementById('set-stat3Label').value.trim() || 'Services uniques',
+            hide: document.getElementById('set-heroStatsHide').checked
+        }
     };
     try {
         const res = await apiFetch(`${API}/api/barber/salon/${salonId}/branding`, {

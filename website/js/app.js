@@ -48,6 +48,30 @@ function applySalonBranding(salon) {
   const heroSub = document.querySelector('.hero-description');
   if (heroTitle && salon.branding?.heroTitle) heroTitle.innerHTML = salon.branding.heroTitle;
   if (heroSub && salon.branding?.heroSubtitle) heroSub.textContent = salon.branding.heroSubtitle;
+
+  const stats = salon.branding?.heroStats;
+  const statsBlock = document.getElementById('heroStatsBlock');
+  if (statsBlock && stats) {
+    if (stats.hide) {
+      statsBlock.style.display = 'none';
+    } else {
+      const el1Val = document.getElementById('heroStat1Value');
+      const el1Lab = document.getElementById('heroStat1Label');
+      if (el1Val) { el1Val.dataset.count = stats.stat1Value || '2500'; el1Val.textContent = '0'; }
+      if (el1Lab) el1Lab.textContent = stats.stat1Label || 'Clients satisfaits';
+
+      const el2Val = document.getElementById('heroStat2Value');
+      const el2Lab = document.getElementById('heroStat2Label');
+      if (el2Val) { el2Val.dataset.count = stats.stat2Value || '8'; el2Val.textContent = '0'; }
+      if (el2Lab) el2Lab.textContent = stats.stat2Label || 'Années d\\'expérience';
+
+      const el3Val = document.getElementById('heroStat3Value');
+      const el3Lab = document.getElementById('heroStat3Label');
+      if (el3Val) { el3Val.dataset.count = stats.stat3Value || '15'; el3Val.textContent = '0'; }
+      if (el3Lab) el3Lab.textContent = stats.stat3Label || 'Services uniques';
+    }
+  }
+
   document.title = `${salon.name} | Réservation en ligne`;
 
   if (salon.services?.length > 0) {
@@ -231,8 +255,20 @@ function initCounters() {
   const observer = new IntersectionObserver(entries => {
     entries.forEach(e => {
       if (e.isIntersecting) {
-        const t = parseInt(e.target.dataset.count); let cur = 0; const inc = t / 60;
-        const timer = setInterval(() => { cur += inc; if (cur >= t) { cur = t; clearInterval(timer); } e.target.textContent = Math.floor(cur) + '+'; }, 30);
+        const raw = e.target.dataset.count;
+        const cleanNumber = parseInt(raw.replace(/[^0-9]/g, ''));
+        if (isNaN(cleanNumber)) {
+          e.target.textContent = raw;
+        } else {
+          const t = cleanNumber;
+          let cur = 0; const inc = t / 60;
+          const suffix = raw.replace(/[0-9]/g, ''); // kept non-numbers
+          const timer = setInterval(() => { 
+            cur += inc; 
+            if (cur >= t) { cur = t; clearInterval(timer); } 
+            e.target.textContent = Math.floor(cur) + suffix; 
+          }, 30);
+        }
         observer.unobserve(e.target);
       }
     });

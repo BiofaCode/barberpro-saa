@@ -307,6 +307,9 @@ class ApiService {
     } catch (e) {
       debugPrint('API Error (updateBranding): $e');
     }
+    return false;
+  }
+
   // ---- Testimonials ----
   static Future<bool> addTestimonial(Map<String, dynamic> data) async {
     if (_salonId == null) return false;

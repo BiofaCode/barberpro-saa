@@ -625,6 +625,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final primaryColorCtrl = TextEditingController(text: branding['primaryColor'] ?? '#6366F1');
     final accentColorCtrl = TextEditingController(text: branding['accentColor'] ?? '#818CF8');
 
+    final heroStats = branding['heroStats'] as Map<String, dynamic>? ?? {};
+    final stat1ValCtrl = TextEditingController(text: heroStats['stat1Value']?.toString() ?? '2500+');
+    final stat1LabCtrl = TextEditingController(text: heroStats['stat1Label']?.toString() ?? 'Clients satisfaits');
+    final stat2ValCtrl = TextEditingController(text: heroStats['stat2Value']?.toString() ?? '8+');
+    final stat2LabCtrl = TextEditingController(text: heroStats['stat2Label']?.toString() ?? "Années d'expérience");
+    final stat3ValCtrl = TextEditingController(text: heroStats['stat3Value']?.toString() ?? '15+');
+    final stat3LabCtrl = TextEditingController(text: heroStats['stat3Label']?.toString() ?? 'Services uniques');
+    bool hideStats = heroStats['hide'] == true;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -650,6 +659,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 16),
               _buildTextField('Couleur Accent (HEX)', accentColorCtrl),
               const SizedBox(height: 24),
+              Text("Statistiques d'accroche (Hero)", style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+              const SizedBox(height: 12),
+              StatefulBuilder(
+                builder: (ctx, setStateSheet) => SwitchListTile(
+                  title: Text('Masquer ces statistiques', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 14)),
+                  value: hideStats,
+                  activeColor: AppTheme.primary,
+                  onChanged: (val) => setStateSheet(() => hideStats = val),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(children: [ Expanded(child: _buildTextField('Valeur 1', stat1ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildTextField('Texte 1', stat1LabCtrl)) ]),
+              const SizedBox(height: 12),
+              Row(children: [ Expanded(child: _buildTextField('Valeur 2', stat2ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildTextField('Texte 2', stat2LabCtrl)) ]),
+              const SizedBox(height: 12),
+              Row(children: [ Expanded(child: _buildTextField('Valeur 3', stat3ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildTextField('Texte 3', stat3LabCtrl)) ]),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -662,6 +689,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       'heroSubtitle': subtitleCtrl.text.trim(),
                       'primaryColor': primaryColorCtrl.text.trim(),
                       'accentColor': accentColorCtrl.text.trim(),
+                      'heroStats': {
+                        'stat1Value': stat1ValCtrl.text.trim().isNotEmpty ? stat1ValCtrl.text.trim() : '2500+',
+                        'stat1Label': stat1LabCtrl.text.trim().isNotEmpty ? stat1LabCtrl.text.trim() : 'Clients satisfaits',
+                        'stat2Value': stat2ValCtrl.text.trim().isNotEmpty ? stat2ValCtrl.text.trim() : '8+',
+                        'stat2Label': stat2LabCtrl.text.trim().isNotEmpty ? stat2LabCtrl.text.trim() : "Années d'expérience",
+                        'stat3Value': stat3ValCtrl.text.trim().isNotEmpty ? stat3ValCtrl.text.trim() : '15+',
+                        'stat3Label': stat3LabCtrl.text.trim().isNotEmpty ? stat3LabCtrl.text.trim() : 'Services uniques',
+                        'hide': hideStats,
+                      }
                     };
                     final success = await ApiService.updateBranding(newBranding);
                     if (success) {
@@ -997,7 +1033,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo ajoutée', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.success));
     } else {
       setState(() => _loading = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur d\\'upload', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.error));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Erreur d'upload", style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.error));
     }
   }
 

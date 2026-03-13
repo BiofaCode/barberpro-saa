@@ -13,6 +13,15 @@ const salonSchema = new mongoose.Schema({
         accentColor: { type: String, default: '#818CF8' },
         heroTitle: { type: String, default: '' },
         heroSubtitle: { type: String, default: '' },
+        heroStats: {
+            stat1Value: { type: String, default: '2500+' },
+            stat1Label: { type: String, default: 'Clients satisfaits' },
+            stat2Value: { type: String, default: '8+' },
+            stat2Label: { type: String, default: 'Années d\\'expérience' },
+            stat3Value: { type: String, default: '15+' },
+            stat3Label: { type: String, default: 'Services uniques' },
+            hide: { type: Boolean, default: false }
+        }
     },
     services: [{
         name: { type: String, required: true },

@@ -1,0 +1,36 @@
+﻿Analyzing barber_app...                                         
+
+  error - Expected to find ',' - lib\screens\settings_screen.dart:632:105 - expected_token
+  error - Too many positional arguments: 0 expected, but 2 found - lib\screens\settings_screen.dart:632:105 - extra_positional_arguments
+  error - Undefined name 'exp├®rience' - lib\screens\settings_screen.dart:632:105 - undefined_identifier
+  error - Illegal character '233' - lib\screens\settings_screen.dart:632:108 - illegal_character
+  error - Expected to find ',' - lib\screens\settings_screen.dart:632:115 - expected_token
+  error - Expected to find ';' - lib\screens\settings_screen.dart:632:115 - expected_token
+  error - Unterminated string literal - lib\screens\settings_screen.dart:632:117 - unterminated_string_literal
+  error - Expected to find ')' - lib\screens\settings_screen.dart:633:5 - expected_token
+  error - Expected to find ',' - lib\screens\settings_screen.dart:662:38 - expected_token
+  error - The method 'accroche' isn't defined for the type '_SettingsScreenState' - lib\screens\settings_screen.dart:662:38 - undefined_method
+  error - Too many positional arguments: 1 expected, but 14 found - lib\screens\settings_screen.dart:662:38 - extra_positional_arguments_could_be_named
+  error - Expected to find ',' - lib\screens\settings_screen.dart:662:53 - expected_token
+  error - Unterminated string literal - lib\screens\settings_screen.dart:662:154 - unterminated_string_literal
+  error - Expected to find ',' - lib\screens\settings_screen.dart:663:15 - expected_token
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\screens\settings_screen.dart:668:19 - deprecated_member_use
+  error - The literal can't be either a map or a set because it contains at least one literal map entry or a spread operator spreading a 'Map', and at least one element which is neither of these - lib\screens\settings_screen.dart:692:36 - ambiguous_set_or_map_literal_both
+  error - Expected to find ',' - lib\screens\settings_screen.dart:696:116 - expected_token
+  error - Undefined name 'exp├®rience' - lib\screens\settings_screen.dart:696:116 - undefined_identifier
+  error - Illegal character '233' - lib\screens\settings_screen.dart:696:119 - illegal_character
+  error - Expected to find ',' - lib\screens\settings_screen.dart:696:126 - expected_token
+  error - Unterminated string literal - lib\screens\settings_screen.dart:696:127 - unterminated_string_literal
+  error - Expected to find ')' - lib\screens\settings_screen.dart:720:13 - expected_token
+warning - The '!' will have no effect because the receiver can't be null - lib\screens\settings_screen.dart:869:67 - unnecessary_non_null_assertion
+   info - Don't use 'BuildContext's across async gaps - lib\screens\settings_screen.dart:1001:7 - use_build_context_synchronously
+   info - Statements in an if should be enclosed in a block - lib\screens\settings_screen.dart:1036:20 - curly_braces_in_flow_control_structures
+  error - Arguments of a constant creation must be constant expressions - lib\screens\settings_screen.dart:1036:104 - const_with_non_constant_argument
+  error - Expected to find ',' - lib\screens\settings_screen.dart:1036:104 - expected_token
+  error - Too many positional arguments: 1 expected, but 3 found - lib\screens\settings_screen.dart:1036:104 - extra_positional_arguments_could_be_named
+  error - Undefined name 'upload' - lib\screens\settings_screen.dart:1036:104 - undefined_identifier
+  error - Expected to find ',' - lib\screens\settings_screen.dart:1036:110 - expected_token
+  error - Expected to find ';' - lib\screens\settings_screen.dart:1036:110 - expected_token
+  error - Unterminated string literal - lib\screens\settings_screen.dart:1036:186 - unterminated_string_literal
+  error - Expected to find ')' - lib\screens\settings_screen.dart:1037:5 - expected_token
+
