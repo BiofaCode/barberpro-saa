@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Page introuvable | SalonPro</title>
+    <meta name="robots" content="noindex">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/saas/css/saas.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+    <style>
+        .not-found-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .not-found-glow {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 65%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .not-found-content {
+            position: relative;
+            z-index: 1;
+            max-width: 520px;
+        }
+
+        .not-found-code {
+            font-size: clamp(96px, 18vw, 160px);
+            font-weight: 900;
+            font-family: 'Inter', sans-serif;
+            line-height: 1;
+            background: linear-gradient(135deg, #6366f1 0%, #c084fc 50%, #f0abfc 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -4px;
+            margin-bottom: 8px;
+        }
+
+        .not-found-title {
+            font-size: clamp(22px, 4vw, 30px);
+            letter-spacing: -0.5px;
+            margin-bottom: 16px;
+        }
+
+        .not-found-desc {
+            font-size: 16px;
+            color: var(--saas-muted);
+            font-family: 'Inter', sans-serif;
+            line-height: 1.7;
+            margin-bottom: 40px;
+        }
+
+        .not-found-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .not-found-links {
+            margin-top: 48px;
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .not-found-links a {
+            font-size: 14px;
+            color: var(--saas-muted);
+            font-family: 'Inter', sans-serif;
+            transition: color 0.2s;
+        }
+
+        .not-found-links a:hover {
+            color: var(--saas-text);
+        }
+
+        @media (max-width: 480px) {
+            .not-found-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .not-found-actions .btn {
+                width: 100%;
+                max-width: 280px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <nav class="saas-nav">
+        <div class="container nav-content">
+            <a href="/" class="logo">
+                <span class="logo-icon">✨</span>
+                Salon<span class="highlight">Pro</span>
+            </a>
+            <div class="nav-links">
+                <a href="/#features">Fonctionnalités</a>
+                <a href="/#pricing">Tarifs</a>
+                <a href="/pro" class="login-link">Espace Pro</a>
+                <a href="/#pricing" class="btn btn-primary">Essai gratuit →</a>
+            </div>
+            <button class="mobile-menu-btn" onclick="document.querySelector('.nav-links').classList.toggle('open')">☰</button>
+        </div>
+    </nav>
+
+    <main class="not-found-page">
+        <div class="not-found-glow"></div>
+        <div class="not-found-content">
+            <div class="not-found-code">404</div>
+            <h1 class="not-found-title">Page introuvable</h1>
+            <p class="not-found-desc">
+                Cette page n'existe pas ou a été déplacée.<br>
+                Pas de panique — votre salon vous attend.
+            </p>
+            <div class="not-found-actions">
+                <a href="/" class="btn btn-primary btn-lg shine-effect">Retour à l'accueil →</a>
+                <a href="/pro" class="btn btn-outline btn-lg">Espace Pro</a>
+            </div>
+            <div class="not-found-links">
+                <a href="/#pricing">Tarifs</a>
+                <a href="/#features">Fonctionnalités</a>
+                <a href="/saas/faq.html">FAQ</a>
+                <a href="mailto:info@osmodigital.ch">Contact</a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('.saas-nav');
+            if (window.scrollY > 50) nav.classList.add('scrolled');
+            else nav.classList.remove('scrolled');
+        });
+    </script>
+</body>
+
+</html>

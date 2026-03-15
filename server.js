@@ -1360,8 +1360,11 @@ const server = http.createServer(async (req, res) => {
 
     fs.readFile(filePath, (err, content) => {
         if (err) {
-            res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
-            res.end('<h1>404 - Page non trouvée</h1>');
+            fs.readFile(path.join(__dirname, 'saas/404.html'), (err404, page404) => {
+                res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+                res.end(page404 || '<h1>404 - Page non trouvée</h1>');
+            });
+            return;
         } else {
             if (salonSlug && ext === '.html') {
                 let html = content.toString();
