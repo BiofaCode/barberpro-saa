@@ -137,7 +137,7 @@ function initApp() {
             showPage('dashboard');
         }
     }
-    loadDashboard();
+    // NOTE: no extra loadDashboard() here — showPage() already calls it
 }
 
 function openWebsite() {
@@ -182,7 +182,7 @@ function toggleSidebar() {
 }
 
 // ---- Dashboard ----
-async function loadDashboard() {
+async function loadDashboard(_retry = 0) {
     try {
         const [statsRes, bookingsRes] = await Promise.all([
             apiFetch(`${API}/api/barber/salon/${salonId}/stats`),
@@ -263,11 +263,21 @@ async function loadDashboard() {
         }
     } catch (e) {
         console.error('Dashboard error:', e);
+        if (_retry < 2) {
+            // Auto-retry (handles Render cold start ~15s spin-up)
+            const delay = (_retry + 1) * 3000;
+            document.getElementById('todayBookings').innerHTML =
+                `<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Connexion au serveur… réessai dans ${delay / 1000}s</div></div>`;
+            setTimeout(() => loadDashboard(_retry + 1), delay);
+        } else {
+            document.getElementById('todayBookings').innerHTML =
+                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger les données<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadDashboard()">Réessayer</button></div></div>`;
+        }
     }
 }
 
 // ---- Bookings ----
-async function loadBookings() {
+async function loadBookings(_retry = 0) {
     try {
         const res = await apiFetch(`${API}/api/barber/salon/${salonId}/bookings`);
         const data = await res.json();
@@ -291,7 +301,18 @@ async function loadBookings() {
                 </div>
             `).join('') + '</div>';
         }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+        console.error('Bookings error:', e);
+        if (_retry < 2) {
+            const delay = (_retry + 1) * 3000;
+            document.getElementById('bookingsList').innerHTML =
+                `<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Connexion… réessai dans ${delay / 1000}s</div></div>`;
+            setTimeout(() => loadBookings(_retry + 1), delay);
+        } else {
+            document.getElementById('bookingsList').innerHTML =
+                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadBookings()">Réessayer</button></div></div>`;
+        }
+    }
 }
 
 // ---- Manual Booking (phone call, walk-in) ----
