@@ -154,7 +154,14 @@ function showPage(page) {
     document.getElementById(`page-${page}`).classList.add('active');
 
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    // event may be undefined when called programmatically (e.g. initApp)
+    if (typeof event !== 'undefined' && event?.currentTarget) {
+        event.currentTarget.classList.add('active');
+    } else {
+        // Highlight nav item by page name
+        const navLink = document.querySelector(`.nav-item[onclick="showPage('${page}')"]`);
+        if (navLink) navLink.classList.add('active');
+    }
 
     const titles = { dashboard: 'Tableau de bord', bookings: 'Rendez-vous', clients: 'Mes Clients', employees: 'Mon Équipe', services: 'Mes Prestations', settings: 'Mon Salon' };
     document.getElementById('topbarTitle').textContent = titles[page] || page;
