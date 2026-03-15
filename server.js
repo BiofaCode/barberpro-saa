@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 
 // Configure Cloudinary
@@ -1108,7 +1108,7 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
                     },
                     quantity: 1
                 }],
-                metadata: { plan: plan || 'pro', salonId: salon._id, salonName, ownerEmail: email },
+                metadata: { plan: plan || 'pro', salonId: salon._id, salonName, ownerEmail: email, ownerName: ownerName || '' },
                 customer_email: email,
                 subscription_data: { trial_period_days: 14 },
                 success_url: `${baseUrl}/saas/success.html?plan=${plan || 'pro'}&salon=${encodeURIComponent(salonName)}`,
@@ -1178,13 +1178,11 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             });
             console.log(`✅ Salon ${salonId} activé (plan: ${plan}, trial jusqu'au ${trialEnd})`);
 
-            // Now send welcome email
-            try {
-                const { sendWelcomeEmail } = require('./email');
-                if (sendWelcomeEmail && ownerEmail) {
-                    sendWelcomeEmail(ownerEmail, session.metadata?.salonName || 'Votre salon', salonName || 'Votre salon', plan);
-                }
-            } catch (e) { console.log('Welcome email error:', e.message); }
+            // Send welcome email (non-blocking)
+            if (ownerEmail) {
+                const ownerNameMeta = session.metadata?.ownerName || '';
+                sendWelcomeEmail(ownerEmail, ownerNameMeta || salonName, salonName || 'Votre salon', plan);
+            }
         }
     } else if (event.type === 'customer.subscription.deleted') {
         const subscription = event.data.object;

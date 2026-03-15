@@ -35,9 +35,9 @@
                 <input type="password" class="form-input form-input-full" id="loginPassword" placeholder="••••••••"
                     onkeydown="if(event.key==='Enter')doLogin()">
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doLogin()">Se connecter</button>
+            <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doLogin()">Se connecter</button>
             <p style="text-align:center;margin-top:14px;font-size:13px">
-                <button class="btn-link" onclick="showPanel('panelForgot')">Mot de passe oublié ?</button>
+                <button type="button" class="btn-link" onclick="showPanel('panelForgot')">Mot de passe oublié ?</button>
             </p>
         </div>
 
@@ -57,11 +57,11 @@
                 <input type="email" class="form-input form-input-full" id="forgotEmail" placeholder="votre@email.com"
                     onkeydown="if(event.key==='Enter')submitForgotPassword()">
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:8px" id="forgotBtn" onclick="submitForgotPassword()">
+            <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px" id="forgotBtn" onclick="submitForgotPassword()">
                 Envoyer le lien
             </button>
             <p style="text-align:center;margin-top:14px;font-size:13px">
-                <button class="btn-link" onclick="showPanel('panelLogin')">← Retour à la connexion</button>
+                <button type="button" class="btn-link" onclick="showPanel('panelLogin')">← Retour à la connexion</button>
             </p>
         </div>
 
@@ -83,7 +83,7 @@
                 <input type="password" class="form-input form-input-full" id="resetPasswordConfirm" placeholder="••••••••"
                     onkeydown="if(event.key==='Enter')submitResetPassword()">
             </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:8px" id="resetBtn" onclick="submitResetPassword()">
+            <button type="button" class="btn btn-primary" style="width:100%;margin-top:8px" id="resetBtn" onclick="submitResetPassword()">
                 Enregistrer le nouveau mot de passe
             </button>
         </div>
