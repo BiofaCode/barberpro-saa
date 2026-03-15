@@ -63,7 +63,7 @@ function applySalonBranding(salon) {
       const el2Val = document.getElementById('heroStat2Value');
       const el2Lab = document.getElementById('heroStat2Label');
       if (el2Val) { el2Val.dataset.count = stats.stat2Value || '8'; el2Val.textContent = '0'; }
-      if (el2Lab) el2Lab.textContent = stats.stat2Label || 'Années d\\'expérience';
+      if (el2Lab) el2Lab.textContent = stats.stat2Label || 'Ann\u00e9es d\'exp\u00e9rience';
 
       const el3Val = document.getElementById('heroStat3Value');
       const el3Lab = document.getElementById('heroStat3Label');

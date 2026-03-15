@@ -655,6 +655,7 @@ route('PUT', '/api/barber/salon/:salonId/branding', async (req, res, params) => 
         facebook: body.facebook !== undefined ? body.facebook : (salon.branding?.facebook || ''),
         tiktok: body.tiktok !== undefined ? body.tiktok : (salon.branding?.tiktok || ''),
         youtube: body.youtube !== undefined ? body.youtube : (salon.branding?.youtube || ''),
+        heroStats: body.heroStats !== undefined ? body.heroStats : (salon.branding?.heroStats || null),
     };
 
     const updated = await db.updateSalon(params.salonId, { branding });
