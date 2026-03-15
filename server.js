@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner } = require('./email');
 const cloudinary = require('cloudinary').v2;
 
 // Configure Cloudinary
@@ -179,6 +179,27 @@ setInterval(() => {
     const now = Date.now();
     for (const [k, v] of resetTokens) { if (now > v.expiry) resetTokens.delete(k); }
 }, 30 * 60 * 1000);
+
+// ---- Reminder Cron: run every hour ----
+async function sendPendingReminders() {
+    try {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        const bookings = await db.findBookings({ date: tomorrowStr, status: 'confirmed', reminderSent: { $ne: true } });
+        for (const booking of bookings) {
+            if (!booking.clientEmail) continue;
+            const salon = await db.findSalonById(booking.salon);
+            if (!salon) continue;
+            sendReminderEmail(booking, salon);
+            await db.updateBooking(booking._id, { reminderSent: true });
+        }
+        if (bookings.length > 0) console.log(`⏰ Rappels J-1 envoyés: ${bookings.length} RDV`);
+    } catch(e) { console.error('Reminder cron error:', e.message); }
+}
+setInterval(sendPendingReminders, 60 * 60 * 1000);
+// Run once at startup after a short delay
+setTimeout(sendPendingReminders, 30000);
 
 // ---- Routing ----
 const routes = [];
@@ -894,6 +915,7 @@ route('POST', '/api/barber/salon/:salonId/bookings', async (req, res, params) =>
         date: body.date, time: body.time, notes: body.notes || '',
         employeeId, employeeName,
         status: 'confirmed', source: body.source || 'manual',
+        cancelToken: crypto.randomBytes(16).toString('hex'),
     });
 
     console.log(`  📅 RDV manuel: ${body.clientName} - ${body.serviceName} @ ${body.date} ${body.time}`);
@@ -901,7 +923,9 @@ route('POST', '/api/barber/salon/:salonId/bookings', async (req, res, params) =>
 
     // Send confirmation email (non-blocking)
     const salon = await db.findSalonById(params.salonId);
-    if (salon && booking.clientEmail) sendBookingConfirmation(booking, salon);
+    const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+    const cancelUrl = booking.cancelToken ? `${baseUrl}/cancel/${booking.cancelToken}` : null;
+    if (salon && booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrl);
 });
 
 // Clients
@@ -1244,13 +1268,16 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
         date: body.date, time: body.time, notes: body.notes || '',
         employeeId: body.employeeId || null, employeeName: body.employeeName || null,
         status: 'confirmed', source: 'website',
+        cancelToken: crypto.randomBytes(16).toString('hex'),
     });
 
     console.log(`  📅 Nouveau RDV: ${body.clientName} - ${body.serviceName} @ ${salon.name} (${body.date} ${body.time})`);
     json(res, 201, { success: true, data: booking });
 
     // Send confirmation email (non-blocking)
-    if (booking.clientEmail) sendBookingConfirmation(booking, salon);
+    const baseUrlBook = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+    const cancelUrlBook = booking.cancelToken ? `${baseUrlBook}/cancel/${booking.cancelToken}` : null;
+    if (booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrlBook);
 });
 
 // OTP Store (in memory) - email -> { code, expires }
@@ -1331,6 +1358,46 @@ route('PUT', '/api/salon/:slug/bookings/:bookingId/cancel', async (req, res, par
     json(res, 200, { success: true, data: updated });
 });
 
+// Cancel booking via token (GET: fetch booking info)
+route('GET', '/api/cancel-token/:token', async (req, res, params) => {
+    const results = await db.findBookings({ cancelToken: params.token });
+    const booking = results && results[0];
+    if (!booking) return json(res, 404, { success: false, error: 'Lien invalide ou expiré' });
+    const salon = await db.findSalonById(booking.salon);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    json(res, 200, { success: true, data: { booking, salon } });
+});
+
+// Cancel booking via token (POST: confirm cancellation)
+route('POST', '/api/cancel-token/:token', async (req, res, params) => {
+    const results = await db.findBookings({ cancelToken: params.token });
+    const booking = results && results[0];
+    if (!booking) return json(res, 404, { success: false, error: 'Lien invalide ou expiré' });
+
+    // Check if already cancelled
+    if (booking.status === 'cancelled') {
+        return json(res, 400, { success: false, error: 'Ce rendez-vous est déjà annulé' });
+    }
+
+    // Check if date is in the past
+    const bookingDate = new Date(booking.date + 'T' + (booking.time || '00:00') + ':00');
+    if (bookingDate < new Date()) {
+        return json(res, 400, { success: false, error: 'Ce rendez-vous est déjà passé' });
+    }
+
+    await db.updateBooking(booking._id, { status: 'cancelled' });
+    console.log(`  ❌ RDV annulé via lien email: ${booking.clientName} - ${booking.serviceName} @ ${booking.date}`);
+
+    const salon = await db.findSalonById(booking.salon);
+
+    // Send cancellation emails (non-blocking)
+    if (booking.clientEmail) sendCancellationConfirmation(booking, salon || { name: 'SalonPro' });
+    const owner = await db.findOwnerBySalon(booking.salon);
+    if (owner && owner.email) sendCancellationAlertToOwner(booking, salon || { name: 'SalonPro' }, owner.email);
+
+    json(res, 200, { success: true });
+});
+
 // ==========================
 //  HTTP SERVER
 // ==========================
@@ -1397,6 +1464,18 @@ const server = http.createServer(async (req, res) => {
     else if (pathname.startsWith('/pro')) {
         const proPath = pathname === '/pro' || pathname === '/pro/' ? '/barber/index.html' : pathname.replace(/^\/pro/, '/barber');
         filePath = path.join(__dirname, proPath);
+    }
+    else if (pathname.startsWith('/cancel/')) {
+        const filePath = path.join(__dirname, 'website', 'cancel.html');
+        const cancelToken = pathname.split('/cancel/')[1]?.split('?')[0] || '';
+        fs.readFile(filePath, (err, content) => {
+            if (err) { res.writeHead(404); return res.end('Not found'); }
+            let html = content.toString();
+            html = html.replace('</head>', `<script>window.CANCEL_TOKEN="${cancelToken}";</script>\n</head>`);
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.end(html);
+        });
+        return;
     }
     else if (pathname.startsWith('/s/')) {
         const parts = pathname.split('/').filter(Boolean);
