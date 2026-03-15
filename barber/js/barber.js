@@ -902,7 +902,7 @@ async function loadSettings() {
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
                             <div class="form-group" style="margin-bottom:0"><label class="form-label">Valeur 2</label><input class="form-input form-input-full" id="set-stat2Value" value="${salon.branding?.heroStats?.stat2Value || '8+'}" placeholder="8+"></div>
-                            <div class="form-group" style="margin-bottom:0"><label class="form-label">Texte 2</label><input class="form-input form-input-full" id="set-stat2Label" value="${salon.branding?.heroStats?.stat2Label || 'Années d\\'expérience'}" placeholder="Années d'expérience"></div>
+                            <div class="form-group" style="margin-bottom:0"><label class="form-label">Texte 2</label><input class="form-input form-input-full" id="set-stat2Label" value="${salon.branding?.heroStats?.stat2Label || 'Ann\u00e9es d\'exp\u00e9rience'}" placeholder="Années d'expérience"></div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
                             <div class="form-group" style="margin-bottom:0"><label class="form-label">Valeur 3</label><input class="form-input form-input-full" id="set-stat3Value" value="${salon.branding?.heroStats?.stat3Value || '15+'}" placeholder="15+"></div>
@@ -1127,7 +1127,7 @@ async function saveBranding() {
             stat1Value: document.getElementById('set-stat1Value').value.trim() || '2500+',
             stat1Label: document.getElementById('set-stat1Label').value.trim() || 'Clients satisfaits',
             stat2Value: document.getElementById('set-stat2Value').value.trim() || '8+',
-            stat2Label: document.getElementById('set-stat2Label').value.trim() || 'Années d\\'expérience',
+            stat2Label: document.getElementById('set-stat2Label').value.trim() || 'Ann\u00e9es d\'exp\u00e9rience',
             stat3Value: document.getElementById('set-stat3Value').value.trim() || '15+',
             stat3Label: document.getElementById('set-stat3Label').value.trim() || 'Services uniques',
             hide: document.getElementById('set-heroStatsHide').checked
