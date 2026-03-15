@@ -1334,10 +1334,16 @@ a {
         padding: 24px;
         gap: 16px;
         border-bottom: 1px solid var(--saas-border);
+        z-index: 99;
     }
 
     .nav-links.open {
         display: flex;
+    }
+
+    .nav-links .btn {
+        width: 100%;
+        text-align: center;
     }
 
     .mobile-menu-btn {
@@ -1345,34 +1351,71 @@ a {
     }
 
     .hero {
-        padding: 140px 0 60px;
+        padding: 120px 0 48px;
+        overflow: hidden;
+    }
+
+    .hero-glow-2 {
+        display: none;
     }
 
     .hero-title {
-        font-size: 36px;
+        font-size: 34px;
         letter-spacing: -1px;
     }
 
     .hero-desc {
-        font-size: 16px;
+        font-size: 15px;
+        padding: 0 8px;
     }
 
     .hero-actions {
         flex-direction: column;
-        align-items: center;
+        align-items: stretch;
+        padding: 0 8px;
+    }
+
+    .hero-actions .btn {
+        width: 100%;
+        justify-content: center;
     }
 
     .social-proof {
         flex-direction: column;
         text-align: center;
+        gap: 10px;
     }
 
     .social-text {
         align-items: center;
     }
 
+    .hero-image-wrapper {
+        padding: 0 8px;
+    }
+
     .abstract-dashboard {
-        height: 300px;
+        height: 240px;
+        transform: none;
+    }
+
+    .abstract-dashboard:hover {
+        transform: none;
+    }
+
+    .ui-floating-card {
+        display: none;
+    }
+
+    .features,
+    .how-it-works,
+    .pricing,
+    .testimonials {
+        padding: 64px 0;
+    }
+
+    .section-header {
+        margin-bottom: 40px;
     }
 
     .bento-grid,
@@ -1386,12 +1429,28 @@ a {
         grid-column: span 1;
     }
 
+    .bento-item {
+        padding: 24px;
+    }
+
+    .step-card {
+        padding: 28px 20px;
+    }
+
+    .pricing-card {
+        padding: 28px 24px;
+    }
+
     .pricing-card.featured {
         transform: scale(1);
     }
 
     .pricing-card.featured:hover {
         transform: translateY(-8px);
+    }
+
+    .trust-items {
+        gap: 20px;
     }
 
     .footer-grid {
@@ -1405,17 +1464,89 @@ a {
         text-align: center;
     }
 
-    .ui-floating-card {
-        display: none;
+    .cta-footer {
+        padding: 80px 0;
     }
 
     .modal-card {
-        margin: 16px;
-        max-height: 95vh;
+        margin: 12px;
+        padding: 24px 20px;
+        max-height: 96vh;
+    }
+
+    .modal-header {
+        margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+        font-size: 22px;
     }
 
     .form-row {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-title {
+        font-size: 28px;
+    }
+
+    .hero-badge {
+        font-size: 12px;
+        padding: 6px 14px;
+    }
+
+    .abstract-dashboard {
+        height: 200px;
+    }
+
+    .ui-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .ui-stat-card {
+        height: 70px;
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .ui-icon-circle {
+        width: 26px;
+        height: 26px;
+    }
+
+    .amount {
+        font-size: 48px;
+    }
+
+    .section-header h2 {
+        font-size: 26px;
+    }
+
+    .step-number {
+        font-size: 36px;
+    }
+
+    .checkout-toast {
+        left: 12px;
+        right: 12px;
+        transform: none;
+        bottom: 16px;
+        font-size: 14px;
+        padding: 14px 18px;
+    }
+
+    @keyframes toastIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 }
 
