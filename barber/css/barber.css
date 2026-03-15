@@ -94,6 +94,21 @@ body {
     color: #22c55e;
 }
 
+.btn-link-forgot {
+    background: none;
+    border: none;
+    color: #6366f1;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+.btn-link-forgot:hover { opacity: 1; }
+
 .btn-link {
     background: none;
     border: none;

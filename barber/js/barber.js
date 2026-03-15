@@ -89,92 +89,6 @@ function doLogout() {
     localStorage.removeItem('barberSession');
     document.getElementById('appScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
-    showPanel('panelLogin');
-}
-
-// ---- Password Reset Flow ----
-function showPanel(id) {
-    ['panelLogin', 'panelForgot', 'panelReset'].forEach(p => {
-        const el = document.getElementById(p);
-        if (el) el.style.display = p === id ? 'block' : 'none';
-    });
-}
-
-async function submitForgotPassword() {
-    const email = (document.getElementById('forgotEmail')?.value || '').trim();
-    const msgEl = document.getElementById('forgotMsg');
-    const btn = document.getElementById('forgotBtn');
-
-    if (!email) { showMsg(msgEl, 'Veuillez entrer votre adresse email.'); return; }
-
-    btn.textContent = 'Envoi en cours...';
-    btn.disabled = true;
-
-    try {
-        await fetch('/api/barber/forgot-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-        // Always show success (avoid email enumeration)
-        msgEl.className = 'login-error success';
-        msgEl.style.display = 'block';
-        msgEl.textContent = '✅ Si un compte existe pour cet email, un lien vous a été envoyé. Vérifiez vos spams.';
-        btn.textContent = 'Email envoyé';
-    } catch {
-        showMsg(msgEl, 'Erreur de connexion. Réessayez.');
-        btn.textContent = 'Envoyer le lien';
-        btn.disabled = false;
-    }
-}
-
-async function submitResetPassword() {
-    const password = document.getElementById('resetPassword')?.value || '';
-    const confirm = document.getElementById('resetPasswordConfirm')?.value || '';
-    const msgEl = document.getElementById('resetMsg');
-    const btn = document.getElementById('resetBtn');
-    const urlToken = new URLSearchParams(window.location.search).get('reset_token');
-
-    if (password.length < 6) { showMsg(msgEl, 'Le mot de passe doit contenir au moins 6 caractères.'); return; }
-    if (password !== confirm) { showMsg(msgEl, 'Les mots de passe ne correspondent pas.'); return; }
-
-    btn.textContent = 'Enregistrement...';
-    btn.disabled = true;
-
-    try {
-        const res = await fetch('/api/barber/reset-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: urlToken, password })
-        });
-        const data = await res.json();
-        if (data.success) {
-            msgEl.className = 'login-error success';
-            msgEl.style.display = 'block';
-            msgEl.textContent = '✅ Mot de passe modifié ! Vous pouvez vous connecter.';
-            btn.textContent = 'Mot de passe enregistré';
-            // Clean URL and redirect to login after 2s
-            setTimeout(() => {
-                window.history.replaceState({}, '', '/pro');
-                showPanel('panelLogin');
-            }, 2000);
-        } else {
-            showMsg(msgEl, data.error || 'Lien invalide ou expiré.');
-            btn.textContent = 'Enregistrer le nouveau mot de passe';
-            btn.disabled = false;
-        }
-    } catch {
-        showMsg(msgEl, 'Erreur de connexion. Réessayez.');
-        btn.textContent = 'Enregistrer le nouveau mot de passe';
-        btn.disabled = false;
-    }
-}
-
-function showMsg(el, msg, type = 'error') {
-    if (!el) return;
-    el.className = 'login-error' + (type === 'success' ? ' success' : '');
-    el.style.display = 'block';
-    el.textContent = msg;
 }
 
 // ---- Init ----
@@ -1552,14 +1466,6 @@ document.getElementById('loginEmail').addEventListener('keydown', e => {
 
 // Magic Login & Persistent Session
 document.addEventListener('DOMContentLoaded', () => {
-    // Check for password reset token in URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const resetToken = urlParams.get('reset_token');
-    if (resetToken) {
-        showPanel('panelReset');
-        return; // Skip auto-login
-    }
-
     const magic = localStorage.getItem('magic_login');
     const sessionStr = localStorage.getItem('barberSession');
     
@@ -1598,3 +1504,95 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+// ============================================================
+//  FORGOT / RESET PASSWORD
+// ============================================================
+function openForgotModal() {
+    const m = document.getElementById('forgotModal');
+    m.style.display = 'flex';
+    document.getElementById('forgotEmail').value = '';
+    setForgotMsg('', '');
+    document.getElementById('forgotSubmitBtn').textContent = 'Envoyer le lien';
+    document.getElementById('forgotSubmitBtn').disabled = false;
+}
+function closeForgotModal() {
+    document.getElementById('forgotModal').style.display = 'none';
+}
+
+async function submitForgotPassword() {
+    const email = (document.getElementById('forgotEmail').value || '').trim();
+    const btn = document.getElementById('forgotSubmitBtn');
+    if (!email) { setForgotMsg('Veuillez entrer votre email.', 'error'); return; }
+    btn.textContent = 'Envoi…'; btn.disabled = true;
+    try {
+        await fetch('/api/barber/forgot-password', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        setForgotMsg('✅ Si un compte existe pour cet email, un lien vous a été envoyé. Vérifiez vos spams.', 'success');
+        btn.textContent = 'Email envoyé';
+    } catch {
+        setForgotMsg('Erreur de connexion. Réessayez.', 'error');
+        btn.textContent = 'Envoyer le lien'; btn.disabled = false;
+    }
+}
+
+function setForgotMsg(msg, type) {
+    const el = document.getElementById('forgotMsg');
+    if (!msg) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.style.background = type === 'success' ? 'rgba(34,197,94,.1)' : 'rgba(239,68,68,.1)';
+    el.style.border = type === 'success' ? '1px solid rgba(34,197,94,.3)' : '1px solid rgba(239,68,68,.3)';
+    el.style.color = type === 'success' ? '#22c55e' : '#ef4444';
+    el.textContent = msg;
+}
+
+async function submitResetPassword() {
+    const password = document.getElementById('resetPassword').value || '';
+    const confirm = document.getElementById('resetPasswordConfirm').value || '';
+    const btn = document.getElementById('resetSubmitBtn');
+    const urlToken = new URLSearchParams(window.location.search).get('reset_token');
+    const msgEl = document.getElementById('resetMsg');
+
+    if (password.length < 6) { setResetMsg('Minimum 6 caractères.', 'error'); return; }
+    if (password !== confirm) { setResetMsg('Les mots de passe ne correspondent pas.', 'error'); return; }
+    btn.textContent = 'Enregistrement…'; btn.disabled = true;
+    try {
+        const res = await fetch('/api/barber/reset-password', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: urlToken, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+            setResetMsg('✅ Mot de passe modifié ! Redirection…', 'success');
+            setTimeout(() => { window.history.replaceState({}, '', '/pro'); location.reload(); }, 2000);
+        } else {
+            setResetMsg(data.error || 'Lien invalide ou expiré.', 'error');
+            btn.textContent = 'Enregistrer'; btn.disabled = false;
+        }
+    } catch {
+        setResetMsg('Erreur de connexion. Réessayez.', 'error');
+        btn.textContent = 'Enregistrer'; btn.disabled = false;
+    }
+}
+
+function setResetMsg(msg, type) {
+    const el = document.getElementById('resetMsg');
+    el.style.display = 'block';
+    el.style.background = type === 'success' ? 'rgba(34,197,94,.1)' : 'rgba(239,68,68,.1)';
+    el.style.border = type === 'success' ? '1px solid rgba(34,197,94,.3)' : '1px solid rgba(239,68,68,.3)';
+    el.style.color = type === 'success' ? '#22c55e' : '#ef4444';
+    el.textContent = msg;
+}
+
+// Show reset modal if ?reset_token= in URL
+(function checkResetToken() {
+    const token = new URLSearchParams(window.location.search).get('reset_token');
+    if (token) {
+        window.addEventListener('DOMContentLoaded', () => {
+            const m = document.getElementById('resetModal');
+            if (m) m.style.display = 'flex';
+        });
+    }
+})();
