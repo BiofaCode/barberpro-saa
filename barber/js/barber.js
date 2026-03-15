@@ -641,7 +641,7 @@ async function loadServices() {
 
         const container = document.getElementById('servicesList');
         if (svcs.length === 0) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💈</div><div class="empty-state-text">Aucune prestation</div></div>';
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✨</div><div class="empty-state-text">Aucune prestation</div></div>';
         } else {
             container.innerHTML = '<div class="data-grid">' + svcs.map(s => `
                 <div class="data-card">
@@ -671,7 +671,16 @@ async function showAddService() {
             <div class="form-group" style="flex:1"><label class="form-label">Prix (CHF)</label><input type="number" class="form-input form-input-full" id="svcPrice" placeholder="25"></div>
             <div class="form-group" style="flex:1"><label class="form-label">Durée (min)</label><input type="number" class="form-input form-input-full" id="svcDuration" placeholder="30"></div>
         </div>
-        <div class="form-group"><label class="form-label">Icône (emoji)</label><input class="form-input form-input-full" id="svcIcon" value="✂️" placeholder="✂️"></div>
+        <div class="form-group">
+            <label class="form-label">Icône (emoji)</label>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+                <input class="form-input" id="svcIcon" value="✂️" placeholder="✂️" style="width:70px;text-align:center;font-size:1.4rem">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('svcIcon').value='✂️'">Réinitialiser</button>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+                ${['✂️','💇','💅','🧖','💆','🪒','🧴','💋','👗','👠','💄','🌸','🧘','🪮','🧼','🌿','⭐','✨','💎','🔥'].map(e=>`<button type="button" onclick="document.getElementById('svcIcon').value='${e}'" style="font-size:1.3rem;padding:4px 6px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">${e}</button>`).join('')}
+            </div>
+        </div>
         <div class="form-group"><label class="form-label">Description</label><input class="form-input form-input-full" id="svcDesc" placeholder="Description courte"></div>
         <div class="form-group">
             <label class="form-label">Assigner à (laisser vide = tous)</label>
@@ -730,7 +739,16 @@ async function showEditService(svc) {
             <div class="form-group" style="flex:1"><label class="form-label">Prix (CHF)</label><input type="number" class="form-input form-input-full" id="svcPrice" value="${svc.price}"></div>
             <div class="form-group" style="flex:1"><label class="form-label">Durée (min)</label><input type="number" class="form-input form-input-full" id="svcDuration" value="${svc.duration}"></div>
         </div>
-        <div class="form-group"><label class="form-label">Icône (emoji)</label><input class="form-input form-input-full" id="svcIcon" value="${svc.icon}"></div>
+        <div class="form-group">
+            <label class="form-label">Icône (emoji)</label>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+                <input class="form-input" id="svcIcon" value="${svc.icon}" placeholder="✂️" style="width:70px;text-align:center;font-size:1.4rem">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('svcIcon').value='✂️'">Réinitialiser</button>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+                ${['✂️','💇','💅','🧖','💆','🪒','🧴','💋','👗','👠','💄','🌸','🧘','🪮','🧼','🌿','⭐','✨','💎','🔥'].map(e=>`<button type="button" onclick="document.getElementById('svcIcon').value='${e}'" style="font-size:1.3rem;padding:4px 6px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">${e}</button>`).join('')}
+            </div>
+        </div>
         <div class="form-group"><label class="form-label">Description</label><input class="form-input form-input-full" id="svcDesc" value="${svc.description}"></div>
         <div class="form-group">
             <label class="form-label">Assigner à (laisser vide = tous)</label>
@@ -881,8 +899,17 @@ async function loadSettings() {
                                 <span id="colorLabelText" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.textColor || '#F5F0E8'}</span>
                             </div>
                         </div>
+                        <div class="form-group" style="flex:1">
+                            <label class="form-label">Fond du site</label>
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <input type="color" id="set-color-bg" value="${salon.branding?.backgroundColor || '#0a0a0f'}" style="width:50px;height:40px;border:none;border-radius:8px;cursor:pointer" oninput="updateColorPreview()">
+                                <span id="colorLabelBg" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.backgroundColor || '#0a0a0f'}</span>
+                            </div>
+                        </div>
                     </div>
                     <div id="colorPreview" style="padding:16px;border-radius:12px;margin-bottom:16px;text-align:center;font-weight:700;font-size:1rem;background:linear-gradient(135deg,${salon.branding?.primaryColor || '#6366F1'},${salon.branding?.accentColor || '#818CF8'});color:${salon.branding?.textColor || '#F5F0E8'}">
+                        <span style="font-size:.8rem;opacity:.7;display:block;font-weight:400">Fond:</span>
+                        <span id="previewBgDot" style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${salon.branding?.backgroundColor || '#0a0a0f'};border:2px solid rgba(255,255,255,.3);margin-right:6px;vertical-align:middle"></span>
                         Aperçu de vos couleurs
                     </div>
                     <div class="form-group"><label class="form-label">Titre principal du site (hero)</label><input class="form-input form-input-full" id="set-heroTitle" value="${salon.branding?.heroTitle || ''}" placeholder="L'Art de la Coiffure Masculine"></div>
@@ -1119,6 +1146,7 @@ async function saveBranding() {
         heroTitle: document.getElementById('set-heroTitle').value.trim(),
         heroSubtitle: document.getElementById('set-heroSubtitle').value.trim(),
         textColor: document.getElementById('set-color-text').value,
+        backgroundColor: document.getElementById('set-color-bg')?.value || '#0a0a0f',
         instagram: document.getElementById('set-instagram').value.trim(),
         facebook: document.getElementById('set-facebook').value.trim(),
         tiktok: document.getElementById('set-tiktok').value.trim(),
@@ -1174,12 +1202,16 @@ function updateColorPreview() {
     const c1 = document.getElementById('set-color1').value;
     const c2 = document.getElementById('set-color2').value;
     const cText = document.getElementById('set-color-text').value;
+    const cBg = document.getElementById('set-color-bg')?.value;
     document.getElementById('colorLabel1').textContent = c1;
     document.getElementById('colorLabel2').textContent = c2;
     document.getElementById('colorLabelText').textContent = cText;
+    if (cBg) document.getElementById('colorLabelBg').textContent = cBg;
     const prev = document.getElementById('colorPreview');
     prev.style.background = `linear-gradient(135deg,${c1},${c2})`;
     prev.style.color = cText;
+    const dot = document.getElementById('previewBgDot');
+    if (dot && cBg) dot.style.background = cBg;
 }
 
 // ---- Save Hours ----

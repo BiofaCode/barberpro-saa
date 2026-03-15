@@ -37,6 +37,11 @@ function applySalonBranding(salon) {
     if (b.textColor) {
       document.documentElement.style.setProperty('--color-text-primary', b.textColor);
     }
+    if (b.backgroundColor) {
+      document.documentElement.style.setProperty('--color-bg', b.backgroundColor);
+      document.documentElement.style.setProperty('--color-bg-secondary', b.backgroundColor);
+      document.body.style.background = b.backgroundColor;
+    }
   }
 
   const logoEl = document.querySelector('.nav-logo-text');

@@ -170,7 +170,8 @@ async function sendOTPEmail(email, code, salonName = 'SalonPro') {
   }
 }
 // Send welcome email after signup
-async function sendWelcomeEmail(email, ownerName, salonName, plan) {
+async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
+  baseUrl = baseUrl || process.env.BASE_URL || 'https://barberpro-saa.onrender.com';
   const fromName = process.env.SMTP_FROM_NAME || 'SalonPro';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const planNames = { starter: 'Starter', pro: 'Pro', premium: 'Premium' };
@@ -216,7 +217,7 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan) {
       </div>
 
       <div style="text-align:center;margin:24px 0">
-        <a href="${process.env.BASE_URL || 'http://localhost:3000'}/pro" style="display:inline-block;background:#6366F1;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px">Accéder à mon Espace Pro →</a>
+        <a href="${baseUrl}/pro" style="display:inline-block;background:#6366F1;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px">Accéder à mon Espace Pro →</a>
       </div>
 
       <p style="font-size:13px;color:#71717a;margin:20px 0 0;line-height:1.6">

@@ -656,6 +656,7 @@ route('PUT', '/api/barber/salon/:salonId/branding', async (req, res, params) => 
         tiktok: body.tiktok !== undefined ? body.tiktok : (salon.branding?.tiktok || ''),
         youtube: body.youtube !== undefined ? body.youtube : (salon.branding?.youtube || ''),
         heroStats: body.heroStats !== undefined ? body.heroStats : (salon.branding?.heroStats || null),
+        backgroundColor: body.backgroundColor || salon.branding?.backgroundColor || '#0a0a0f',
     };
 
     const updated = await db.updateSalon(params.salonId, { branding });
@@ -1182,7 +1183,8 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             // Send welcome email (non-blocking)
             if (ownerEmail) {
                 const ownerNameMeta = session.metadata?.ownerName || '';
-                sendWelcomeEmail(ownerEmail, ownerNameMeta || salonName, salonName || 'Votre salon', plan);
+                const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+                sendWelcomeEmail(ownerEmail, ownerNameMeta || salonName, salonName || 'Votre salon', plan, baseUrl);
             }
         }
     } else if (event.type === 'customer.subscription.deleted') {
