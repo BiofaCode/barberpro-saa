@@ -45,18 +45,23 @@
     <!-- Navbar -->
     <nav class="saas-nav">
         <div class="container nav-content">
-            <div class="logo">
+            <a href="/" class="logo">
                 <span class="logo-icon">✨</span>
                 Salon<span class="highlight">Pro</span>
-            </div>
+            </a>
             <div class="nav-links">
                 <a href="#features">Fonctionnalités</a>
                 <a href="#pricing">Tarifs</a>
-                <a href="/pro" class="login-link">Espace Pro</a>
+                <a href="/pro">Espace Pro</a>
                 <a href="#pricing" class="btn btn-primary">Essai gratuit →</a>
             </div>
-            <button class="mobile-menu-btn"
-                onclick="document.querySelector('.nav-links').classList.toggle('open')">☰</button>
+            <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">☰</button>
+        </div>
+        <div class="nav-mobile-dropdown" id="mobileMenu">
+            <a href="#features" onclick="closeMobileMenu()">Fonctionnalités</a>
+            <a href="#pricing" onclick="closeMobileMenu()">Tarifs</a>
+            <a href="/pro" onclick="closeMobileMenu()">Espace Pro</a>
+            <a href="#pricing" class="btn btn-primary" onclick="closeMobileMenu()">Essai gratuit →</a>
         </div>
     </nav>
 
@@ -487,6 +492,22 @@
 
     <!-- Scripts -->
     <script>
+        // Mobile menu
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        mobileMenuBtn.addEventListener('click', () => {
+            const open = mobileMenu.classList.toggle('open');
+            mobileMenuBtn.textContent = open ? '✕' : '☰';
+        });
+        function closeMobileMenu() {
+            mobileMenu.classList.remove('open');
+            mobileMenuBtn.textContent = '☰';
+        }
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.saas-nav')) closeMobileMenu();
+        });
+
         let selectedPlan = 'pro';
         const planLabels = {
             starter: 'Pack Starter — 39 CHF/mois',

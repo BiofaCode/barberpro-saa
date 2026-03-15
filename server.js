@@ -156,6 +156,23 @@ function verifyToken(req) {
     } catch { return null; }
 }
 
+// ---- Rate Limiter (in-memory) ----
+const rateLimitMap = new Map();
+function rateLimit(ip, key, maxRequests, windowMs) {
+    const now = Date.now();
+    const mapKey = `${ip}:${key}`;
+    const entry = rateLimitMap.get(mapKey) || { count: 0, resetAt: now + windowMs };
+    if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + windowMs; }
+    entry.count++;
+    rateLimitMap.set(mapKey, entry);
+    return entry.count > maxRequests;
+}
+// Clean up old entries every 10 minutes
+setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of rateLimitMap) { if (now > v.resetAt) rateLimitMap.delete(k); }
+}, 10 * 60 * 1000);
+
 // ---- Routing ----
 const routes = [];
 function route(method, pattern, handler) {
@@ -934,6 +951,11 @@ route('POST', '/api/stripe/portal/session', async (req, res) => {
 
 // Register + Checkout in one step
 route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+    if (rateLimit(ip, 'register', 5, 10 * 60 * 1000)) {
+        return json(res, 429, { success: false, error: 'Trop de tentatives. Veuillez réessayer dans 10 minutes.' });
+    }
+
     const body = await parseBody(req);
     const { salonName, ownerName, email, password, phone, plan } = body;
 
