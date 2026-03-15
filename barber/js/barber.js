@@ -124,20 +124,31 @@ function initApp() {
 
         const sidebarNav = document.querySelector('.sidebar-nav');
         if (isEmployee) {
-            // Hide specific menu items for employees
             const linksToHide = ['dashboard', 'clients', 'employees', 'services', 'settings'];
             linksToHide.forEach(pageId => {
                 const link = sidebarNav.querySelector(`a[onclick="showPage('${pageId}')"]`);
                 if (link) link.style.display = 'none';
             });
-            showPage('bookings');
+            activatePage('bookings');
+            setTimeout(loadBookings, 0);
         } else {
-            // Show all
             Array.from(sidebarNav.querySelectorAll('a')).forEach(a => a.style.display = 'flex');
-            showPage('dashboard');
+            activatePage('dashboard');
+            setTimeout(loadDashboard, 0); // defer after DOM paint
         }
     }
-    // NOTE: no extra loadDashboard() here — showPage() already calls it
+}
+
+// Activate a page tab without triggering data load (used by initApp)
+function activatePage(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(`page-${page}`).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const navLink = document.querySelector(`.nav-item[onclick="showPage('${page}')"]`);
+    if (navLink) navLink.classList.add('active');
+    const titles = { dashboard: 'Tableau de bord', bookings: 'Rendez-vous', clients: 'Mes Clients', employees: 'Mon Équipe', services: 'Mes Prestations', settings: 'Mon Salon' };
+    const titleEl = document.getElementById('topbarTitle');
+    if (titleEl) titleEl.textContent = titles[page] || page;
 }
 
 function openWebsite() {
@@ -148,32 +159,15 @@ function openWebsite() {
     }
 }
 
-// ---- Pages ----
+// ---- Pages (called from nav clicks only) ----
 function showPage(page) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.getElementById(`page-${page}`).classList.add('active');
-
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    // event may be undefined when called programmatically (e.g. initApp)
-    if (typeof event !== 'undefined' && event?.currentTarget) {
-        event.currentTarget.classList.add('active');
-    } else {
-        // Highlight nav item by page name
-        const navLink = document.querySelector(`.nav-item[onclick="showPage('${page}')"]`);
-        if (navLink) navLink.classList.add('active');
-    }
-
-    const titles = { dashboard: 'Tableau de bord', bookings: 'Rendez-vous', clients: 'Mes Clients', employees: 'Mon Équipe', services: 'Mes Prestations', settings: 'Mon Salon' };
-    document.getElementById('topbarTitle').textContent = titles[page] || page;
-
+    activatePage(page);
     if (page === 'dashboard') loadDashboard();
     else if (page === 'bookings') loadBookings();
     else if (page === 'clients') loadClients();
     else if (page === 'employees') loadEmployees();
     else if (page === 'services') loadServices();
     else if (page === 'settings') loadSettings();
-
-    // Close sidebar on mobile
     document.getElementById('sidebar').classList.remove('open');
 }
 
@@ -184,10 +178,13 @@ function toggleSidebar() {
 // ---- Dashboard ----
 async function loadDashboard(_retry = 0) {
     try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 8000); // 8s timeout (Render cold start)
         const [statsRes, bookingsRes] = await Promise.all([
-            apiFetch(`${API}/api/barber/salon/${salonId}/stats`),
-            apiFetch(`${API}/api/barber/salon/${salonId}/bookings?date=${todayStr()}`)
+            apiFetch(`${API}/api/barber/salon/${salonId}/stats`, { signal: ctrl.signal }),
+            apiFetch(`${API}/api/barber/salon/${salonId}/bookings?date=${todayStr()}`, { signal: ctrl.signal })
         ]);
+        clearTimeout(t);
         const stats = (await statsRes.json()).data || {};
         const bookings = (await bookingsRes.json()).data || [];
 
@@ -279,7 +276,10 @@ async function loadDashboard(_retry = 0) {
 // ---- Bookings ----
 async function loadBookings(_retry = 0) {
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/bookings`);
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 8000);
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/bookings`, { signal: ctrl.signal });
+        clearTimeout(t);
         const data = await res.json();
         const bookings = data.data || [];
 
