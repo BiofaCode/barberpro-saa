@@ -16,7 +16,9 @@
 <body>
     <!-- Login Screen -->
     <div id="loginScreen" class="login-screen">
-        <div class="login-card">
+
+        <!-- Panel: Login -->
+        <div class="login-card" id="panelLogin">
             <div class="login-logo">
                 <div class="login-logo-icon">✨</div>
                 <h1>Salon<span>Pro</span></h1>
@@ -25,14 +27,67 @@
             <div id="loginError" class="login-error" style="display:none"></div>
             <div class="form-group">
                 <label class="form-label">Email</label>
-                <input type="email" class="form-input form-input-full" id="loginEmail" placeholder="votre@email.com">
+                <input type="email" class="form-input form-input-full" id="loginEmail" placeholder="votre@email.com"
+                    onkeydown="if(event.key==='Enter')doLogin()">
             </div>
             <div class="form-group">
                 <label class="form-label">Mot de passe</label>
-                <input type="password" class="form-input form-input-full" id="loginPassword" placeholder="••••••••">
+                <input type="password" class="form-input form-input-full" id="loginPassword" placeholder="••••••••"
+                    onkeydown="if(event.key==='Enter')doLogin()">
             </div>
             <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doLogin()">Se connecter</button>
+            <p style="text-align:center;margin-top:14px;font-size:13px">
+                <button class="btn-link" onclick="showPanel('panelForgot')">Mot de passe oublié ?</button>
+            </p>
         </div>
+
+        <!-- Panel: Forgot Password -->
+        <div class="login-card" id="panelForgot" style="display:none">
+            <div class="login-logo">
+                <div class="login-logo-icon">🔐</div>
+                <h1>Salon<span>Pro</span></h1>
+                <p>Réinitialiser le mot de passe</p>
+            </div>
+            <div id="forgotMsg" class="login-error" style="display:none"></div>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;line-height:1.6">
+                Entrez votre adresse email. Si un compte existe, vous recevrez un lien de réinitialisation valable <strong>1 heure</strong>.
+            </p>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input form-input-full" id="forgotEmail" placeholder="votre@email.com"
+                    onkeydown="if(event.key==='Enter')submitForgotPassword()">
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px" id="forgotBtn" onclick="submitForgotPassword()">
+                Envoyer le lien
+            </button>
+            <p style="text-align:center;margin-top:14px;font-size:13px">
+                <button class="btn-link" onclick="showPanel('panelLogin')">← Retour à la connexion</button>
+            </p>
+        </div>
+
+        <!-- Panel: Reset Password (shown when ?reset_token= in URL) -->
+        <div class="login-card" id="panelReset" style="display:none">
+            <div class="login-logo">
+                <div class="login-logo-icon">🔑</div>
+                <h1>Salon<span>Pro</span></h1>
+                <p>Nouveau mot de passe</p>
+            </div>
+            <div id="resetMsg" class="login-error" style="display:none"></div>
+            <div class="form-group">
+                <label class="form-label">Nouveau mot de passe</label>
+                <input type="password" class="form-input form-input-full" id="resetPassword" placeholder="Minimum 6 caractères" minlength="6"
+                    onkeydown="if(event.key==='Enter')submitResetPassword()">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Confirmer le mot de passe</label>
+                <input type="password" class="form-input form-input-full" id="resetPasswordConfirm" placeholder="••••••••"
+                    onkeydown="if(event.key==='Enter')submitResetPassword()">
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px" id="resetBtn" onclick="submitResetPassword()">
+                Enregistrer le nouveau mot de passe
+            </button>
+        </div>
+
     </div>
 
     <!-- Main App (hidden until login) -->

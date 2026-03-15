@@ -89,6 +89,92 @@ function doLogout() {
     localStorage.removeItem('barberSession');
     document.getElementById('appScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
+    showPanel('panelLogin');
+}
+
+// ---- Password Reset Flow ----
+function showPanel(id) {
+    ['panelLogin', 'panelForgot', 'panelReset'].forEach(p => {
+        const el = document.getElementById(p);
+        if (el) el.style.display = p === id ? 'block' : 'none';
+    });
+}
+
+async function submitForgotPassword() {
+    const email = (document.getElementById('forgotEmail')?.value || '').trim();
+    const msgEl = document.getElementById('forgotMsg');
+    const btn = document.getElementById('forgotBtn');
+
+    if (!email) { showMsg(msgEl, 'Veuillez entrer votre adresse email.'); return; }
+
+    btn.textContent = 'Envoi en cours...';
+    btn.disabled = true;
+
+    try {
+        await fetch('/api/barber/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        // Always show success (avoid email enumeration)
+        msgEl.className = 'login-error success';
+        msgEl.style.display = 'block';
+        msgEl.textContent = '✅ Si un compte existe pour cet email, un lien vous a été envoyé. Vérifiez vos spams.';
+        btn.textContent = 'Email envoyé';
+    } catch {
+        showMsg(msgEl, 'Erreur de connexion. Réessayez.');
+        btn.textContent = 'Envoyer le lien';
+        btn.disabled = false;
+    }
+}
+
+async function submitResetPassword() {
+    const password = document.getElementById('resetPassword')?.value || '';
+    const confirm = document.getElementById('resetPasswordConfirm')?.value || '';
+    const msgEl = document.getElementById('resetMsg');
+    const btn = document.getElementById('resetBtn');
+    const urlToken = new URLSearchParams(window.location.search).get('reset_token');
+
+    if (password.length < 6) { showMsg(msgEl, 'Le mot de passe doit contenir au moins 6 caractères.'); return; }
+    if (password !== confirm) { showMsg(msgEl, 'Les mots de passe ne correspondent pas.'); return; }
+
+    btn.textContent = 'Enregistrement...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/barber/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: urlToken, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+            msgEl.className = 'login-error success';
+            msgEl.style.display = 'block';
+            msgEl.textContent = '✅ Mot de passe modifié ! Vous pouvez vous connecter.';
+            btn.textContent = 'Mot de passe enregistré';
+            // Clean URL and redirect to login after 2s
+            setTimeout(() => {
+                window.history.replaceState({}, '', '/pro');
+                showPanel('panelLogin');
+            }, 2000);
+        } else {
+            showMsg(msgEl, data.error || 'Lien invalide ou expiré.');
+            btn.textContent = 'Enregistrer le nouveau mot de passe';
+            btn.disabled = false;
+        }
+    } catch {
+        showMsg(msgEl, 'Erreur de connexion. Réessayez.');
+        btn.textContent = 'Enregistrer le nouveau mot de passe';
+        btn.disabled = false;
+    }
+}
+
+function showMsg(el, msg, type = 'error') {
+    if (!el) return;
+    el.className = 'login-error' + (type === 'success' ? ' success' : '');
+    el.style.display = 'block';
+    el.textContent = msg;
 }
 
 // ---- Init ----
@@ -1466,6 +1552,14 @@ document.getElementById('loginEmail').addEventListener('keydown', e => {
 
 // Magic Login & Persistent Session
 document.addEventListener('DOMContentLoaded', () => {
+    // Check for password reset token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetToken = urlParams.get('reset_token');
+    if (resetToken) {
+        showPanel('panelReset');
+        return; // Skip auto-login
+    }
+
     const magic = localStorage.getItem('magic_login');
     const sessionStr = localStorage.getItem('barberSession');
     

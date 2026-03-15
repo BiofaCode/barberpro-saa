@@ -242,4 +242,62 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan) {
   }
 }
 
-module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail };
+// Send password reset email
+async function sendPasswordResetEmail(email, ownerName, resetUrl) {
+  const fromName = process.env.SMTP_FROM_NAME || 'SalonPro';
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: [email],
+      subject: `🔐 Réinitialisation de votre mot de passe — SalonPro`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+  <div style="max-width:520px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+    <div style="background:#6366F1;padding:28px;text-align:center">
+      <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700">🔐 Réinitialisation du mot de passe</h1>
+      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:13px">SalonPro — Espace Pro</p>
+    </div>
+    <div style="padding:28px">
+      <p style="font-size:15px;color:#27272a;margin:0 0 16px">
+        Bonjour <strong>${ownerName || 'cher utilisateur'}</strong>,
+      </p>
+      <p style="font-size:14px;color:#52525b;margin:0 0 24px;line-height:1.7">
+        Nous avons reçu une demande de réinitialisation du mot de passe pour votre compte SalonPro.<br>
+        Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe. Ce lien est valable <strong>1 heure</strong>.
+      </p>
+      <div style="text-align:center;margin:28px 0">
+        <a href="${resetUrl}" style="display:inline-block;background:#6366F1;color:#fff;padding:14px 32px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px">
+          Réinitialiser mon mot de passe →
+        </a>
+      </div>
+      <p style="font-size:12px;color:#a1a1aa;margin:20px 0 0;line-height:1.6;text-align:center">
+        Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.<br>
+        Votre mot de passe actuel reste inchangé.
+      </p>
+      <p style="font-size:11px;color:#d4d4d8;margin:12px 0 0;text-align:center;word-break:break-all">
+        Lien : ${resetUrl}
+      </p>
+    </div>
+    <div style="background:#fafafa;padding:14px 28px;text-align:center;border-top:1px solid #e4e4e7">
+      <p style="font-size:12px;color:#a1a1aa;margin:0">SalonPro — Propulsé par Osmo Digital</p>
+    </div>
+  </div>
+</body>
+</html>`
+    });
+
+    if (error) { console.error(`  ❌ Erreur Resend (reset): ${error.message}`); return { success: false }; }
+    console.log(`  📧 Email reset envoyé à ${email} (ID: ${data.id})`);
+    return { success: true };
+  } catch (err) {
+    console.error(`  ❌ Erreur critique email (reset): ${err.message}`);
+    return { success: false };
+  }
+}
+
+module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail };

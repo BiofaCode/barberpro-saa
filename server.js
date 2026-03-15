@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation, sendOTPEmail } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 
 // Configure Cloudinary
@@ -167,11 +167,18 @@ function rateLimit(ip, key, maxRequests, windowMs) {
     rateLimitMap.set(mapKey, entry);
     return entry.count > maxRequests;
 }
-// Clean up old entries every 10 minutes
+// Clean up old rate limit entries every 10 minutes
 setInterval(() => {
     const now = Date.now();
     for (const [k, v] of rateLimitMap) { if (now > v.resetAt) rateLimitMap.delete(k); }
 }, 10 * 60 * 1000);
+
+// ---- Password Reset Tokens (in-memory, 1h TTL) ----
+const resetTokens = new Map(); // token → { ownerId, email, expiry }
+setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of resetTokens) { if (now > v.expiry) resetTokens.delete(k); }
+}, 30 * 60 * 1000);
 
 // ---- Routing ----
 const routes = [];
@@ -443,6 +450,50 @@ route('POST', '/api/barber/login', async (req, res) => {
     // If neither matched
     console.log(`❌ Login failed: No matching credentials found`);
     json(res, 401, { success: false, error: 'Email ou mot de passe incorrect' });
+});
+
+// Forgot password — always returns 200 to avoid email enumeration
+route('POST', '/api/barber/forgot-password', async (req, res) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+    if (rateLimit(ip, 'forgot', 5, 15 * 60 * 1000)) {
+        return json(res, 429, { success: false, error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
+    }
+
+    const body = await parseBody(req);
+    const email = (body.email || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) return json(res, 200, { success: true }); // silent fail
+
+    const owner = await db.findOwnerByEmail(email);
+    if (owner) {
+        const token = crypto.randomBytes(32).toString('hex');
+        resetTokens.set(token, { ownerId: owner._id, email, expiry: Date.now() + 60 * 60 * 1000 });
+        const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+        const resetUrl = `${baseUrl}/pro?reset_token=${token}`;
+        sendPasswordResetEmail(email, owner.name, resetUrl); // non-blocking
+        console.log(`🔑 Password reset token generated for ${email}`);
+    }
+
+    json(res, 200, { success: true }); // always success to avoid email enumeration
+});
+
+// Reset password — validates token and sets new password
+route('POST', '/api/barber/reset-password', async (req, res) => {
+    const body = await parseBody(req);
+    const { token, password } = body;
+
+    if (!token || !password || password.length < 6) {
+        return json(res, 400, { success: false, error: 'Token et mot de passe (min. 6 caractères) requis.' });
+    }
+
+    const entry = resetTokens.get(token);
+    if (!entry || Date.now() > entry.expiry) {
+        return json(res, 400, { success: false, error: 'Lien expiré ou invalide. Veuillez refaire une demande.' });
+    }
+
+    await db.updateOwner(entry.ownerId, { password });
+    resetTokens.delete(token); // single-use
+    console.log(`✅ Password reset for owner ${entry.email}`);
+    json(res, 200, { success: true });
 });
 
 route('GET', '/api/barber/salon/:salonId', async (req, res, params) => {
