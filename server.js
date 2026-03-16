@@ -11,6 +11,19 @@ const crypto = require('crypto');
 const db = require('./db');
 const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner } = require('./email');
 const cloudinary = require('cloudinary').v2;
+const webpush = require('web-push');
+
+// Configure Web Push (VAPID)
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(
+        `mailto:${process.env.VAPID_EMAIL || 'info@osmodigital.ch'}`,
+        process.env.VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY
+    );
+    console.log('🔔 Web Push (VAPID) configuré');
+} else {
+    console.warn('⚠️ VAPID keys manquantes — push notifications désactivées');
+}
 
 // Configure Cloudinary
 if (process.env.CLOUDINARY_URL) {
@@ -1274,10 +1287,18 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     console.log(`  📅 Nouveau RDV: ${body.clientName} - ${body.serviceName} @ ${salon.name} (${body.date} ${body.time})`);
     json(res, 201, { success: true, data: booking });
 
-    // Send confirmation email (non-blocking)
+    // Non-blocking: email + push notification to salon owner
     const baseUrlBook = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
     const cancelUrlBook = booking.cancelToken ? `${baseUrlBook}/cancel/${booking.cancelToken}` : null;
     if (booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrlBook);
+
+    // Push notification to owner
+    sendPushToSalon(salon._id, {
+        title: `📅 Nouveau RDV — ${salon.name}`,
+        body: `${body.clientName} · ${body.serviceName} · ${body.date} à ${body.time}`,
+        url: '/pro',
+        tag: 'new-booking'
+    });
 });
 
 // OTP Store (in memory) - email -> { code, expires }
@@ -1356,6 +1377,65 @@ route('PUT', '/api/salon/:slug/bookings/:bookingId/cancel', async (req, res, par
     const updated = await db.updateBooking(params.bookingId, { status: 'cancelled' });
     console.log(`  ❌ RDV annulé par client: ${booking.clientName} - ${booking.serviceName} @ ${booking.date}`);
     json(res, 200, { success: true, data: updated });
+});
+
+// ---- Push Notifications ----
+
+// Helper: send push to all subscriptions of a salon's owner
+async function sendPushToSalon(salonId, payload) {
+    if (!process.env.VAPID_PUBLIC_KEY) return;
+    try {
+        const owner = await db.findOwnerBySalon(salonId);
+        if (!owner?.pushSubscriptions?.length) return;
+        const message = JSON.stringify(payload);
+        for (const sub of owner.pushSubscriptions) {
+            webpush.sendNotification(sub, message).catch(err => {
+                // 410 = subscription expired/invalid
+                if (err.statusCode === 410) {
+                    db.updateOwner(owner._id, {
+                        pushSubscriptions: owner.pushSubscriptions.filter(s => s.endpoint !== sub.endpoint)
+                    }).catch(() => {});
+                }
+            });
+        }
+    } catch (e) { console.error('Push error:', e.message); }
+}
+
+// Save push subscription for the logged-in owner
+route('POST', '/api/barber/push/subscribe', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false });
+    const body = await parseBody(req);
+    if (!body.endpoint) return json(res, 400, { success: false, error: 'Subscription invalide' });
+
+    const owner = await db.findOwnerBySalon(user.salonId);
+    if (!owner) return json(res, 404, { success: false });
+
+    const existing = owner.pushSubscriptions || [];
+    // Avoid duplicates
+    const filtered = existing.filter(s => s.endpoint !== body.endpoint);
+    await db.updateOwner(owner._id, { pushSubscriptions: [...filtered, body] });
+    console.log(`🔔 Push subscription saved for salon ${user.salonId}`);
+    json(res, 200, { success: true });
+});
+
+// Remove push subscription (logout / disable)
+route('POST', '/api/barber/push/unsubscribe', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false });
+    const body = await parseBody(req);
+
+    const owner = await db.findOwnerBySalon(user.salonId);
+    if (!owner) return json(res, 200, { success: true });
+
+    const filtered = (owner.pushSubscriptions || []).filter(s => s.endpoint !== body.endpoint);
+    await db.updateOwner(owner._id, { pushSubscriptions: filtered });
+    json(res, 200, { success: true });
+});
+
+// Serve VAPID public key to browser
+route('GET', '/api/barber/push/vapid-key', async (req, res) => {
+    json(res, 200, { key: process.env.VAPID_PUBLIC_KEY || '' });
 });
 
 // Cancel booking via token (GET: fetch booking info)
@@ -1492,6 +1572,9 @@ const server = http.createServer(async (req, res) => {
         }
     }
     // ---- Routes pour le SaaS Landing Page ----
+    else if (pathname === '/sw.js') {
+        filePath = path.join(__dirname, 'sw.js');
+    }
     else if (pathname === '/' && req.method === 'GET') {
         filePath = path.join(__dirname, 'saas/index.html');
     }

@@ -137,6 +137,58 @@ function initApp() {
             setTimeout(loadDashboard, 0); // defer after DOM paint
         }
     }
+
+    // Setup push notifications (owner only, non-blocking)
+    if (currentUser?.role !== 'employee') {
+        setTimeout(setupPushNotifications, 3000);
+    }
+}
+
+// ---- Push Notifications ----
+async function setupPushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    try {
+        // Register service worker
+        const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+
+        // Get VAPID public key from server
+        const keyRes = await apiFetch('/api/barber/push/vapid-key');
+        const { key } = await keyRes.json();
+        if (!key) return;
+
+        // Check existing subscription
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+            // Request permission only if not already granted/denied
+            if (Notification.permission === 'default') {
+                const perm = await Notification.requestPermission();
+                if (perm !== 'granted') return;
+            } else if (Notification.permission === 'denied') return;
+
+            // Subscribe
+            sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(key)
+            });
+        }
+
+        // Save subscription to server
+        await apiFetch('/api/barber/push/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(sub.toJSON())
+        });
+        console.log('🔔 Push notifications activées');
+    } catch (e) {
+        console.warn('Push setup failed:', e.message);
+    }
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
 
 // Activate a page tab without triggering data load (used by initApp)

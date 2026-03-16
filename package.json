@@ -29,6 +29,7 @@
     "nodemailer": "^8.0.1",
     "nodemailer-brevo-transport": "^2.2.1",
     "resend": "^6.9.3",
-    "stripe": "^20.4.1"
+    "stripe": "^20.4.1",
+    "web-push": "^3.6.7"
   }
 }
