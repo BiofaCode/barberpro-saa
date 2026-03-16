@@ -888,12 +888,81 @@ async function deleteService(id) {
 }
 
 // ---- Settings ----
+async function loadSMSStatus() {
+    try {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/sms-status`);
+        const data = await res.json();
+        const { credits = 0, packs = {}, configured = false } = data.data || {};
+        const el = document.getElementById('smsCardBody');
+        if (!el) return;
+
+        const creditColor = credits === 0 ? 'var(--error)' : credits < 20 ? '#f59e0b' : 'var(--success, #22c55e)';
+        const configWarning = !configured
+            ? `<div style="margin-bottom:16px;padding:10px 14px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;font-size:.82rem;color:#fbbf24">
+                ⚠️ Twilio non configuré — ajoutez <code>TWILIO_ACCOUNT_SID</code>, <code>TWILIO_AUTH_TOKEN</code> et <code>TWILIO_PHONE_NUMBER</code> dans Render pour activer l'envoi SMS.
+               </div>` : '';
+
+        el.innerHTML = `
+            ${configWarning}
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:14px 18px;background:var(--bg-surface);border-radius:12px;border:1px solid var(--border)">
+                <span style="font-size:32px">📱</span>
+                <div>
+                    <div style="font-size:.8rem;color:var(--text-muted);margin-bottom:2px">Crédits SMS disponibles</div>
+                    <div style="font-size:26px;font-weight:800;color:${creditColor}">${credits}</div>
+                </div>
+            </div>
+            <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:14px">
+                Un crédit = 1 SMS envoyé. Les rappels J-1 et les confirmations de RDV consomment 1 crédit chacun.
+            </p>
+            <div style="display:grid;gap:10px">
+                ${Object.entries(packs).map(([key, pack]) => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px">
+                    <div>
+                        <div style="font-weight:600;font-size:.9rem">${pack.label}</div>
+                        <div style="font-size:.8rem;color:var(--text-muted)">${pack.credits} SMS</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px">
+                        <span style="font-weight:700;font-size:1rem">CHF ${pack.priceChf}</span>
+                        <button class="btn btn-primary btn-sm" onclick="buySMSPack('${key}')">Acheter</button>
+                    </div>
+                </div>`).join('')}
+            </div>`;
+    } catch(e) {
+        const el = document.getElementById('smsCardBody');
+        if (el) el.innerHTML = `<div style="font-size:.85rem;color:var(--text-muted)">Impossible de charger les crédits SMS.</div>`;
+    }
+}
+
+async function buySMSPack(packKey) {
+    try {
+        const btn = event.currentTarget;
+        btn.disabled = true;
+        btn.textContent = '…';
+        const res = await apiFetch('/api/barber/sms/buy', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pack: packKey })
+        });
+        const data = await res.json();
+        if (data.success && data.url) {
+            window.location.href = data.url;
+        } else {
+            showToast(data.error || 'Erreur paiement', 'error');
+            btn.disabled = false;
+            btn.textContent = 'Acheter';
+        }
+    } catch(e) {
+        showToast('Erreur de connexion', 'error');
+    }
+}
+
 async function loadSettings() {
     try {
         const res = await apiFetch(`${API}/api/barber/salon/${salonId}`);
         const data = await res.json();
         const salon = data.data || {};
         currentSalon = salon;
+        loadSMSStatus(); // load SMS credits alongside settings
 
         const logoHtml = salon.logo
             ? `<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px"><img src="${salon.logo}" style="width:80px;height:80px;object-fit:cover;border-radius:14px;border:2px solid var(--border)"><div><div style="font-weight:600;margin-bottom:4px">Logo actuel</div><button class="btn btn-danger btn-sm" onclick="deleteLogo()">🗑 Supprimer</button></div></div>`
@@ -1153,17 +1222,10 @@ async function loadSettings() {
             </div>
 
             <!-- SMS -->
-            <div class="card" style="margin-bottom:20px">
-                <div class="card-header"><h3>📱 Rappels SMS</h3><span class="badge badge-pending">En développement</span></div>
-                <div class="card-body">
-                    <div style="display:flex;align-items:flex-start;gap:16px;padding:12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px">
-                        <span style="font-size:28px">🔔</span>
-                        <div>
-                            <div style="font-weight:600;margin-bottom:4px">Rappels SMS automatiques</div>
-                            <div style="font-size:.85rem;color:var(--text-sec)">Les rappels SMS seront envoyés automatiquement 24h et 1h avant chaque rendez-vous. Cette fonctionnalité sera disponible prochainement.</div>
-                            <div style="margin-top:10px;font-size:.8rem;color:var(--text-muted)">Statut : <span class="badge badge-pending">${salon.smsReminders?.status || 'En développement'}</span></div>
-                        </div>
-                    </div>
+            <div class="card" style="margin-bottom:20px" id="smsCard">
+                <div class="card-header"><h3>📱 Crédits SMS</h3></div>
+                <div class="card-body" id="smsCardBody">
+                    <div style="text-align:center;color:var(--text-muted);font-size:.85rem">Chargement…</div>
                 </div>
             </div>
 
@@ -1610,6 +1672,15 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'flex';
             initApp();
+
+            // Handle SMS credit purchase redirect
+            const urlP = new URLSearchParams(window.location.search);
+            if (urlP.get('sms_success') === '1') {
+                window.history.replaceState({}, '', '/pro');
+                setTimeout(() => { showPage('settings'); showToast('✅ Crédits SMS ajoutés !'); }, 500);
+            } else if (urlP.get('sms_cancel') === '1') {
+                window.history.replaceState({}, '', '/pro');
+            }
         } catch (e) {
             console.error('Session restore failed', e);
             localStorage.removeItem('barberSession');

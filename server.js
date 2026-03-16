@@ -12,6 +12,7 @@ const db = require('./db');
 const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
+const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, SMS_PACKS } = require('./sms');
 
 // Configure Web Push (VAPID)
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -201,13 +202,19 @@ async function sendPendingReminders() {
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         const bookings = await db.findBookings({ date: tomorrowStr, status: 'confirmed', reminderSent: { $ne: true } });
         for (const booking of bookings) {
-            if (!booking.clientEmail) continue;
             const salon = await db.findSalonById(booking.salon);
             if (!salon) continue;
-            sendReminderEmail(booking, salon);
+            // Email reminder
+            if (booking.clientEmail) sendReminderEmail(booking, salon);
+            // SMS reminder (if phone + credits)
+            if (booking.clientPhone && (salon.smsCredits || 0) > 0) {
+                sendSMSReminder(booking, salon).then(result => {
+                    if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
+                });
+            }
             await db.updateBooking(booking._id, { reminderSent: true });
         }
-        if (bookings.length > 0) console.log(`⏰ Rappels J-1 envoyés: ${bookings.length} RDV`);
+        if (bookings.length > 0) console.log(`⏰ Rappels J-1 envoyés: ${bookings.length} RDV (email + SMS si crédits)`);
     } catch(e) { console.error('Reminder cron error:', e.message); }
 }
 setInterval(sendPendingReminders, 60 * 60 * 1000);
@@ -954,11 +961,53 @@ route('GET', '/api/barber/salon/:salonId/sms-status', async (req, res, params) =
     json(res, 200, {
         success: true,
         data: {
-            enabled: salon.smsReminders?.enabled || false,
-            status: salon.smsReminders?.status || 'En développement',
-            message: 'Les rappels SMS sont en cours de développement.'
+            credits: salon.smsCredits || 0,
+            packs: SMS_PACKS,
+            configured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
         }
     });
+});
+
+// Buy SMS credits via Stripe checkout
+route('POST', '/api/barber/sms/buy', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false });
+
+    const body = await parseBody(req);
+    const pack = SMS_PACKS[body.pack];
+    if (!pack) return json(res, 400, { success: false, error: 'Pack invalide (starter | pro | max)' });
+
+    const salon = await db.findSalonById(user.salonId);
+    if (!salon) return json(res, 404, { success: false });
+
+    const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+
+    const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        mode: 'payment',
+        line_items: [{
+            price_data: {
+                currency: 'chf',
+                unit_amount: pack.priceChf * 100,
+                product_data: {
+                    name: `SalonPro — ${pack.label} (${pack.credits} SMS)`,
+                    description: `${pack.credits} crédits SMS pour ${salon.name}`,
+                },
+            },
+            quantity: 1,
+        }],
+        metadata: {
+            type: 'sms_credits',
+            salonId: String(user.salonId),
+            credits: String(pack.credits),
+            packName: pack.label,
+        },
+        success_url: `${baseUrl}/pro?sms_success=1`,
+        cancel_url: `${baseUrl}/pro?sms_cancel=1`,
+    });
+
+    console.log(`[SMS Credits] Session créée: ${session.id} — ${pack.label} pour salon ${user.salonId}`);
+    json(res, 200, { success: true, url: session.url });
 });
 
 // ==========================
@@ -1202,6 +1251,21 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
         const salonId = session.metadata?.salonId;
+
+        // ---- SMS Credits purchase ----
+        if (session.metadata?.type === 'sms_credits' && salonId) {
+            const credits = parseInt(session.metadata.credits || '0', 10);
+            const salon = await db.findSalonById(salonId);
+            if (salon && credits > 0) {
+                const current = salon.smsCredits || 0;
+                await db.updateSalon(salonId, { smsCredits: current + credits });
+                console.log(`✅ +${credits} crédits SMS ajoutés au salon ${salonId} (total: ${current + credits})`);
+            }
+            json(res, 200, { received: true });
+            return;
+        }
+
+        // ---- Subscription checkout ----
         const plan = session.metadata?.plan || 'pro';
         const ownerEmail = session.metadata?.ownerEmail;
         const salonName = session.metadata?.salonName;
@@ -1287,7 +1351,7 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     console.log(`  📅 Nouveau RDV: ${body.clientName} - ${body.serviceName} @ ${salon.name} (${body.date} ${body.time})`);
     json(res, 201, { success: true, data: booking });
 
-    // Non-blocking: email + push notification to salon owner
+    // Non-blocking: email + push + SMS
     const baseUrlBook = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
     const cancelUrlBook = booking.cancelToken ? `${baseUrlBook}/cancel/${booking.cancelToken}` : null;
     if (booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrlBook);
@@ -1296,9 +1360,15 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     sendPushToSalon(salon._id, {
         title: `📅 Nouveau RDV — ${salon.name}`,
         body: `${body.clientName} · ${body.serviceName} · ${body.date} à ${body.time}`,
-        url: '/pro',
-        tag: 'new-booking'
+        url: '/pro', tag: 'new-booking'
     });
+
+    // SMS to client (if phone + credits available)
+    if (booking.clientPhone && (salon.smsCredits || 0) > 0) {
+        sendSMSConfirmation(booking, salon).then(result => {
+            if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
+        });
+    }
 });
 
 // OTP Store (in memory) - email -> { code, expires }
