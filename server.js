@@ -1676,9 +1676,55 @@ const server = http.createServer(async (req, res) => {
                 let html = content.toString();
                 html = html.replace(/href="(css\/[^"]+)"/g, `href="/s/${salonSlug}/$1"`);
                 html = html.replace(/src="(js\/[^"]+)"/g, `src="/s/${salonSlug}/$1"`);
-                html = html.replace('</head>', `<script>window.SALON_SLUG="${salonSlug}";</script>\n</head>`);
-                res.writeHead(200, { 'Content-Type': contentType });
-                res.end(html);
+
+                // Async: fetch salon for server-side SEO injection
+                db.findSalonBySlug(salonSlug).then(salon => {
+                    if (salon) {
+                        const name = salon.name || 'SalonPro';
+                        const city = salon.city || (salon.address ? salon.address.split(',')[0] : '');
+                        const desc = `Prenez rendez-vous en ligne chez ${name}${city ? ' à ' + city : ''}. Réservation rapide, disponible 24h/24. Confirmez votre RDV en quelques clics.`;
+                        const safeDesc = desc.replace(/"/g, '&quot;');
+                        const safeName = name.replace(/"/g, '&quot;');
+                        const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+                        const pageUrl = `${baseUrl}/s/${salonSlug}`;
+                        const img = salon.logo || '';
+
+                        const seoHead = [
+                            `<title>${safeName} | Réservation en ligne</title>`,
+                            `<meta name="description" content="${safeDesc}">`,
+                            `<meta property="og:title" content="${safeName} | Réservation en ligne">`,
+                            `<meta property="og:description" content="${safeDesc}">`,
+                            `<meta property="og:type" content="local.business">`,
+                            `<meta property="og:url" content="${pageUrl}">`,
+                            img ? `<meta property="og:image" content="${img}">` : '',
+                            `<link rel="canonical" href="${pageUrl}">`,
+                            `<script type="application/ld+json">${JSON.stringify({
+                                '@context': 'https://schema.org',
+                                '@type': 'LocalBusiness',
+                                name,
+                                url: pageUrl,
+                                ...(img && { image: img }),
+                                ...(salon.phone && { telephone: salon.phone }),
+                                ...(salon.address && { address: { '@type': 'PostalAddress', streetAddress: salon.address } }),
+                            })}</script>`,
+                        ].filter(Boolean).join('\n  ');
+
+                        // Remove generic placeholder tags
+                        html = html.replace(/<title>[^<]*<\/title>/i, '');
+                        html = html.replace(/<meta name="description"[^>]*>/i, '');
+                        html = html.replace(/<meta name="keywords"[^>]*>/i, '');
+                        // Inject SEO tags + fix favicon emoji
+                        html = html.replace('<head>', `<head>\n  ${seoHead}`);
+                        html = html.replace("font-size='90'>💈</text>", "font-size='90'>✂️</text>");
+                    }
+                    html = html.replace('</head>', `<script>window.SALON_SLUG="${salonSlug}";</script>\n</head>`);
+                    res.writeHead(200, { 'Content-Type': contentType });
+                    res.end(html);
+                }).catch(() => {
+                    html = html.replace('</head>', `<script>window.SALON_SLUG="${salonSlug}";</script>\n</head>`);
+                    res.writeHead(200, { 'Content-Type': contentType });
+                    res.end(html);
+                });
             } else {
                 res.writeHead(200, { 'Content-Type': contentType });
                 res.end(content);
