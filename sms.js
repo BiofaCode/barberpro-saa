@@ -95,4 +95,15 @@ async function sendSMSCancellation(booking, salon) {
     return sendSMS(booking.clientPhone, body);
 }
 
-module.exports = { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, SMS_PACKS };
+// ---- SMS Notification propriétaire nouveau RDV ----
+async function sendSMSOwnerNotification(booking, salon, ownerPhone) {
+    if (!ownerPhone) return { success: false, reason: 'no_phone' };
+    const body =
+        `📅 Nouveau RDV — ${salon.name || 'SalonPro'}\n` +
+        `👤 ${booking.clientName}\n` +
+        `✂️ ${booking.serviceName} · ${formatDateFR(booking.date)} à ${booking.time}` +
+        (booking.clientPhone ? `\n📞 ${booking.clientPhone}` : '');
+    return sendSMS(ownerPhone, body);
+}
+
+module.exports = { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS };

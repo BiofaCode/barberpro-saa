@@ -888,11 +888,27 @@ async function deleteService(id) {
 }
 
 // ---- Settings ----
+async function saveSMSSettings() {
+    const settings = {
+        clientConfirmation: document.getElementById('sms-toggle-confirm')?.checked ?? true,
+        clientReminder: document.getElementById('sms-toggle-reminder')?.checked ?? true,
+        ownerNotification: document.getElementById('sms-toggle-owner')?.checked ?? false,
+        ownerPhone: document.getElementById('sms-owner-phone')?.value?.trim() || '',
+    };
+    try {
+        await apiFetch(`${API}/api/barber/salon/${salonId}/sms-settings`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+        showToast('Paramètres SMS enregistrés ✅');
+    } catch { showToast('Erreur de sauvegarde', 'error'); }
+}
+
 async function loadSMSStatus() {
     try {
         const res = await apiFetch(`${API}/api/barber/salon/${salonId}/sms-status`);
         const data = await res.json();
-        const { credits = 0, packs = {}, configured = false } = data.data || {};
+        const { credits = 0, packs = {}, configured = false, settings = {} } = data.data || {};
         const el = document.getElementById('smsCardBody');
         if (!el) return;
 
@@ -914,6 +930,24 @@ async function loadSMSStatus() {
             <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:14px">
                 Un crédit = 1 SMS envoyé. Les rappels J-1 et les confirmations de RDV consomment 1 crédit chacun.
             </p>
+            <div style="margin-bottom:20px;padding:16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px">
+                <div style="font-weight:600;font-size:.9rem;margin-bottom:12px">⚙️ Préférences d'envoi</div>
+                ${[
+                    { id: 'sms-toggle-confirm', label: 'SMS de confirmation au client', checked: settings.clientConfirmation !== false },
+                    { id: 'sms-toggle-reminder', label: 'SMS rappel J-1 au client', checked: settings.clientReminder !== false },
+                    { id: 'sms-toggle-owner', label: 'SMS alerte nouveau RDV (vous)', checked: !!settings.ownerNotification },
+                ].map(t => `
+                <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light,rgba(255,255,255,.06));cursor:pointer">
+                    <span style="font-size:.85rem;color:var(--text-sec)">${t.label}</span>
+                    <input type="checkbox" id="${t.id}" ${t.checked ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--primary,#6366f1)">
+                </label>`).join('')}
+                <div style="margin-top:12px">
+                    <label style="font-size:.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Votre numéro de téléphone (pour les alertes)</label>
+                    <input type="tel" id="sms-owner-phone" value="${settings.ownerPhone || ''}" placeholder="+41 79 000 00 00"
+                        class="form-input form-input-full" style="font-size:.85rem;padding:8px 12px">
+                </div>
+                <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%" onclick="saveSMSSettings()">Enregistrer les préférences</button>
+            </div>
             <div style="display:grid;gap:10px">
                 ${Object.entries(packs).map(([key, pack]) => `
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px">

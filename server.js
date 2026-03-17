@@ -12,7 +12,7 @@ const db = require('./db');
 const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
-const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, SMS_PACKS } = require('./sms');
+const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
 
 // Configure Web Push (VAPID)
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -206,8 +206,9 @@ async function sendPendingReminders() {
             if (!salon) continue;
             // Email reminder
             if (booking.clientEmail) sendReminderEmail(booking, salon);
-            // SMS reminder (if phone + credits)
-            if (booking.clientPhone && (salon.smsCredits || 0) > 0) {
+            // SMS reminder (if phone + credits + toggle on)
+            const smsOk = salon.smsSettings?.clientReminder !== false;
+            if (smsOk && booking.clientPhone && (salon.smsCredits || 0) > 0) {
                 sendSMSReminder(booking, salon).then(result => {
                     if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
                 });
@@ -941,11 +942,19 @@ route('POST', '/api/barber/salon/:salonId/bookings', async (req, res, params) =>
     console.log(`  📅 RDV manuel: ${body.clientName} - ${body.serviceName} @ ${body.date} ${body.time}`);
     json(res, 201, { success: true, data: booking });
 
-    // Send confirmation email (non-blocking)
+    // Non-blocking: email + SMS
     const salon = await db.findSalonById(params.salonId);
     const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
     const cancelUrl = booking.cancelToken ? `${baseUrl}/cancel/${booking.cancelToken}` : null;
     if (salon && booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrl);
+    if (salon && salon.smsSettings?.clientConfirmation !== false && booking.clientPhone && (salon.smsCredits || 0) > 0) {
+        sendSMSConfirmation(booking, salon).then(result => {
+            if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
+        });
+    }
+    if (salon && salon.smsSettings?.ownerNotification && salon.smsSettings?.ownerPhone) {
+        sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone);
+    }
 });
 
 // Clients
@@ -964,8 +973,23 @@ route('GET', '/api/barber/salon/:salonId/sms-status', async (req, res, params) =
             credits: salon.smsCredits || 0,
             packs: SMS_PACKS,
             configured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
+            settings: salon.smsSettings || { clientConfirmation: true, clientReminder: true, ownerNotification: false, ownerPhone: '' },
         }
     });
+});
+
+route('PUT', '/api/barber/salon/:salonId/sms-settings', async (req, res, params) => {
+    const user = verifyToken(req);
+    if (!user) return json(res, 401, { success: false });
+    const body = await parseBody(req);
+    const smsSettings = {
+        clientConfirmation: body.clientConfirmation !== false,
+        clientReminder: body.clientReminder !== false,
+        ownerNotification: !!body.ownerNotification,
+        ownerPhone: (body.ownerPhone || '').trim(),
+    };
+    await db.updateSalon(params.salonId, { smsSettings });
+    json(res, 200, { success: true, data: smsSettings });
 });
 
 // Buy SMS credits via Stripe checkout
@@ -1363,11 +1387,15 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
         url: '/pro', tag: 'new-booking'
     });
 
-    // SMS to client (if phone + credits available)
-    if (booking.clientPhone && (salon.smsCredits || 0) > 0) {
+    // SMS to client (if toggle on + phone + credits)
+    if (salon.smsSettings?.clientConfirmation !== false && booking.clientPhone && (salon.smsCredits || 0) > 0) {
         sendSMSConfirmation(booking, salon).then(result => {
             if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
         });
+    }
+    // SMS notification to owner (if toggle on + ownerPhone configured)
+    if (salon.smsSettings?.ownerNotification && salon.smsSettings?.ownerPhone) {
+        sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone);
     }
 });
 
@@ -1713,9 +1741,14 @@ const server = http.createServer(async (req, res) => {
                         html = html.replace(/<title>[^<]*<\/title>/i, '');
                         html = html.replace(/<meta name="description"[^>]*>/i, '');
                         html = html.replace(/<meta name="keywords"[^>]*>/i, '');
-                        // Inject SEO tags + fix favicon emoji
+                        // Replace favicon with salon logo if available, otherwise ✂️
+                        if (img) {
+                            html = html.replace(/<link rel="icon"[^>]*>/i, `<link rel="icon" href="${img}" type="image/png">`);
+                        } else {
+                            html = html.replace("font-size='90'>💈</text>", "font-size='90'>✂️</text>");
+                        }
+                        // Inject SEO tags
                         html = html.replace('<head>', `<head>\n  ${seoHead}`);
-                        html = html.replace("font-size='90'>💈</text>", "font-size='90'>✂️</text>");
                     }
                     html = html.replace('</head>', `<script>window.SALON_SLUG="${salonSlug}";</script>\n</head>`);
                     res.writeHead(200, { 'Content-Type': contentType });
