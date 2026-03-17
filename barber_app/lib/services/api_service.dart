@@ -6,15 +6,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/booking_model.dart';
 
 class ApiService {
-  // URL du serveur
-  static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:3000';
-    return 'http://10.0.2.2:3000'; // Android emulator
-  }
+  // URL de production par défaut
+  static const String _defaultUrl = 'https://barberpro-saa.onrender.com';
 
   static String? _customUrl;
+
+  static String get _url => _customUrl ?? _defaultUrl;
+
+  // Sauvegarder l'URL serveur dans les préférences
+  static Future<void> saveServerUrl(String url) async {
+    final cleaned = url.trim().replaceAll(RegExp(r'/+$'), '');
+    _customUrl = cleaned;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('serverUrl', cleaned);
+  }
+
+  static String get currentServerUrl => _url;
+
   static void setBaseUrl(String url) => _customUrl = url;
-  static String get _url => _customUrl ?? baseUrl;
 
   // Barbier connecté
   static String? _token;
@@ -31,6 +40,11 @@ class ApiService {
   static Future<bool> loadSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+
+      // Charger l'URL serveur sauvegardée
+      final savedUrl = prefs.getString('serverUrl');
+      if (savedUrl != null && savedUrl.isNotEmpty) _customUrl = savedUrl;
+
       final token = prefs.getString('token');
       final userStr = prefs.getString('currentUser');
       final salonStr = prefs.getString('currentSalon');
@@ -48,6 +62,22 @@ class ApiService {
       debugPrint('Error loading session: $e');
     }
     return false;
+  }
+
+  // ---- Mot de passe oublié ----
+  static Future<bool> forgotPassword(String email) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_url/api/barber/forgot-password'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+      final data = jsonDecode(res.body);
+      return data['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (forgotPassword): $e');
+      return false;
+    }
   }
 
   // ---- Login barbier ----

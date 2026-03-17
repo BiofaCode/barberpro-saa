@@ -21,17 +21,17 @@ void main() async {
   // Checking for persistent login
   final isLoggedIn = await ApiService.loadSession();
 
-  runApp(BarberProApp(isLoggedIn: isLoggedIn));
+  runApp(SalonProApp(isLoggedIn: isLoggedIn));
 }
 
-class BarberProApp extends StatelessWidget {
+class SalonProApp extends StatelessWidget {
   final bool isLoggedIn;
-  const BarberProApp({super.key, this.isLoggedIn = false});
+  const SalonProApp({super.key, this.isLoggedIn = false});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'BarberPro',
+      title: 'SalonPro',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
