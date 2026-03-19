@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SalonPro | Le logiciel n°1 des professionnels de la beauté</title>
-  <meta name="description" content="Gérez votre salon de coiffure, barber shop ou institut de beauté avec SalonPro. Réservation en ligne 24/7, gestion d'équipe, statistiques. Essai gratuit 14 jours.">
+  <title>SalonPro — Le logiciel de réservation pour salons de beauté</title>
+  <meta name="description" content="Gérez votre salon de coiffure, barber shop ou institut avec SalonPro. Réservation en ligne 24/7, gestion d'équipe, paiements en ligne. Essai gratuit 14 jours.">
 
   <!-- SEO -->
   <link rel="canonical" href="https://salonpro.osmodigital.ch/">
@@ -15,368 +15,455 @@
   <!-- Open Graph -->
   <meta property="og:type"        content="website">
   <meta property="og:url"         content="https://salonpro.osmodigital.ch/">
-  <meta property="og:title"       content="SalonPro | Le logiciel n°1 des professionnels de la beauté">
-  <meta property="og:description" content="Réservation en ligne 24/7, gestion d'équipe et statistiques. Essai gratuit 14 jours — zéro commission.">
+  <meta property="og:title"       content="SalonPro — Le logiciel de réservation pour salons de beauté">
+  <meta property="og:description" content="Réservation en ligne 24/7, gestion d'équipe et paiements. Essai gratuit 14 jours — zéro commission.">
   <meta property="og:image"       content="https://salonpro.osmodigital.ch/saas/og-image.png">
   <meta property="og:locale"      content="fr_CH">
   <meta property="og:site_name"   content="SalonPro">
 
   <!-- Twitter Card -->
   <meta name="twitter:card"        content="summary_large_image">
-  <meta name="twitter:title"       content="SalonPro | Le logiciel n°1 des salons de beauté">
-  <meta name="twitter:description" content="Réservation en ligne 24/7, gestion d'équipe et statistiques. Essai gratuit 14 jours.">
+  <meta name="twitter:title"       content="SalonPro — Le logiciel n°1 des salons de beauté">
+  <meta name="twitter:description" content="Réservation en ligne 24/7, gestion d'équipe et paiements. Essai gratuit 14 jours.">
   <meta name="twitter:image"       content="https://salonpro.osmodigital.ch/saas/og-image.png">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500;1,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/saas/css/saas.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✂️</text></svg>">
 </head>
 
 <body>
 
-  <!-- ── NAVBAR ─────────────────────────────────────────── -->
-  <nav class="saas-nav" id="saasNav">
-    <div class="container nav-content">
-      <a href="/" class="logo">
-        <span class="logo-icon">✨</span>
-        Salon<span class="highlight">Pro</span>
+  <!-- ═══════════════════════════════════════════
+       NAVBAR
+  ═══════════════════════════════════════════ -->
+  <nav class="nav" id="mainNav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="nav-logo-mark">S</span>
+        Salon<strong>Pro</strong>
       </a>
 
-      <div class="nav-links">
+      <div class="nav-links" id="navLinks">
         <a href="#features">Fonctionnalités</a>
         <a href="#pricing">Tarifs</a>
-        <a href="/pro">Espace Pro</a>
-        <a href="#pricing" class="btn btn-primary">Essai gratuit →</a>
+        <a href="/saas/faq.html">FAQ</a>
+        <a href="/pro" class="nav-login">Connexion</a>
+        <button class="btn btn-primary btn-sm" onclick="startCheckout('pro')">Essai gratuit</button>
       </div>
 
-      <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">☰</button>
+      <button class="nav-burger" id="navBurger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
 
-    <div class="nav-mobile-dropdown" id="mobileMenu">
-      <a href="#features" onclick="closeMobileMenu()">Fonctionnalités</a>
-      <a href="#pricing"  onclick="closeMobileMenu()">Tarifs</a>
-      <a href="/pro"      onclick="closeMobileMenu()">Espace Pro</a>
-      <a href="#pricing" class="btn btn-primary" onclick="closeMobileMenu()">Essai gratuit →</a>
+    <!-- Mobile menu -->
+    <div class="nav-mobile" id="navMobile">
+      <a href="#features" onclick="closeMobile()">Fonctionnalités</a>
+      <a href="#pricing" onclick="closeMobile()">Tarifs</a>
+      <a href="/saas/faq.html" onclick="closeMobile()">FAQ</a>
+      <a href="/pro" onclick="closeMobile()">Connexion</a>
+      <button class="btn btn-primary" onclick="closeMobile(); startCheckout('pro')">Essai gratuit 14 jours →</button>
     </div>
   </nav>
 
-  <!-- ── HERO ───────────────────────────────────────────── -->
-  <header class="hero">
-    <div class="hero-glow"></div>
-    <div class="hero-glow-2"></div>
+  <!-- ═══════════════════════════════════════════
+       HERO
+  ═══════════════════════════════════════════ -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-orb hero-orb-1"></div>
+      <div class="hero-orb hero-orb-2"></div>
+      <div class="hero-grid"></div>
+    </div>
 
-    <div class="container hero-inner">
-      <!-- Badge -->
-      <div class="hero-badge">
-        <span class="pulse-dot"></span>
-        Nouveau — Paiement en ligne intégré
-      </div>
-
-      <!-- Title -->
-      <h1 class="hero-title">
-        Gérez votre salon<br>
-        <span class="text-gradient">comme un pro.</span>
-      </h1>
-
-      <!-- Description -->
-      <p class="hero-desc">
-        Réservation en ligne 24h/24, gestion d'équipe, statistiques en temps réel.<br>
-        Tout ce dont les salons, coiffeurs et instituts ont besoin pour se développer.
-      </p>
-
-      <!-- CTAs -->
-      <div class="hero-actions">
-        <a href="#pricing" class="btn btn-primary btn-lg shine-effect">Commencer gratuitement</a>
-        <a href="#features" class="btn btn-outline btn-lg">Découvrir les fonctionnalités →</a>
-      </div>
-
-      <!-- Social proof -->
-      <div class="social-proof">
-        <div class="avatars">
-          <div class="avatar" style="background:linear-gradient(135deg,#6366f1,#818cf8)">A</div>
-          <div class="avatar" style="background:linear-gradient(135deg,#f59e0b,#fbbf24)">M</div>
-          <div class="avatar" style="background:linear-gradient(135deg,#10b981,#34d399)">S</div>
-          <div class="avatar" style="background:linear-gradient(135deg,#ec4899,#f472b6)">J</div>
+    <div class="wrap hero-wrap">
+      <!-- Left — text -->
+      <div class="hero-text">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          Paiements en ligne intégrés — Nouveau
         </div>
-        <div class="social-text">
-          <strong>+150 salons</strong> nous font déjà confiance
-          <span class="stars">⭐⭐⭐⭐⭐</span>
+
+        <h1 class="hero-title">
+          Votre salon mérite<br>
+          un logiciel <em>qui travaille</em><br>
+          à votre place.
+        </h1>
+
+        <p class="hero-sub">
+          Réservations 24h/24, gestion d'équipe, SMS rappels et paiements en ligne.
+          Tout en un. Sans commission sur vos ventes.
+        </p>
+
+        <div class="hero-actions">
+          <button class="btn btn-primary btn-lg shine" onclick="startCheckout('pro')">
+            Commencer gratuitement
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <a href="#features" class="btn btn-ghost btn-lg">Voir les fonctionnalités</a>
+        </div>
+
+        <div class="hero-proof">
+          <div class="proof-avatars">
+            <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">M</span>
+            <span style="background:linear-gradient(135deg,#f59e0b,#ef4444)">K</span>
+            <span style="background:linear-gradient(135deg,#10b981,#06b6d4)">S</span>
+            <span style="background:linear-gradient(135deg,#ec4899,#8b5cf6)">J</span>
+          </div>
+          <div class="proof-text">
+            <strong>+150 salons</strong> nous font confiance
+            <span class="proof-stars">★★★★★ 4.9/5</span>
+          </div>
         </div>
       </div>
 
-      <!-- Dashboard mockup -->
-      <div class="hero-visual reveal">
-        <div class="abstract-dashboard">
-          <div class="ui-sidebar">
-            <div class="ui-avatar"></div>
-            <div class="ui-nav-item active"></div>
-            <div class="ui-nav-item"></div>
-            <div class="ui-nav-item"></div>
-            <div class="ui-nav-item"></div>
+      <!-- Right — mockup -->
+      <div class="hero-visual">
+        <div class="mockup">
+          <div class="mockup-bar">
+            <span></span><span></span><span></span>
           </div>
-          <div class="ui-main">
-            <div class="ui-header">
-              <div class="ui-title"></div>
-              <div class="ui-btn"></div>
-            </div>
-            <div class="ui-stats-grid">
-              <div class="ui-stat-card">
-                <div class="ui-icon-circle blue"></div>
-                <div class="ui-stat-lines"><div class="ui-line sh"></div><div class="ui-line md"></div></div>
+          <div class="mockup-body">
+            <!-- Stats row -->
+            <div class="m-stats">
+              <div class="m-stat">
+                <div class="m-stat-num" style="color:#6366f1">24</div>
+                <div class="m-stat-label">RDV aujourd'hui</div>
               </div>
-              <div class="ui-stat-card">
-                <div class="ui-icon-circle purple"></div>
-                <div class="ui-stat-lines"><div class="ui-line sh"></div><div class="ui-line lg"></div></div>
+              <div class="m-stat">
+                <div class="m-stat-num" style="color:#10b981">3 840</div>
+                <div class="m-stat-label">CHF ce mois</div>
               </div>
-              <div class="ui-stat-card">
-                <div class="ui-icon-circle green"></div>
-                <div class="ui-stat-lines"><div class="ui-line sh"></div><div class="ui-line md"></div></div>
+              <div class="m-stat">
+                <div class="m-stat-num" style="color:#f59e0b">98%</div>
+                <div class="m-stat-label">Taux d'occupation</div>
               </div>
             </div>
-            <div class="ui-chart-area">
-              <div class="ui-chart-bar h30"></div>
-              <div class="ui-chart-bar h70"></div>
-              <div class="ui-chart-bar h50"></div>
-              <div class="ui-chart-bar h90"></div>
-              <div class="ui-chart-bar h40"></div>
-              <div class="ui-chart-bar h80"></div>
-              <div class="ui-chart-bar h60"></div>
+            <!-- Chart -->
+            <div class="m-chart-label">Revenus — 7 derniers jours</div>
+            <div class="m-chart">
+              <div class="m-bar" style="height:45%"><span>L</span></div>
+              <div class="m-bar" style="height:65%"><span>M</span></div>
+              <div class="m-bar" style="height:50%"><span>M</span></div>
+              <div class="m-bar" style="height:80%"><span>J</span></div>
+              <div class="m-bar" style="height:55%"><span>V</span></div>
+              <div class="m-bar m-bar-active" style="height:90%"><span>S</span></div>
+              <div class="m-bar" style="height:35%"><span>D</span></div>
+            </div>
+            <!-- Booking card -->
+            <div class="m-booking-row">
+              <div class="m-booking">
+                <div class="m-booking-dot" style="background:#6366f1"></div>
+                <div>
+                  <div class="m-booking-name">Marie Dupont</div>
+                  <div class="m-booking-svc">Coupe + couleur · 14h00</div>
+                </div>
+                <div class="m-booking-price">85 CHF</div>
+              </div>
+              <div class="m-booking">
+                <div class="m-booking-dot" style="background:#10b981"></div>
+                <div>
+                  <div class="m-booking-name">Karim Benali</div>
+                  <div class="m-booking-svc">Barbe + coupe · 15h30</div>
+                </div>
+                <div class="m-booking-price">45 CHF</div>
+              </div>
             </div>
           </div>
-          <div class="ui-floating-card">
-            <div class="ui-notif-dot"></div>
-            <div class="ui-notif-content">
-              <div class="ui-notif-title">Nouveau RDV</div>
-              <div class="ui-notif-sub">Marie D. — 14h30</div>
+          <!-- Floating notification -->
+          <div class="mockup-notif">
+            <div class="notif-icon">🔔</div>
+            <div class="notif-text">
+              <strong>Nouveau RDV</strong>
+              <span>Sophie L. · demain 10h00</span>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </header>
+  </section>
 
-  <!-- ── TRUST BAND ─────────────────────────────────────── -->
-  <section class="trust-band">
-    <div class="container">
-      <p class="trust-label">Conçu pour tous les professionnels de la beauté</p>
-      <div class="trust-items">
+  <!-- ═══════════════════════════════════════════
+       TRUST STRIP
+  ═══════════════════════════════════════════ -->
+  <div class="trust-strip">
+    <div class="wrap trust-inner">
+      <span class="trust-label">Fait pour tous les pros de la beauté</span>
+      <div class="trust-pills">
         <span>✂️ Coiffeurs</span>
-        <span>💅 Instituts de beauté</span>
-        <span>💆 Spas & bien-être</span>
-        <span>🪒 Barber shops</span>
-        <span>🧴 Soins capillaires</span>
+        <span>🪒 Barbers</span>
+        <span>💅 Ongles</span>
+        <span>💆 Spas</span>
+        <span>🧖 Instituts</span>
+        <span>🌿 Bien-être</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       STATS
+  ═══════════════════════════════════════════ -->
+  <section class="stats-section">
+    <div class="wrap stats-grid">
+      <div class="stat-block reveal">
+        <div class="stat-value">+150</div>
+        <div class="stat-label">Salons actifs</div>
+      </div>
+      <div class="stat-block reveal" style="transition-delay:.1s">
+        <div class="stat-value">24/7</div>
+        <div class="stat-label">Réservations en ligne</div>
+      </div>
+      <div class="stat-block reveal" style="transition-delay:.2s">
+        <div class="stat-value">0%</div>
+        <div class="stat-label">Commission sur vos ventes</div>
+      </div>
+      <div class="stat-block reveal" style="transition-delay:.3s">
+        <div class="stat-value">14j</div>
+        <div class="stat-label">Essai gratuit sans CB</div>
       </div>
     </div>
   </section>
 
-  <!-- ── FEATURES ───────────────────────────────────────── -->
+  <!-- ═══════════════════════════════════════════
+       FEATURES
+  ═══════════════════════════════════════════ -->
   <section class="features" id="features">
-    <div class="container">
-      <div class="section-header reveal">
-        <span class="section-tag">Fonctionnalités</span>
-        <h2>Tout ce dont vous avez besoin,<br>réuni au même endroit.</h2>
-        <p>Oubliez les agendas papier et les logiciels complexes. SalonPro est pensé pour être intuitif dès le premier jour.</p>
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="tag">Fonctionnalités</span>
+        <h2>Tout ce qu'il faut pour<br>faire tourner votre salon.</h2>
+        <p>Oubliez l'agenda papier. SalonPro centralise tout — réservations, équipe, clients, paiements — dans une seule interface claire.</p>
       </div>
 
-      <div class="bento-grid">
-        <div class="bento-item col-span-2 reveal">
-          <div class="bento-content">
-            <div class="feature-icon">🗓️</div>
-            <h3>Réservation 24h/24 & 7j/7</h3>
-            <p>Vos clients réservent eux-mêmes en 3 clics sur votre site personnalisé. Fini le téléphone qui sonne sans arrêt pendant que vous travaillez.</p>
-          </div>
-          <div class="feature-visual">
-            <div class="mini-calendar">
-              <div class="cal-header">Mars 2026</div>
-              <div class="cal-grid">
-                <div class="cal-day"></div><div class="cal-day"></div>
-                <div class="cal-day active"></div><div class="cal-day"></div>
-                <div class="cal-day"></div><div class="cal-day highlight"></div>
-                <div class="cal-day"></div>
+      <div class="feat-grid">
+        <!-- Feature 1 - large -->
+        <div class="feat-card feat-large reveal">
+          <div class="feat-icon-wrap" style="--c:#6366f1">🗓️</div>
+          <h3>Réservation en ligne 24h/24</h3>
+          <p>Vos clients réservent eux-mêmes sur votre page personnalisée, en 3 clics, depuis leur téléphone. Vous recevez une notification instantanée.</p>
+          <div class="feat-visual-cal">
+            <div class="mini-cal">
+              <div class="mini-cal-head">
+                <span>Mars 2026</span>
+              </div>
+              <div class="mini-cal-grid">
+                <div class="mc-day"></div><div class="mc-day"></div><div class="mc-day dot"></div>
+                <div class="mc-day sel"></div><div class="mc-day"></div><div class="mc-day dot"></div>
+                <div class="mc-day"></div><div class="mc-day dot"></div><div class="mc-day"></div>
+                <div class="mc-day"></div><div class="mc-day sel"></div><div class="mc-day"></div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="bento-item reveal">
-          <div class="bento-content">
-            <div class="feature-icon">📱</div>
-            <h3>L'App dans la poche</h3>
-            <p>Application iOS & Android pour vous et vos collaborateurs. Notifications, planning, partout.</p>
+        <!-- Feature 2 -->
+        <div class="feat-card reveal" style="transition-delay:.1s">
+          <div class="feat-icon-wrap" style="--c:#f59e0b">📱</div>
+          <h3>SMS de rappel automatiques</h3>
+          <p>Réduisez les no-shows jusqu'à 70% avec des rappels SMS envoyés automatiquement 24h avant chaque rendez-vous.</p>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="feat-card reveal" style="transition-delay:.15s">
+          <div class="feat-icon-wrap" style="--c:#10b981">💳</div>
+          <h3>Paiements & acomptes en ligne</h3>
+          <p>Acceptez des acomptes ou paiements complets via Stripe. L'argent arrive directement sur votre compte bancaire.</p>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="feat-card reveal" style="transition-delay:.2s">
+          <div class="feat-icon-wrap" style="--c:#8b5cf6">👥</div>
+          <h3>Gestion d'équipe complète</h3>
+          <p>Créez des profils pour chaque collaborateur, assignez des prestations, et suivez leurs performances en temps réel.</p>
+        </div>
+
+        <!-- Feature 5 - large -->
+        <div class="feat-card feat-large reveal" style="transition-delay:.25s">
+          <div class="feat-icon-wrap" style="--c:#ec4899">📊</div>
+          <h3>Statistiques & tableau de bord</h3>
+          <p>Chiffre d'affaires, services les plus demandés, taux d'occupation, fidélisation client — tout en un coup d'œil pour piloter votre activité.</p>
+          <div class="feat-chart-mini">
+            <div class="fcm-bar" style="height:40%"></div>
+            <div class="fcm-bar" style="height:70%"></div>
+            <div class="fcm-bar" style="height:55%"></div>
+            <div class="fcm-bar" style="height:85%"></div>
+            <div class="fcm-bar" style="height:45%"></div>
+            <div class="fcm-bar fcm-active" style="height:95%"></div>
           </div>
         </div>
 
-        <div class="bento-item reveal">
-          <div class="bento-content">
-            <div class="feature-icon">👥</div>
-            <h3>Gestion d'équipe</h3>
-            <p>Assignez des prestations à chaque collaborateur et suivez leurs performances individuellement.</p>
-          </div>
-        </div>
-
-        <div class="bento-item col-span-2 reveal">
-          <div class="bento-content">
-            <div class="feature-icon">📈</div>
-            <h3>Statistiques en temps réel</h3>
-            <p>Chiffre d'affaires, fidélisation client, services les plus populaires — des rapports clairs pour piloter votre activité.</p>
-          </div>
+        <!-- Feature 6 -->
+        <div class="feat-card reveal" style="transition-delay:.3s">
+          <div class="feat-icon-wrap" style="--c:#06b6d4">🎨</div>
+          <h3>Site vitrine personnalisé</h3>
+          <p>Chaque salon a sa propre page avec vos couleurs, logo, galerie photos et bouton de réservation. Partageable en 1 lien.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ── HOW IT WORKS ───────────────────────────────────── -->
-  <section class="how-it-works">
-    <div class="container">
-      <div class="section-header reveal">
-        <span class="section-tag">Comment ça marche</span>
-        <h2>Opérationnel en 3 étapes</h2>
+  <!-- ═══════════════════════════════════════════
+       HOW IT WORKS
+  ═══════════════════════════════════════════ -->
+  <section class="steps-section">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="tag">Comment ça marche</span>
+        <h2>Lancé en 10 minutes chrono.</h2>
       </div>
-      <div class="steps-grid">
-        <div class="step-card reveal">
-          <span class="step-number">01</span>
-          <h3>Créez votre salon</h3>
-          <p>Choisissez votre pack, renseignez vos infos de base et c'est parti en quelques minutes.</p>
+
+      <div class="steps-row">
+        <div class="step reveal">
+          <div class="step-num">01</div>
+          <div class="step-line"></div>
+          <h3>Créez votre compte</h3>
+          <p>Renseignez vos infos de base, choisissez votre plan. 14 jours offerts, aucune carte requise.</p>
         </div>
-        <div class="step-card reveal">
-          <span class="step-number">02</span>
-          <h3>Personnalisez votre site</h3>
-          <p>Logo, couleurs, horaires, prestations — tout se configure simplement depuis votre espace Pro.</p>
+        <div class="step reveal" style="transition-delay:.12s">
+          <div class="step-num">02</div>
+          <div class="step-line"></div>
+          <h3>Configurez votre salon</h3>
+          <p>Ajoutez vos prestations, vos horaires et votre équipe. Le site vitrine est généré automatiquement.</p>
         </div>
-        <div class="step-card reveal">
-          <span class="step-number">03</span>
+        <div class="step reveal" style="transition-delay:.24s">
+          <div class="step-num">03</div>
+          <div class="step-line"></div>
           <h3>Recevez des réservations</h3>
-          <p>Partagez votre lien et laissez vos clients réserver eux-mêmes, 24h/24, 7j/7.</p>
+          <p>Partagez votre lien, activez les rappels SMS et laissez SalonPro gérer le reste.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ── PRICING ────────────────────────────────────────── -->
+  <!-- ═══════════════════════════════════════════
+       PRICING
+  ═══════════════════════════════════════════ -->
   <section class="pricing" id="pricing">
-    <div class="container">
-      <div class="section-header reveal">
-        <span class="section-tag">Tarifs</span>
-        <h2>Un prix simple, zéro commission.</h2>
-        <p>Boostez votre salon sans frais cachés. Essai gratuit de 14 jours, sans engagement, sans carte bancaire.</p>
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="tag">Tarifs</span>
+        <h2>Simple, transparent,<br>sans mauvaises surprises.</h2>
+        <p>Zéro commission sur vos réservations. Essai gratuit 14 jours, résiliation à tout moment.</p>
       </div>
 
-      <div class="pricing-grid reveal">
+      <div class="plans reveal">
         <!-- Starter -->
-        <div class="pricing-card" data-plan="starter">
-          <div class="pricing-header">
-            <h3>Starter</h3>
-            <div class="price">
-              <span class="currency">CHF</span>
-              <span class="amount">39</span>
-              <span class="period">/mois</span>
-            </div>
-            <p>Idéal pour les indépendants.</p>
+        <div class="plan" data-plan="starter">
+          <div class="plan-name">Starter</div>
+          <div class="plan-price">
+            <span class="plan-cur">CHF</span>
+            <span class="plan-amt">39</span>
+            <span class="plan-per">/mois</span>
           </div>
-          <ul class="pricing-features">
-            <li><span class="check">✓</span> Zéro commission</li>
-            <li><span class="check">✓</span> <b>Jusqu'à 2 employés</b></li>
-            <li><span class="check">✓</span> Site vitrine personnalisé</li>
-            <li><span class="check">✓</span> Réservations en ligne</li>
-            <li><span class="check">✓</span> Emails automatiques</li>
-            <li class="disabled"><span class="x">✕</span> Statistiques avancées</li>
-            <li class="disabled"><span class="x">✕</span> Avis clients</li>
+          <p class="plan-desc">Idéal pour les indépendants et petits salons.</p>
+          <ul class="plan-feats">
+            <li><span class="ok">✓</span> Zéro commission</li>
+            <li><span class="ok">✓</span> Jusqu'à 2 employés</li>
+            <li><span class="ok">✓</span> Site vitrine personnalisé</li>
+            <li><span class="ok">✓</span> Réservations en ligne 24/7</li>
+            <li><span class="ok">✓</span> Emails de confirmation</li>
+            <li><span class="no">✕</span> SMS rappels</li>
+            <li><span class="no">✕</span> Paiements en ligne</li>
           </ul>
-          <button class="btn btn-secondary btn-full" onclick="startCheckout('starter')">Commencer l'essai gratuit</button>
+          <button class="btn btn-outline btn-full" onclick="startCheckout('starter')">Commencer l'essai gratuit</button>
         </div>
 
-        <!-- Pro (featured) -->
-        <div class="pricing-card featured" data-plan="pro">
-          <div class="pricing-badge-popular">Le + populaire</div>
-          <div class="pricing-header">
-            <h3>Pro</h3>
-            <div class="price">
-              <span class="currency">CHF</span>
-              <span class="amount">49</span>
-              <span class="period">/mois</span>
-            </div>
-            <p>Tout pour faire décoller votre activité.</p>
+        <!-- Pro -->
+        <div class="plan plan-featured" data-plan="pro">
+          <div class="plan-badge">Le plus populaire</div>
+          <div class="plan-name">Pro</div>
+          <div class="plan-price">
+            <span class="plan-cur">CHF</span>
+            <span class="plan-amt">49</span>
+            <span class="plan-per">/mois</span>
           </div>
-          <ul class="pricing-features">
-            <li><span class="check">✓</span> Zéro commission</li>
-            <li><span class="check">✓</span> <b>Jusqu'à 5 employés</b></li>
-            <li><span class="check">✓</span> Site avec galerie photos</li>
-            <li><span class="check">✓</span> Réservations en ligne</li>
-            <li><span class="check">✓</span> Emails automatiques</li>
-            <li><span class="check">✓</span> Statistiques complètes</li>
-            <li><span class="check">✓</span> Avis clients intégrés</li>
+          <p class="plan-desc">Tout pour faire décoller votre activité.</p>
+          <ul class="plan-feats">
+            <li><span class="ok">✓</span> Zéro commission</li>
+            <li><span class="ok">✓</span> Jusqu'à 5 employés</li>
+            <li><span class="ok">✓</span> Site + galerie photos</li>
+            <li><span class="ok">✓</span> Réservations en ligne 24/7</li>
+            <li><span class="ok">✓</span> SMS rappels (crédits inclus)</li>
+            <li><span class="ok">✓</span> Paiements & acomptes en ligne</li>
+            <li><span class="ok">✓</span> Statistiques complètes</li>
           </ul>
-          <button class="btn btn-primary btn-full shine-effect" onclick="startCheckout('pro')">Commencer l'essai gratuit</button>
+          <button class="btn btn-primary btn-full shine" onclick="startCheckout('pro')">Commencer l'essai gratuit</button>
         </div>
 
         <!-- Premium -->
-        <div class="pricing-card" data-plan="premium">
-          <div class="pricing-header">
-            <h3>Premium</h3>
-            <div class="price">
-              <span class="currency">CHF</span>
-              <span class="amount">89</span>
-              <span class="period">/mois</span>
-            </div>
-            <p>Pour les grands salons et franchises.</p>
+        <div class="plan" data-plan="premium">
+          <div class="plan-name">Premium</div>
+          <div class="plan-price">
+            <span class="plan-cur">CHF</span>
+            <span class="plan-amt">89</span>
+            <span class="plan-per">/mois</span>
           </div>
-          <ul class="pricing-features">
-            <li><span class="check">✓</span> Zéro commission</li>
-            <li><span class="check">✓</span> <b>Employés illimités</b></li>
-            <li><span class="check">✓</span> Marque blanche</li>
-            <li><span class="check">✓</span> Toutes les fonctionnalités Pro</li>
-            <li><span class="check">✓</span> Rappels SMS (bientôt)</li>
-            <li><span class="check">✓</span> Assistance VIP prioritaire</li>
-            <li><span class="check">✓</span> Multi-établissements</li>
+          <p class="plan-desc">Pour les grands salons et multi-établissements.</p>
+          <ul class="plan-feats">
+            <li><span class="ok">✓</span> Zéro commission</li>
+            <li><span class="ok">✓</span> Employés illimités</li>
+            <li><span class="ok">✓</span> Tout le plan Pro inclus</li>
+            <li><span class="ok">✓</span> Multi-établissements</li>
+            <li><span class="ok">✓</span> Marque blanche</li>
+            <li><span class="ok">✓</span> Assistance prioritaire</li>
+            <li><span class="ok">✓</span> Intégrations avancées</li>
           </ul>
-          <button class="btn btn-secondary btn-full" onclick="startCheckout('premium')">Commencer l'essai gratuit</button>
+          <button class="btn btn-outline btn-full" onclick="startCheckout('premium')">Commencer l'essai gratuit</button>
         </div>
       </div>
+
+      <p class="pricing-note reveal">Tous les plans incluent un essai de 14 jours · Paiement par carte · Résiliation en 1 clic</p>
     </div>
   </section>
 
-  <!-- ── TESTIMONIALS ───────────────────────────────────── -->
-  <section class="testimonials">
-    <div class="container">
-      <div class="section-header reveal">
-        <span class="section-tag">Témoignages</span>
-        <h2>Ils utilisent SalonPro au quotidien</h2>
+  <!-- ═══════════════════════════════════════════
+       TESTIMONIALS
+  ═══════════════════════════════════════════ -->
+  <section class="testis-section">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="tag">Témoignages</span>
+        <h2>Ils l'utilisent au quotidien.</h2>
       </div>
-      <div class="testimonial-grid">
-        <div class="testimonial-card reveal">
-          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
-          <p>"Depuis que j'utilise SalonPro, mes clients réservent eux-mêmes. Je gagne au moins 2h par jour !"</p>
-          <div class="testimonial-author">
-            <div class="testimonial-avatar" style="background:linear-gradient(135deg,#6366f1,#818cf8)">M</div>
+
+      <div class="testis-grid">
+        <div class="testi reveal">
+          <div class="testi-stars">★★★★★</div>
+          <p>"Depuis SalonPro, mes clients réservent eux-mêmes. Je gagne au moins 2h par jour — et je gère tout depuis mon téléphone."</p>
+          <div class="testi-author">
+            <div class="testi-av" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">M</div>
             <div>
               <strong>Marie D.</strong>
               <span>Coiffeuse indépendante, Lausanne</span>
             </div>
           </div>
         </div>
-        <div class="testimonial-card reveal">
-          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
-          <p>"Interface super clean. Mon équipe de 4 professionnels l'a adoptée en 1 jour. Meilleur rapport qualité-prix du marché."</p>
-          <div class="testimonial-author">
-            <div class="testimonial-avatar" style="background:linear-gradient(135deg,#f59e0b,#fbbf24)">K</div>
+
+        <div class="testi reveal" style="transition-delay:.1s">
+          <div class="testi-stars">★★★★★</div>
+          <p>"Interface ultra claire. Mon équipe de 4 coiffeurs l'a adoptée en une heure. Les SMS de rappel ont divisé nos no-shows par 3."</p>
+          <div class="testi-author">
+            <div class="testi-av" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">K</div>
             <div>
               <strong>Karim B.</strong>
-              <span>Propriétaire de BarberKing, Genève</span>
+              <span>Barber King, Genève</span>
             </div>
           </div>
         </div>
-        <div class="testimonial-card reveal">
-          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
-          <p>"Les statistiques m'aident à comprendre quels services marchent le mieux. Indispensable pour mon institut."</p>
-          <div class="testimonial-author">
-            <div class="testimonial-avatar" style="background:linear-gradient(135deg,#ec4899,#f472b6)">S</div>
+
+        <div class="testi reveal" style="transition-delay:.2s">
+          <div class="testi-stars">★★★★★</div>
+          <p>"Les statistiques m'ont aidée à comprendre quels services marchent le mieux. J'ai réorganisé mon menu et mes revenus ont augmenté de 20%."</p>
+          <div class="testi-author">
+            <div class="testi-av" style="background:linear-gradient(135deg,#ec4899,#8b5cf6)">S</div>
             <div>
               <strong>Sophie L.</strong>
-              <span>Institut de beauté Éclat, Zurich</span>
+              <span>Institut Éclat, Zurich</span>
             </div>
           </div>
         </div>
@@ -384,73 +471,129 @@
     </div>
   </section>
 
-  <!-- ── CTA ────────────────────────────────────────────── -->
-  <section class="cta-footer reveal">
-    <div class="container cta-container">
-      <h2>Prêt à digitaliser votre salon ?</h2>
-      <p>Créez votre espace en 5 minutes. Essai gratuit de 14 jours, aucune carte bancaire requise.</p>
-      <a href="#pricing" class="btn btn-white btn-lg">Démarrer maintenant →</a>
+  <!-- ═══════════════════════════════════════════
+       FAQ
+  ═══════════════════════════════════════════ -->
+  <section class="faq-section">
+    <div class="wrap faq-wrap">
+      <div class="section-head reveal">
+        <span class="tag">Questions fréquentes</span>
+        <h2>On répond à vos questions.</h2>
+      </div>
+
+      <div class="faq-list">
+        <details class="faq-item reveal">
+          <summary>Faut-il être technique pour utiliser SalonPro ?</summary>
+          <p>Non. L'interface est conçue pour être utilisée par n'importe qui, sans formation. La plupart des salons sont opérationnels en moins d'une heure.</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary>Y a-t-il des commissions sur mes réservations ?</summary>
+          <p>Zéro commission. Vous payez uniquement votre abonnement mensuel. Les paiements en ligne (acomptes) ont des frais Stripe standards (~1,5%) plus 2,5% de frais plateforme SalonPro.</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary>Puis-je annuler à tout moment ?</summary>
+          <p>Oui. Aucun engagement, aucune période minimale. Vous pouvez annuler depuis votre espace en un clic. Vos données restent accessibles jusqu'à la fin de la période payée.</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary>Comment les clients trouvent-ils ma page de réservation ?</summary>
+          <p>Chaque salon reçoit un lien personnalisé (ex: salonpro.ch/s/mon-salon) à partager sur Instagram, WhatsApp, votre site web ou vos cartes de visite.</p>
+        </details>
+        <details class="faq-item reveal">
+          <summary>Les données de mes clients sont-elles sécurisées ?</summary>
+          <p>Oui. Serveurs en Suisse, chiffrement SSL, conformité nLPD (loi suisse) et RGPD. Vos données ne sont jamais vendues ni partagées avec des tiers.</p>
+        </details>
+      </div>
+
+      <div class="faq-more reveal">
+        <a href="/saas/faq.html">Voir toutes les questions →</a>
+      </div>
     </div>
   </section>
 
-  <!-- ── FOOTER ─────────────────────────────────────────── -->
-  <footer class="site-footer">
-    <div class="container">
-      <div class="footer-grid">
-        <div class="footer-brand">
-          <div class="logo-small">✨ SalonPro</div>
-          <p>Le logiciel n°1 pour les professionnels de la beauté en Suisse romande.</p>
+  <!-- ═══════════════════════════════════════════
+       BOTTOM CTA
+  ═══════════════════════════════════════════ -->
+  <section class="cta-section reveal">
+    <div class="cta-glow"></div>
+    <div class="wrap cta-inner">
+      <div class="cta-badge">14 jours offerts · Sans carte bancaire</div>
+      <h2>Prêt à prendre le contrôle<br>de votre salon ?</h2>
+      <p>Rejoignez +150 professionnels qui gèrent leur activité avec SalonPro.</p>
+      <button class="btn btn-white btn-lg shine" onclick="startCheckout('pro')">
+        Démarrer maintenant →
+      </button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════════ -->
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <div class="footer-brand">
+        <div class="footer-logo">
+          <span class="nav-logo-mark" style="width:28px;height:28px;font-size:14px">S</span>
+          Salon<strong>Pro</strong>
         </div>
-        <div class="footer-links">
-          <h4>Produit</h4>
-          <a href="#features">Fonctionnalités</a>
-          <a href="#pricing">Tarifs</a>
-          <a href="/pro">Espace Pro</a>
-        </div>
-        <div class="footer-links">
-          <h4>Aide</h4>
-          <a href="/saas/faq.html">FAQ</a>
-          <a href="mailto:info@osmodigital.ch">info@osmodigital.ch</a>
-          <a href="/saas/cgu.html">CGU & Confidentialité</a>
-        </div>
+        <p>Le logiciel de réservation n°1<br>pour les professionnels de la beauté en Suisse.</p>
+        <div class="footer-legal">© 2026 SalonPro · Osmo Digital</div>
       </div>
-      <div class="footer-bottom">
-        <span>© 2026 SalonPro — Un produit Osmo Digital. Tous droits réservés.</span>
-        <a href="/saas/cgu.html">Conditions & Confidentialité</a>
+
+      <div class="footer-col">
+        <h4>Produit</h4>
+        <a href="#features">Fonctionnalités</a>
+        <a href="#pricing">Tarifs</a>
+        <a href="/pro">Espace Pro</a>
+      </div>
+
+      <div class="footer-col">
+        <h4>Support</h4>
+        <a href="/saas/faq.html">FAQ</a>
+        <a href="mailto:info@osmodigital.ch">info@osmodigital.ch</a>
+        <a href="/saas/status.html">Statut du service</a>
+      </div>
+
+      <div class="footer-col">
+        <h4>Légal</h4>
+        <a href="/saas/cgu.html">CGU</a>
+        <a href="/saas/cgu.html#confidentialite">Confidentialité</a>
+        <a href="/saas/cgu.html#cookies">Cookies</a>
       </div>
     </div>
   </footer>
 
-  <!-- ── SIGNUP MODAL ───────────────────────────────────── -->
+  <!-- ═══════════════════════════════════════════
+       SIGNUP MODAL (identique, fonctionnel)
+  ═══════════════════════════════════════════ -->
   <div id="signupModal" class="modal-overlay" style="display:none">
     <div class="modal-card">
-      <button class="modal-close" onclick="closeSignupModal()">&times;</button>
-      <div class="modal-header">
-        <span class="modal-icon">✨</span>
+      <button class="modal-close" onclick="closeSignupModal()">✕</button>
+      <div class="modal-head">
+        <div class="modal-logo-wrap"><span class="nav-logo-mark">S</span></div>
         <h2>Créer votre salon</h2>
         <p id="modalPlanLabel">Pack Pro — 49 CHF/mois</p>
       </div>
       <form id="signupForm" onsubmit="event.preventDefault(); submitSignup();">
-        <div class="form-group">
-          <label for="signupSalonName">Nom du salon</label>
+        <div class="mform-group">
+          <label>Nom du salon</label>
           <input type="text" id="signupSalonName" placeholder="ex: Beauty Lounge Lausanne" required>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="signupOwnerName">Votre nom</label>
+        <div class="mform-row">
+          <div class="mform-group">
+            <label>Votre nom</label>
             <input type="text" id="signupOwnerName" placeholder="Prénom Nom" required>
           </div>
-          <div class="form-group">
-            <label for="signupPhone">Téléphone</label>
+          <div class="mform-group">
+            <label>Téléphone</label>
             <input type="tel" id="signupPhone" placeholder="+41 79 123 45 67">
           </div>
         </div>
-        <div class="form-group">
-          <label for="signupEmail">Email (sera votre login)</label>
+        <div class="mform-group">
+          <label>Email (votre identifiant)</label>
           <input type="email" id="signupEmail" placeholder="vous@exemple.ch" required>
         </div>
-        <div class="form-group">
-          <label for="signupPassword">Mot de passe</label>
+        <div class="mform-group">
+          <label>Mot de passe</label>
           <input type="password" id="signupPassword" placeholder="Minimum 6 caractères" minlength="6" required>
         </div>
         <input type="hidden" id="signupPlan" value="pro">
@@ -458,44 +601,54 @@
           Continuer vers le paiement →
         </button>
         <p class="modal-note">Essai gratuit 14 jours · Annulation à tout moment · Aucun engagement</p>
-        <div id="signupError" style="display:none; margin-top:10px; padding:10px 14px; background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.25); border-radius:8px; color:#ef4444; font-size:13px;"></div>
+        <div id="signupError" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#ef4444;font-size:13px;"></div>
       </form>
     </div>
   </div>
 
   <!-- Toast -->
-  <div id="checkoutToast" class="checkout-toast" style="display:none">
+  <div id="checkoutToast" class="toast" style="display:none">
     <span id="toastMsg"></span>
   </div>
 
-  <!-- ── SCRIPTS ────────────────────────────────────────── -->
+  <!-- ═══════════════════════════════════════════
+       SCRIPTS
+  ═══════════════════════════════════════════ -->
   <script>
-    /* ---- Mobile menu ---- */
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const mobileMenu    = document.getElementById('mobileMenu');
-    mobileMenuBtn.addEventListener('click', () => {
-      const open = mobileMenu.classList.toggle('open');
-      mobileMenuBtn.textContent = open ? '✕' : '☰';
-    });
-    function closeMobileMenu() {
-      mobileMenu.classList.remove('open');
-      mobileMenuBtn.textContent = '☰';
-    }
-    document.addEventListener('click', e => {
-      if (!e.target.closest('.saas-nav')) closeMobileMenu();
-    });
-
-    /* ---- Navbar scroll ---- */
-    const nav = document.getElementById('saasNav');
+    /* ── Navbar ── */
+    const nav = document.getElementById('mainNav');
     window.addEventListener('scroll', () => {
-      nav.classList.toggle('scrolled', window.scrollY > 40);
+      nav.classList.toggle('nav-scrolled', window.scrollY > 20);
     }, { passive: true });
 
-    /* ---- Scroll reveal ---- */
+    /* ── Mobile menu ── */
+    const burger = document.getElementById('navBurger');
+    const mobileNav = document.getElementById('navMobile');
+    burger.addEventListener('click', () => {
+      const open = mobileNav.classList.toggle('open');
+      burger.classList.toggle('open', open);
+    });
+    function closeMobile() {
+      mobileNav.classList.remove('open');
+      burger.classList.remove('open');
+    }
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.nav')) closeMobile();
+    });
+
+    /* ── Smooth scroll ── */
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const t = document.querySelector(a.getAttribute('href'));
+        if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); closeMobile(); }
+      });
+    });
+
+    /* ── Scroll reveal ── */
     document.addEventListener('DOMContentLoaded', () => {
       const io = new IntersectionObserver(entries => {
         entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('active'); });
-      }, { threshold: 0.1 });
+      }, { threshold: 0.08 });
       document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
       /* Checkout URL params */
@@ -509,72 +662,60 @@
       }
     });
 
-    /* ---- Smooth scroll ---- */
-    document.querySelectorAll('a[href^="#"]').forEach(a => {
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        const t = document.querySelector(a.getAttribute('href'));
-        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    /* ── FAQ accordion ── */
+    document.querySelectorAll('.faq-item summary').forEach(s => {
+      s.addEventListener('click', e => {
+        const item = s.parentElement;
+        document.querySelectorAll('.faq-item[open]').forEach(o => { if (o !== item) o.removeAttribute('open'); });
       });
     });
 
-    /* ---- Signup modal ---- */
+    /* ── Signup modal ── */
     const planLabels = {
       starter: 'Pack Starter — 39 CHF/mois',
       pro:     'Pack Pro — 49 CHF/mois',
       premium: 'Pack Premium — 89 CHF/mois',
     };
-
     function startCheckout(plan) {
-      document.getElementById('signupPlan').value      = plan;
+      document.getElementById('signupPlan').value = plan;
       document.getElementById('modalPlanLabel').textContent = planLabels[plan] || plan;
-      document.getElementById('signupModal').style.display  = 'flex';
+      document.getElementById('signupModal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
     function closeSignupModal() {
       document.getElementById('signupModal').style.display = 'none';
       document.body.style.overflow = '';
     }
-    document.addEventListener('click', e => {
-      if (e.target.id === 'signupModal') closeSignupModal();
-    });
+    document.addEventListener('click', e => { if (e.target.id === 'signupModal') closeSignupModal(); });
 
     async function submitSignup() {
-      const btn      = document.getElementById('signupSubmitBtn');
-      const errDiv   = document.getElementById('signupError');
+      const btn = document.getElementById('signupSubmitBtn');
+      const errDiv = document.getElementById('signupError');
       const origText = btn.textContent;
-
       btn.textContent = 'Création en cours…';
-      btn.disabled    = true;
+      btn.disabled = true;
       if (errDiv) errDiv.style.display = 'none';
 
       const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-      const salonName = v('signupSalonName');
-      const ownerName = v('signupOwnerName');
-      const email     = v('signupEmail');
-      const password  = document.getElementById('signupPassword')?.value ?? '';
-      const phone     = v('signupPhone');
-      const plan      = v('signupPlan');
+      const salonName = v('signupSalonName'), ownerName = v('signupOwnerName');
+      const email = v('signupEmail'), password = document.getElementById('signupPassword')?.value ?? '';
+      const phone = v('signupPhone'), plan = v('signupPlan');
 
       if (!salonName || !ownerName || !email || !password) {
         showToast('Veuillez remplir tous les champs obligatoires', 'error');
-        btn.textContent = origText; btn.disabled = false;
-        return;
+        btn.textContent = origText; btn.disabled = false; return;
       }
-
       try {
-        const res  = await fetch('/api/stripe/register-and-checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch('/api/stripe/register-and-checkout', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ salonName, ownerName, email, password, phone, plan }),
         });
         const data = await res.json().catch(() => null);
-        if (!data) { showToast('Erreur serveur (réponse invalide)', 'error'); btn.textContent = origText; btn.disabled = false; return; }
+        if (!data) { showToast('Erreur serveur', 'error'); btn.textContent = origText; btn.disabled = false; return; }
         if (!data.success) {
           showToast(data.error || 'Erreur lors de la création', 'error');
-          if (errDiv) { errDiv.style.display = 'block'; errDiv.textContent = data.error || 'Erreur lors de la création'; }
-          btn.textContent = origText; btn.disabled = false;
-          return;
+          if (errDiv) { errDiv.style.display = 'block'; errDiv.textContent = data.error || 'Erreur'; }
+          btn.textContent = origText; btn.disabled = false; return;
         }
         if (data.data?.sessionData) localStorage.setItem('barberSession', JSON.stringify(data.data.sessionData));
         const url = data.data?.url;
@@ -589,8 +730,7 @@
           }, 2500);
         } else {
           showToast('✅ Salon créé avec succès !', 'success');
-          btn.textContent = origText; btn.disabled = false;
-          closeSignupModal();
+          btn.textContent = origText; btn.disabled = false; closeSignupModal();
         }
       } catch (err) {
         showToast('Erreur de connexion : ' + err.message, 'error');
@@ -601,7 +741,7 @@
     function showToast(msg, type = 'success') {
       const toast = document.getElementById('checkoutToast');
       document.getElementById('toastMsg').textContent = msg;
-      toast.className = 'checkout-toast ' + type;
+      toast.className = 'toast ' + type;
       toast.style.display = 'flex';
       setTimeout(() => { toast.style.display = 'none'; }, 6000);
     }
