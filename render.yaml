@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: salonpro
+    runtime: node
+    plan: starter          # ou "standard" pour éviter les cold starts
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000        # Render utilise le port 10000 par défaut
+      - key: MONGODB_URI
+        sync: false         # à définir dans le dashboard Render
+      - key: JWT_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLIC_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: BASE_URL
+        sync: false         # ex: https://salonpro.ch
+      - key: ADMIN_PASSWORD
+        sync: false
