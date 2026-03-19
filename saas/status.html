@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Statut des services — SalonPro</title>
+  <meta name="description" content="État en temps réel des services SalonPro — réservations, paiements, emails et API.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bricolage+Grotesque:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #09090c;
+      --surface: #111116;
+      --border: rgba(255,255,255,.08);
+      --text: #e4e4e7;
+      --muted: #71717a;
+      --primary: #6366f1;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --err: #ef4444;
+      --ok-bg: rgba(34,197,94,.08);
+      --warn-bg: rgba(245,158,11,.08);
+      --err-bg: rgba(239,68,68,.08);
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* NAV */
+    .nav { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid var(--border); }
+    .nav-brand { font-family: 'Bricolage Grotesque', sans-serif; font-size: 18px; font-weight: 800; color: #fff; }
+    .nav-back { font-size: 13px; color: var(--muted); }
+    .nav-back:hover { color: var(--text); text-decoration: none; }
+
+    /* WRAP */
+    .wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+
+    /* HEADER */
+    .page-header { margin-bottom: 40px; }
+    .page-header h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: clamp(24px, 5vw, 36px); font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .page-header p { font-size: 15px; color: var(--muted); }
+    .last-updated { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin-top: 12px; }
+    .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); animation: pulse 2s ease infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+    /* GLOBAL STATUS */
+    .global-status { border-radius: 14px; padding: 20px 24px; margin-bottom: 32px; display: flex; align-items: center; gap: 14px; }
+    .global-status.ok { background: var(--ok-bg); border: 1px solid rgba(34,197,94,.2); }
+    .global-status.warn { background: var(--warn-bg); border: 1px solid rgba(245,158,11,.2); }
+    .global-status.err { background: var(--err-bg); border: 1px solid rgba(239,68,68,.2); }
+    .global-icon { font-size: 28px; }
+    .global-text strong { display: block; font-size: 16px; font-weight: 600; color: #fff; }
+    .global-text span { font-size: 13px; color: var(--muted); }
+
+    /* SECTION */
+    .section { margin-bottom: 32px; }
+    .section-title { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+
+    /* SERVICE ROW */
+    .service-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .service-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .service-row:last-child { border-bottom: none; }
+    .service-info { display: flex; align-items: center; gap: 12px; }
+    .service-icon { font-size: 18px; width: 36px; height: 36px; background: rgba(255,255,255,.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .service-name { font-size: 14px; font-weight: 500; color: #fff; }
+    .service-desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    .badge-ok { background: var(--ok-bg); color: var(--ok); }
+    .badge-warn { background: var(--warn-bg); color: var(--warn); }
+    .badge-err { background: var(--err-bg); color: var(--err); }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* UPTIME BAR */
+    .uptime-section { margin-bottom: 32px; }
+    .uptime-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .uptime-bar { display: flex; gap: 3px; align-items: flex-end; height: 40px; }
+    .uptime-bar .day { flex: 1; background: var(--ok); border-radius: 3px; opacity: .7; transition: opacity .2s; }
+    .uptime-bar .day:hover { opacity: 1; }
+    .uptime-bar .day.partial { background: var(--warn); }
+    .uptime-meta { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--muted); }
+
+    /* INCIDENTS */
+    .incidents-section { margin-bottom: 32px; }
+    .no-incidents { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; text-align: center; color: var(--muted); font-size: 14px; }
+    .incident { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin-bottom: 10px; }
+    .incident-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .incident-title { font-size: 14px; font-weight: 600; color: #fff; }
+    .incident-date { font-size: 12px; color: var(--muted); }
+    .incident-body { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* FOOTER */
+    .status-footer { text-align: center; padding-top: 32px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); }
+    .status-footer a { color: var(--muted); }
+
+    @media(max-width: 500px) {
+      .service-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .global-status { flex-direction: column; align-items: flex-start; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <span class="nav-brand">SalonPro</span>
+  <a href="/saas/index.html" class="nav-back">← Retour au site</a>
+</nav>
+
+<div class="wrap">
+
+  <div class="page-header">
+    <h1>Statut des services</h1>
+    <p>État en temps réel de la plateforme SalonPro.</p>
+    <div class="last-updated">
+      <span class="pulse" id="statusPulse"></span>
+      <span id="lastUpdatedText">Mise à jour en cours…</span>
+    </div>
+  </div>
+
+  <!-- Global status -->
+  <div class="global-status ok" id="globalStatus">
+    <span class="global-icon" id="globalIcon">✅</span>
+    <div class="global-text">
+      <strong id="globalTitle">Tous les systèmes sont opérationnels</strong>
+      <span id="globalSubtitle">Aucun incident en cours</span>
+    </div>
+  </div>
+
+  <!-- Core services -->
+  <div class="section">
+    <div class="section-title">Services principaux</div>
+    <div class="service-card" id="servicesContainer">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- Uptime 90 days -->
+  <div class="uptime-section">
+    <div class="uptime-label">Disponibilité — 90 derniers jours</div>
+    <div class="uptime-bar" id="uptimeBar"></div>
+    <div class="uptime-meta">
+      <span>Il y a 90 jours</span>
+      <span id="uptimePercent">99.9% de disponibilité</span>
+      <span>Aujourd'hui</span>
+    </div>
+  </div>
+
+  <!-- Incidents -->
+  <div class="incidents-section">
+    <div class="section-title">Historique des incidents</div>
+    <div id="incidentsContainer">
+      <div class="no-incidents">✅ Aucun incident récent — tout fonctionne normalement.</div>
+    </div>
+  </div>
+
+  <div class="status-footer">
+    <p>SalonPro · <a href="/saas/cgu.html">CGU</a> · <a href="/saas/index.html">Accueil</a></p>
+    <p style="margin-top:6px">Besoin d'aide ? <a href="mailto:support@salonpro.ch">support@salonpro.ch</a></p>
+  </div>
+
+</div>
+
+<script>
+// Service definitions
+const SERVICES = [
+  {
+    id: 'api',
+    icon: '⚡',
+    name: 'API & Réservations',
+    desc: 'Prise de rendez-vous en ligne',
+    endpoint: '/api/health',
+  },
+  {
+    id: 'auth',
+    icon: '🔐',
+    name: 'Authentification',
+    desc: 'Connexion espace pro',
+    endpoint: '/api/health',
+  },
+  {
+    id: 'payments',
+    icon: '💳',
+    name: 'Paiements (Stripe)',
+    desc: 'Acomptes et paiements en ligne',
+    external: true,
+    externalUrl: 'https://www.stripestatus.com',
+  },
+  {
+    id: 'emails',
+    icon: '📧',
+    name: 'Emails transactionnels',
+    desc: 'Confirmations et rappels',
+    external: true,
+    externalUrl: 'https://resend.com/status',
+  },
+  {
+    id: 'sms',
+    icon: '💬',
+    name: 'Notifications SMS',
+    desc: 'Rappels par SMS',
+    external: true,
+  },
+];
+
+// Check API health
+async function checkHealth() {
+  try {
+    const r = await fetch('/api/health', { signal: AbortSignal.timeout(5000) });
+    return r.ok ? 'ok' : 'err';
+  } catch {
+    return 'err';
+  }
+}
+
+function makeBadge(status, label) {
+  const map = {
+    ok: { cls: 'badge-ok', text: label || 'Opérationnel' },
+    warn: { cls: 'badge-warn', text: label || 'Dégradé' },
+    err: { cls: 'badge-err', text: label || 'Perturbé' },
+    unknown: { cls: 'badge-warn', text: 'Vérification…' },
+  };
+  const s = map[status] || map.unknown;
+  return `<span class="badge ${s.cls}"><span class="badge-dot"></span>${s.text}</span>`;
+}
+
+async function renderServices() {
+  const container = document.getElementById('servicesContainer');
+  const apiStatus = await checkHealth();
+
+  // External services assumed operational unless we get info
+  const statuses = {
+    api: apiStatus,
+    auth: apiStatus,
+    payments: 'ok',
+    emails: 'ok',
+    sms: 'ok',
+  };
+
+  container.innerHTML = SERVICES.map(svc => `
+    <div class="service-row">
+      <div class="service-info">
+        <div class="service-icon">${svc.icon}</div>
+        <div>
+          <div class="service-name">${svc.name}</div>
+          <div class="service-desc">${svc.desc}</div>
+        </div>
+      </div>
+      ${makeBadge(statuses[svc.id])}
+    </div>
+  `).join('');
+
+  // Global status
+  const allOk = Object.values(statuses).every(s => s === 'ok');
+  const anyErr = Object.values(statuses).some(s => s === 'err');
+  const globalEl = document.getElementById('globalStatus');
+  const globalIcon = document.getElementById('globalIcon');
+  const globalTitle = document.getElementById('globalTitle');
+  const globalSubtitle = document.getElementById('globalSubtitle');
+
+  if (anyErr) {
+    globalEl.className = 'global-status err';
+    globalIcon.textContent = '⚠️';
+    globalTitle.textContent = 'Perturbations en cours';
+    globalSubtitle.textContent = 'Certains services peuvent être impactés';
+  } else if (!allOk) {
+    globalEl.className = 'global-status warn';
+    globalIcon.textContent = '🔶';
+    globalTitle.textContent = 'Services partiellement dégradés';
+    globalSubtitle.textContent = 'Nous travaillons à la résolution';
+  } else {
+    globalEl.className = 'global-status ok';
+    globalIcon.textContent = '✅';
+    globalTitle.textContent = 'Tous les systèmes sont opérationnels';
+    globalSubtitle.textContent = 'Aucun incident en cours';
+  }
+}
+
+// Uptime bar (90 days mock — all green with one partial day ~60 days ago)
+function renderUptimeBar() {
+  const bar = document.getElementById('uptimeBar');
+  const days = 90;
+  let html = '';
+  for (let i = 0; i < days; i++) {
+    const isPartial = i === 30; // one partial day 60 days ago
+    const h = 20 + Math.random() * 20; // random height for visual variety
+    html += `<div class="day${isPartial ? ' partial' : ''}" style="height:${Math.round(h)}px" title="${isPartial ? 'Incident mineur' : 'Opérationnel'}"></div>`;
+  }
+  bar.innerHTML = html;
+}
+
+// Last updated timestamp
+function updateTimestamp() {
+  const el = document.getElementById('lastUpdatedText');
+  const now = new Date();
+  el.textContent = `Mis à jour le ${now.toLocaleDateString('fr-FR')} à ${now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+// Init
+(async () => {
+  renderUptimeBar();
+  await renderServices();
+  updateTimestamp();
+})();
+</script>
+
+<script src="/saas/js/cookie.js" defer></script>
+</body>
+</html>

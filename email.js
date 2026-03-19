@@ -179,60 +179,117 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
   baseUrl = baseUrl || process.env.BASE_URL || 'https://barberpro-saa.onrender.com';
   const fromName = process.env.SMTP_FROM_NAME || 'SalonPro';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
-  const planNames = { starter: 'Starter', pro: 'Pro', premium: 'Premium' };
+  const planLabel = { starter: 'Starter', pro: 'Pro ⭐', premium: 'Premium 🚀' }[plan] || plan;
+  const trialDays = plan === 'starter' ? null : 14;
 
   try {
     const { data, error } = await resend.emails.send({
       from: `${fromName} <${fromEmail}>`,
       to: [email],
-      subject: `🎉 Bienvenue sur SalonPro, ${ownerName} !`,
+      subject: `Bienvenue sur SalonPro, ${ownerName} — votre espace est prêt`,
       html: `
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bienvenue sur SalonPro</title>
+</head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
-  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+  <div style="max-width:580px;margin:32px auto;padding:0 12px">
 
-    <div style="background:#6366F1;padding:32px 28px;text-align:center">
-      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">✨ Bienvenue sur SalonPro !</h1>
-      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">Votre espace est prêt</p>
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#6366F1 0%,#4F46E5 100%);border-radius:16px 16px 0 0;padding:36px 32px;text-align:center">
+      <div style="display:inline-block;background:rgba(255,255,255,.15);border-radius:12px;padding:8px 16px;margin-bottom:16px">
+        <span style="color:#fff;font-size:13px;font-weight:600;letter-spacing:.5px">SALONPRO</span>
+      </div>
+      <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;line-height:1.3">Votre salon est en ligne 🎉</h1>
+      <p style="color:rgba(255,255,255,.8);margin:10px 0 0;font-size:15px">Bienvenue dans la famille SalonPro, ${ownerName} !</p>
     </div>
 
-    <div style="padding:28px">
-      <p style="font-size:15px;color:#27272a;margin:0 0 20px">
+    <!-- Body -->
+    <div style="background:#fff;padding:32px;border-left:1px solid #e4e4e7;border-right:1px solid #e4e4e7">
+
+      <p style="font-size:15px;color:#27272a;margin:0 0 24px;line-height:1.7">
         Bonjour <strong>${ownerName}</strong>,<br>
-        Votre salon <strong>${salonName}</strong> a été créé avec succès sur le pack <strong>${planNames[plan] || plan}</strong>.
+        <strong>${salonName}</strong> est désormais sur SalonPro avec le plan <strong>${planLabel}</strong>${trialDays ? ` — vous bénéficiez de <strong>${trialDays} jours d'essai gratuit</strong>` : ''}.
+        Voici tout ce dont vous avez besoin pour démarrer.
       </p>
 
-      <div style="background:#fafafa;border-radius:12px;padding:20px;border:1px solid #e4e4e7;margin-bottom:20px">
-        <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3f3f46">
-          <tr>
-            <td style="padding:8px 0;color:#71717a;width:100px">Email</td>
-            <td style="padding:8px 0;font-weight:600">${email}</td>
-          </tr>
-          <tr>
-            <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Mot de passe</td>
-            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">Celui que vous avez choisi lors de l'inscription</td>
-          </tr>
-          <tr>
-            <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Pack</td>
-            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">${planNames[plan] || plan} (essai 14 jours)</td>
-          </tr>
-        </table>
+      <!-- CTA principal -->
+      <div style="text-align:center;margin:0 0 32px">
+        <a href="${baseUrl}/pro" style="display:inline-block;background:#6366F1;color:#fff;padding:15px 36px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;letter-spacing:.2px">
+          Accéder à mon espace pro →
+        </a>
       </div>
 
-      <div style="text-align:center;margin:24px 0">
-        <a href="${baseUrl}/pro" style="display:inline-block;background:#6366F1;color:#fff;padding:14px 28px;border-radius:12px;text-decoration:none;font-weight:600;font-size:15px">Accéder à mon Espace Pro →</a>
+      <!-- Séparateur -->
+      <div style="border-top:1px solid #e4e4e7;margin:0 0 24px"></div>
+
+      <!-- Étapes -->
+      <p style="font-size:13px;font-weight:700;color:#71717a;letter-spacing:.8px;text-transform:uppercase;margin:0 0 16px">3 étapes pour démarrer</p>
+
+      <table style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="vertical-align:top;padding:12px 0;border-bottom:1px solid #f4f4f5;width:40px">
+            <div style="width:32px;height:32px;background:#EEF2FF;border-radius:50%;text-align:center;line-height:32px;font-weight:700;color:#6366F1;font-size:14px">1</div>
+          </td>
+          <td style="vertical-align:top;padding:12px 0 12px 14px;border-bottom:1px solid #f4f4f5">
+            <strong style="color:#18181b;font-size:14px;display:block;margin-bottom:3px">Personnalisez votre profil</strong>
+            <span style="color:#71717a;font-size:13px">Ajoutez votre logo, couleurs, adresse et horaires d'ouverture.</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align:top;padding:12px 0;border-bottom:1px solid #f4f4f5;width:40px">
+            <div style="width:32px;height:32px;background:#EEF2FF;border-radius:50%;text-align:center;line-height:32px;font-weight:700;color:#6366F1;font-size:14px">2</div>
+          </td>
+          <td style="vertical-align:top;padding:12px 0 12px 14px;border-bottom:1px solid #f4f4f5">
+            <strong style="color:#18181b;font-size:14px;display:block;margin-bottom:3px">Ajoutez vos services</strong>
+            <span style="color:#71717a;font-size:13px">Définissez prix, durées et options de paiement en ligne si souhaité.</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="vertical-align:top;padding:12px 0;width:40px">
+            <div style="width:32px;height:32px;background:#EEF2FF;border-radius:50%;text-align:center;line-height:32px;font-weight:700;color:#6366F1;font-size:14px">3</div>
+          </td>
+          <td style="vertical-align:top;padding:12px 0 12px 14px">
+            <strong style="color:#18181b;font-size:14px;display:block;margin-bottom:3px">Partagez votre lien de réservation</strong>
+            <span style="color:#71717a;font-size:13px">Copiez votre URL personnalisée et partagez-la sur Instagram, WhatsApp ou votre site.</span>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Séparateur -->
+      <div style="border-top:1px solid #e4e4e7;margin:24px 0"></div>
+
+      <!-- Infos accès -->
+      <p style="font-size:13px;font-weight:700;color:#71717a;letter-spacing:.8px;text-transform:uppercase;margin:0 0 12px">Vos accès</p>
+      <div style="background:#fafafa;border-radius:10px;padding:16px 20px;border:1px solid #e4e4e7;font-size:14px;color:#3f3f46">
+        <div style="margin-bottom:8px"><span style="color:#71717a;min-width:80px;display:inline-block">Email</span> <strong>${email}</strong></div>
+        <div style="margin-bottom:8px"><span style="color:#71717a;min-width:80px;display:inline-block">Plan</span> <strong>${planLabel}</strong></div>
+        <div><span style="color:#71717a;min-width:80px;display:inline-block">Salon</span> <strong>${salonName}</strong></div>
       </div>
 
-      <p style="font-size:13px;color:#71717a;margin:20px 0 0;line-height:1.6">
-        Personnalisez votre salon, ajoutez vos services et commencez à recevoir des réservations en ligne dès aujourd'hui !
+      ${trialDays ? `
+      <!-- Trial notice -->
+      <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:14px 18px;margin-top:20px;font-size:13px;color:#92400E">
+        <strong>⏳ Essai gratuit de ${trialDays} jours</strong> — aucun paiement requis maintenant.<br>
+        Vous pourrez gérer votre abonnement depuis votre espace pro avant la fin de l'essai.
+      </div>` : ''}
+
+      <p style="font-size:13px;color:#71717a;margin:24px 0 0;line-height:1.6;text-align:center">
+        Une question ? Répondez directement à cet email, nous sommes là pour vous aider.
       </p>
     </div>
 
-    <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">SalonPro — Propulsé par Osmo Digital</p>
+    <!-- Footer -->
+    <div style="background:#fafafa;border-radius:0 0 16px 16px;padding:18px 32px;text-align:center;border:1px solid #e4e4e7;border-top:none">
+      <p style="font-size:12px;color:#a1a1aa;margin:0">
+        SalonPro — La solution de réservation pour les professionnels de la beauté<br>
+        <a href="${baseUrl}/saas/cgu.html" style="color:#a1a1aa">CGU</a> · <a href="${baseUrl}/saas/index.html" style="color:#a1a1aa">Site</a>
+      </p>
     </div>
+
   </div>
 </body>
 </html>`

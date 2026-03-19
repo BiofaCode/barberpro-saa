@@ -244,6 +244,10 @@ route('POST', '/api/admin/login', async (req, res) => {
     json(res, 200, { success: true, token });
 });
 
+route('GET', '/api/health', async (req, res) => {
+    json(res, 200, { status: 'ok', ts: Date.now() });
+});
+
 route('GET', '/api/admin/stats', async (req, res) => {
     const totalSalons = await db.countSalons();
     const totalOwners = await db.countOwners();
