@@ -308,6 +308,174 @@
   </section>
 
   <!-- ═══════════════════════════════════════════
+       PRODUCT SCREENSHOTS / PREVIEW
+  ═══════════════════════════════════════════ -->
+  <section class="preview-section" id="apercu">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="tag">Aperçu</span>
+        <h2>Une interface pensée<br>pour les pros du terrain.</h2>
+        <p>Simple à prendre en main dès le premier jour — aucune formation requise.</p>
+      </div>
+
+      <!-- Tab switcher -->
+      <div class="preview-tabs reveal">
+        <button class="ptab active" data-tab="dashboard">📊 Tableau de bord</button>
+        <button class="ptab" data-tab="booking">📅 Réservation client</button>
+        <button class="ptab" data-tab="agenda">🗓️ Agenda</button>
+      </div>
+
+      <!-- Dashboard tab -->
+      <div class="preview-screen reveal active" id="tab-dashboard">
+        <div class="pscreen-chrome">
+          <span class="chrome-dot" style="background:#ef4444"></span>
+          <span class="chrome-dot" style="background:#f59e0b"></span>
+          <span class="chrome-dot" style="background:#22c55e"></span>
+          <span class="chrome-url">salonpro.ch/pro/dashboard</span>
+        </div>
+        <div class="pscreen-body">
+          <!-- Sidebar -->
+          <div class="ps-sidebar">
+            <div class="ps-logo">SP</div>
+            <div class="ps-nav-item active">📊</div>
+            <div class="ps-nav-item">📅</div>
+            <div class="ps-nav-item">👥</div>
+            <div class="ps-nav-item">💳</div>
+            <div class="ps-nav-item">⚙️</div>
+          </div>
+          <!-- Main -->
+          <div class="ps-main">
+            <div class="ps-topbar">
+              <div class="ps-page-title">Bonjour, <strong>Alex</strong> 👋</div>
+              <div class="ps-avatar">A</div>
+            </div>
+            <!-- Stats row -->
+            <div class="ps-stats-row">
+              <div class="ps-stat">
+                <div class="ps-stat-val">12</div>
+                <div class="ps-stat-lbl">RDV aujourd'hui</div>
+              </div>
+              <div class="ps-stat ps-stat-accent">
+                <div class="ps-stat-val">CHF 840</div>
+                <div class="ps-stat-lbl">CA ce mois</div>
+              </div>
+              <div class="ps-stat">
+                <div class="ps-stat-val">96%</div>
+                <div class="ps-stat-lbl">Taux d'occupation</div>
+              </div>
+            </div>
+            <!-- Chart -->
+            <div class="ps-chart-area">
+              <div class="ps-chart-title">Revenus — 7 derniers jours</div>
+              <div class="ps-chart-bars">
+                <div class="ps-bar" style="height:45%"><span>Lun</span></div>
+                <div class="ps-bar" style="height:70%"><span>Mar</span></div>
+                <div class="ps-bar" style="height:55%"><span>Mer</span></div>
+                <div class="ps-bar" style="height:88%"><span>Jeu</span></div>
+                <div class="ps-bar" style="height:40%"><span>Ven</span></div>
+                <div class="ps-bar ps-bar-active" style="height:95%"><span>Sam</span></div>
+                <div class="ps-bar" style="height:30%"><span>Dim</span></div>
+              </div>
+            </div>
+            <!-- Recent bookings -->
+            <div class="ps-chart-title" style="margin:12px 0 8px">Prochains RDV</div>
+            <div class="ps-booking-row"><div class="ps-booking-time">09:00</div><div class="ps-booking-name">Marc D.</div><div class="ps-booking-svc">Coupe + Barbe</div><div class="ps-booking-badge ok">Confirmé</div></div>
+            <div class="ps-booking-row"><div class="ps-booking-time">10:30</div><div class="ps-booking-name">Julien R.</div><div class="ps-booking-svc">Coupe homme</div><div class="ps-booking-badge ok">Confirmé</div></div>
+            <div class="ps-booking-row"><div class="ps-booking-time">14:00</div><div class="ps-booking-name">Antoine B.</div><div class="ps-booking-svc">Brushing</div><div class="ps-booking-badge warn">En attente</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Booking tab -->
+      <div class="preview-screen reveal" id="tab-booking" style="display:none">
+        <div class="pscreen-chrome">
+          <span class="chrome-dot" style="background:#ef4444"></span>
+          <span class="chrome-dot" style="background:#f59e0b"></span>
+          <span class="chrome-dot" style="background:#22c55e"></span>
+          <span class="chrome-url">salonpro.ch/salon/atelier-noir</span>
+        </div>
+        <div class="pscreen-body ps-booking-page">
+          <div class="ps-salon-header">
+            <div class="ps-salon-avatar">AN</div>
+            <div>
+              <div class="ps-salon-name">Atelier Noir</div>
+              <div class="ps-salon-sub">✂️ Barbier · Genève</div>
+            </div>
+          </div>
+          <div class="ps-services-list">
+            <div class="ps-svc-item">
+              <div class="ps-svc-info"><strong>Coupe homme</strong><span>30 min</span></div>
+              <div class="ps-svc-price">CHF 35</div>
+            </div>
+            <div class="ps-svc-item ps-svc-selected">
+              <div class="ps-svc-info"><strong>Coupe + Barbe</strong><span>45 min</span></div>
+              <div class="ps-svc-price">CHF 55 <span class="ps-badge-pay">💳 Acompte</span></div>
+            </div>
+            <div class="ps-svc-item">
+              <div class="ps-svc-info"><strong>Barbe seule</strong><span>20 min</span></div>
+              <div class="ps-svc-price">CHF 25</div>
+            </div>
+          </div>
+          <div class="ps-time-slots">
+            <div class="ps-slot">09:00</div>
+            <div class="ps-slot">09:30</div>
+            <div class="ps-slot ps-slot-sel">10:00</div>
+            <div class="ps-slot">10:30</div>
+            <div class="ps-slot ps-slot-taken">11:00</div>
+            <div class="ps-slot">11:30</div>
+          </div>
+          <div class="ps-book-btn">Confirmer le rendez-vous →</div>
+        </div>
+      </div>
+
+      <!-- Agenda tab -->
+      <div class="preview-screen reveal" id="tab-agenda" style="display:none">
+        <div class="pscreen-chrome">
+          <span class="chrome-dot" style="background:#ef4444"></span>
+          <span class="chrome-dot" style="background:#f59e0b"></span>
+          <span class="chrome-dot" style="background:#22c55e"></span>
+          <span class="chrome-url">salonpro.ch/pro/agenda</span>
+        </div>
+        <div class="pscreen-body">
+          <div class="ps-sidebar">
+            <div class="ps-logo">SP</div>
+            <div class="ps-nav-item">📊</div>
+            <div class="ps-nav-item active">📅</div>
+            <div class="ps-nav-item">👥</div>
+            <div class="ps-nav-item">💳</div>
+            <div class="ps-nav-item">⚙️</div>
+          </div>
+          <div class="ps-main">
+            <div class="ps-topbar">
+              <div class="ps-page-title"><strong>Agenda</strong> — Mercredi 19 mars</div>
+              <div class="ps-avatar">A</div>
+            </div>
+            <div class="ps-agenda-grid">
+              <div class="ps-time-col">
+                <div>09h</div><div>10h</div><div>11h</div><div>12h</div><div>13h</div><div>14h</div>
+              </div>
+              <div class="ps-day-col">
+                <div class="ps-appt" style="top:0;height:60px;background:rgba(99,102,241,.25);border-color:#6366f1">
+                  <div class="ps-appt-name">Marc D.</div>
+                  <div class="ps-appt-svc">Coupe + Barbe</div>
+                </div>
+                <div class="ps-appt" style="top:80px;height:40px;background:rgba(16,185,129,.2);border-color:#10b981">
+                  <div class="ps-appt-name">Julien R.</div>
+                  <div class="ps-appt-svc">Coupe</div>
+                </div>
+                <div class="ps-appt" style="top:200px;height:70px;background:rgba(245,158,11,.2);border-color:#f59e0b">
+                  <div class="ps-appt-name">Antoine B.</div>
+                  <div class="ps-appt-svc">Brushing</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
        HOW IT WORKS
   ═══════════════════════════════════════════ -->
   <section class="steps-section">
@@ -660,6 +828,18 @@
         showToast('Paiement annulé. Votre compte est créé, vous pourrez payer plus tard.', 'info');
         history.replaceState({}, '', '/saas/index.html');
       }
+    });
+
+    /* ── Preview tabs ── */
+    document.querySelectorAll('.ptab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.ptab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.querySelectorAll('.preview-screen').forEach(s => s.style.display = 'none');
+        const target = document.getElementById('tab-' + tab);
+        if (target) { target.style.display = 'block'; target.classList.add('active'); }
+      });
     });
 
     /* ── FAQ accordion ── */
