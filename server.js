@@ -1382,6 +1382,7 @@ route('POST', '/api/barber/stripe/connect/onboard', async (req, res) => {
     if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
     const salon = await db.findSalonById(user.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    if (salon.subscription?.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité disponible sur les plans Pro et Premium uniquement' });
 
     try {
         let accountId = salon.stripeConnect?.accountId;

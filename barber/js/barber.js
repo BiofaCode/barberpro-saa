@@ -1050,9 +1050,27 @@ async function buySMSPack(packKey) {
     }
 }
 
-async function loadStripeConnect() {
+async function loadStripeConnect(plan) {
     const body = document.getElementById('stripeConnectBody');
     if (!body) return;
+
+    // Fonctionnalité réservée aux plans Pro et Premium
+    if (plan === 'starter') {
+        body.innerHTML = `
+            <div style="text-align:center;padding:8px 0">
+                <div style="font-size:2rem;margin-bottom:10px">🔒</div>
+                <div style="font-weight:600;margin-bottom:6px">Fonctionnalité Pro & Premium</div>
+                <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px">
+                    Acceptez des acomptes et paiements en ligne. Disponible à partir du plan <strong>Pro</strong>.
+                </p>
+                <button class="btn btn-primary btn-sm" onclick="manageSubscription()" style="margin:0 auto">
+                    ⬆️ Passer au plan Pro
+                </button>
+            </div>
+        `;
+        return;
+    }
+
     try {
         const res = await apiFetch(`${API}/api/barber/stripe/connect/status`);
         const data = await res.json();
@@ -1114,7 +1132,6 @@ async function loadSettings() {
         const salon = data.data || {};
         currentSalon = salon;
         loadSMSStatus(); // load SMS credits alongside settings
-        loadStripeConnect(); // load Stripe Connect status
 
         const logoHtml = salon.logo
             ? `<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px"><img src="${salon.logo}" style="width:80px;height:80px;object-fit:cover;border-radius:14px;border:2px solid var(--border)"><div><div style="font-weight:600;margin-bottom:4px">Logo actuel</div><button class="btn btn-danger btn-sm" onclick="deleteLogo()">🗑 Supprimer</button></div></div>`
@@ -1408,6 +1425,10 @@ async function loadSettings() {
                 </div>
             </div>
         `;
+
+        // Appelé APRÈS le rendu HTML — l'élément #stripeConnectBody existe maintenant
+        loadStripeConnect(salon.subscription?.plan);
+
     } catch (e) { console.error(e); }
 }
 
