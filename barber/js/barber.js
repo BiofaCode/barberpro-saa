@@ -766,6 +766,25 @@ async function showAddService() {
             <label class="form-label">Assigner à (laisser vide = tous)</label>
             <div id="svcEmployeesList"><div style="margin-top:10px;font-size:0.9rem;color:var(--text-sec)">Chargement des employés...</div></div>
         </div>
+        <div class="form-group" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+            <label class="form-label">💳 Paiement en ligne</label>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px" id="svcPaymentModeGroup">
+                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="none" checked onchange="toggleDepositFields()"> Paiement sur place uniquement</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="deposit" onchange="toggleDepositFields()"> Acompte requis à la réservation</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="full_online" onchange="toggleDepositFields()"> Paiement complet en ligne</label>
+            </div>
+            <div id="svcDepositFields" style="display:none;margin-top:12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:12px">
+                <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px">Montant de l'acompte</div>
+                <div style="display:flex;gap:10px;align-items:center">
+                    <select id="svcDepositType" class="form-input" style="width:140px" onchange="toggleDepositFields()">
+                        <option value="fixed">Montant fixe (CHF)</option>
+                        <option value="percent">Pourcentage (%)</option>
+                    </select>
+                    <input type="number" id="svcDepositAmount" class="form-input" style="flex:1" placeholder="20" min="1">
+                    <span id="svcDepositUnit" style="font-size:.9rem;color:var(--text-muted);white-space:nowrap">CHF</span>
+                </div>
+            </div>
+        </div>
     `;
     document.getElementById('modalFooter').innerHTML = `
         <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
@@ -791,6 +810,26 @@ async function showAddService() {
     }
 }
 
+function getPaymentFields() {
+    const modeEl = document.querySelector('input[name="svcPayMode"]:checked');
+    const paymentMode = modeEl ? modeEl.value : 'none';
+    const depositType = document.getElementById('svcDepositType')?.value || 'fixed';
+    const depositAmount = parseFloat(document.getElementById('svcDepositAmount')?.value) || 0;
+    return { paymentMode, depositType, depositAmount };
+}
+
+function toggleDepositFields() {
+    const modeEl = document.querySelector('input[name="svcPayMode"]:checked');
+    const mode = modeEl ? modeEl.value : 'none';
+    const fields = document.getElementById('svcDepositFields');
+    if (fields) fields.style.display = mode === 'deposit' ? 'block' : 'none';
+    const unitEl = document.getElementById('svcDepositUnit');
+    if (unitEl) {
+        const type = document.getElementById('svcDepositType')?.value;
+        unitEl.textContent = type === 'percent' ? '%' : 'CHF';
+    }
+}
+
 async function addService() {
     const name = document.getElementById('svcName').value.trim();
     const price = parseInt(document.getElementById('svcPrice').value) || 0;
@@ -798,13 +837,14 @@ async function addService() {
     const icon = document.getElementById('svcIcon').value.trim() || '✂️';
     const description = document.getElementById('svcDesc').value.trim();
     const assignedEmployees = Array.from(document.querySelectorAll('.svc-emp-cb:checked')).map(cb => cb.value);
+    const { paymentMode, depositType, depositAmount } = getPaymentFields();
 
     if (!name) return;
 
     await apiFetch(`${API}/api/barber/salon/${salonId}/services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees })
+        body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees, paymentMode, depositType, depositAmount })
     });
     closeModal();
     loadServices();
@@ -833,6 +873,25 @@ async function showEditService(svc) {
         <div class="form-group">
             <label class="form-label">Assigner à (laisser vide = tous)</label>
             <div id="svcEmployeesList"><div style="margin-top:10px;font-size:0.9rem;color:var(--text-sec)">Chargement des employés...</div></div>
+        </div>
+        <div class="form-group" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+            <label class="form-label">💳 Paiement en ligne</label>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="none" ${(!svc.paymentMode || svc.paymentMode === 'none') ? 'checked' : ''} onchange="toggleDepositFields()"> Paiement sur place uniquement</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="deposit" ${svc.paymentMode === 'deposit' ? 'checked' : ''} onchange="toggleDepositFields()"> Acompte requis à la réservation</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="full_online" ${svc.paymentMode === 'full_online' ? 'checked' : ''} onchange="toggleDepositFields()"> Paiement complet en ligne</label>
+            </div>
+            <div id="svcDepositFields" style="display:${svc.paymentMode === 'deposit' ? 'block' : 'none'};margin-top:12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:12px">
+                <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px">Montant de l'acompte</div>
+                <div style="display:flex;gap:10px;align-items:center">
+                    <select id="svcDepositType" class="form-input" style="width:140px" onchange="toggleDepositFields()">
+                        <option value="fixed" ${svc.depositType !== 'percent' ? 'selected' : ''}>Montant fixe (CHF)</option>
+                        <option value="percent" ${svc.depositType === 'percent' ? 'selected' : ''}>Pourcentage (%)</option>
+                    </select>
+                    <input type="number" id="svcDepositAmount" class="form-input" style="flex:1" value="${svc.depositAmount || ''}" placeholder="20" min="1">
+                    <span id="svcDepositUnit" style="font-size:.9rem;color:var(--text-muted);white-space:nowrap">${svc.depositType === 'percent' ? '%' : 'CHF'}</span>
+                </div>
+            </div>
         </div>
     `;
     document.getElementById('modalFooter').innerHTML = `
@@ -867,13 +926,14 @@ async function editService(id) {
     const icon = document.getElementById('svcIcon').value.trim() || '✂️';
     const description = document.getElementById('svcDesc').value.trim();
     const assignedEmployees = Array.from(document.querySelectorAll('.svc-emp-cb:checked')).map(cb => cb.value);
+    const { paymentMode, depositType, depositAmount } = getPaymentFields();
 
     if (!name) return;
 
     await apiFetch(`${API}/api/barber/salon/${salonId}/services/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees })
+        body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees, paymentMode, depositType, depositAmount })
     });
     closeModal();
     loadServices();
@@ -990,6 +1050,63 @@ async function buySMSPack(packKey) {
     }
 }
 
+async function loadStripeConnect() {
+    const body = document.getElementById('stripeConnectBody');
+    if (!body) return;
+    try {
+        const res = await apiFetch(`${API}/api/barber/stripe/connect/status`);
+        const data = await res.json();
+        const d = data.data || {};
+
+        if (d.connected) {
+            body.innerHTML = `
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                    <div style="width:10px;height:10px;border-radius:50%;background:var(--success);flex-shrink:0"></div>
+                    <div>
+                        <div style="font-weight:600;font-size:.95rem">Stripe connecté ✅</div>
+                        <div style="font-size:.8rem;color:var(--text-muted)">Votre compte bancaire est lié. Vous pouvez recevoir des paiements en ligne.</div>
+                    </div>
+                </div>
+                <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:.83rem;color:var(--text-sec);margin-bottom:16px">
+                    💡 Activez le paiement en ligne ou l'acompte par prestation dans <strong>Mes Prestations → modifier</strong>
+                </div>
+                <div style="font-size:.78rem;color:var(--text-muted)">SalonPro prélève 2,5% de frais plateforme sur chaque paiement en ligne.</div>
+            `;
+        } else {
+            body.innerHTML = `
+                <p style="font-size:.9rem;color:var(--text-sec);margin-bottom:16px">
+                    Connectez votre compte Stripe pour <strong>recevoir des paiements en ligne</strong> et activer les acomptes anti-no-show directement sur votre page de réservation.
+                </p>
+                <ul style="font-size:.85rem;color:var(--text-muted);margin:0 0 20px 0;padding-left:1.2em;line-height:1.9">
+                    <li>L'argent arrive <strong>directement</strong> sur votre compte bancaire</li>
+                    <li>Acompte configurable par prestation (montant fixe ou %)</li>
+                    <li>Frais plateforme : 2,5% sur chaque transaction</li>
+                </ul>
+                <button class="btn btn-primary" onclick="stripeConnectOnboard()" style="width:100%;justify-content:center">
+                    🔗 Connecter mon compte Stripe
+                </button>
+                ${d.accountId ? `<div style="margin-top:10px;font-size:.78rem;color:var(--text-muted);text-align:center">Compte créé, en attente de validation Stripe</div>` : ''}
+            `;
+        }
+    } catch (e) {
+        body.innerHTML = `<div style="color:var(--danger);font-size:.85rem">Erreur de chargement</div>`;
+    }
+}
+
+async function stripeConnectOnboard() {
+    try {
+        const res = await apiFetch(`${API}/api/barber/stripe/connect/onboard`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success && data.data?.url) {
+            window.location.href = data.data.url;
+        } else {
+            showToast(data.error || 'Erreur Stripe', 'error');
+        }
+    } catch (e) {
+        showToast('Erreur de connexion', 'error');
+    }
+}
+
 async function loadSettings() {
     try {
         const res = await apiFetch(`${API}/api/barber/salon/${salonId}`);
@@ -997,6 +1114,7 @@ async function loadSettings() {
         const salon = data.data || {};
         currentSalon = salon;
         loadSMSStatus(); // load SMS credits alongside settings
+        loadStripeConnect(); // load Stripe Connect status
 
         const logoHtml = salon.logo
             ? `<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px"><img src="${salon.logo}" style="width:80px;height:80px;object-fit:cover;border-radius:14px;border:2px solid var(--border)"><div><div style="font-weight:600;margin-bottom:4px">Logo actuel</div><button class="btn btn-danger btn-sm" onclick="deleteLogo()">🗑 Supprimer</button></div></div>`
@@ -1252,6 +1370,14 @@ async function loadSettings() {
                         <button class="btn btn-primary btn-sm" onclick="addClosedDate()" style="white-space:nowrap">+ Ajouter</button>
                     </div>
                     <div id="closedDatesList">${renderClosedDates(salon.closedDates || [])}</div>
+                </div>
+            </div>
+
+            <!-- PAIEMENTS EN LIGNE -->
+            <div class="card" style="margin-bottom:20px" id="stripeConnectCard">
+                <div class="card-header"><h3>💳 Paiements en ligne</h3></div>
+                <div class="card-body" id="stripeConnectBody">
+                    <div style="text-align:center;color:var(--text-muted);font-size:.85rem">Chargement…</div>
                 </div>
             </div>
 
@@ -1707,13 +1833,19 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('appScreen').style.display = 'flex';
             initApp();
 
-            // Handle SMS credit purchase redirect
+            // Handle URL redirects
             const urlP = new URLSearchParams(window.location.search);
             if (urlP.get('sms_success') === '1') {
                 window.history.replaceState({}, '', '/pro');
                 setTimeout(() => { showPage('settings'); showToast('✅ Crédits SMS ajoutés !'); }, 500);
             } else if (urlP.get('sms_cancel') === '1') {
                 window.history.replaceState({}, '', '/pro');
+            } else if (urlP.get('stripe_connect') === 'success') {
+                window.history.replaceState({}, '', '/pro');
+                setTimeout(() => { showPage('settings'); showToast('✅ Stripe connecté ! Votre compte bancaire est lié.'); }, 500);
+            } else if (urlP.get('stripe_connect') === 'refresh') {
+                window.history.replaceState({}, '', '/pro');
+                setTimeout(() => { showPage('settings'); showToast('Connexion Stripe à finaliser — relancez le processus.', 'error'); }, 500);
             }
         } catch (e) {
             console.error('Session restore failed', e);

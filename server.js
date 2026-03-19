@@ -1276,6 +1276,32 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
         const session = event.data.object;
         const salonId = session.metadata?.salonId;
 
+        // ---- Booking payment ----
+        if (session.metadata?.type === 'booking' && session.metadata?.bookingId) {
+            const bookingId = session.metadata.bookingId;
+            const amountPaid = parseFloat(session.metadata.amountPaid || '0');
+            const paymentMode = session.metadata.paymentMode;
+            const paymentStatus = paymentMode === 'full_online' ? 'fully_paid' : 'deposit_paid';
+            await db.updateBooking(bookingId, {
+                status: 'confirmed',
+                paymentStatus,
+                amountPaid,
+                stripeSessionId: session.id,
+            });
+            console.log(`✅ Booking ${bookingId} confirmé via paiement (${paymentStatus}, ${amountPaid} CHF)`);
+
+            // Envoie l'email de confirmation
+            const booking = await db.findBookingById ? db.findBookingById(bookingId) : null;
+            const salon2 = salonId ? await db.findSalonById(salonId) : null;
+            if (booking && salon2 && booking.clientEmail) {
+                const baseUrl2 = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+                const cancelUrl2 = booking.cancelToken ? `${baseUrl2}/cancel/${booking.cancelToken}` : null;
+                sendBookingConfirmation(booking, salon2, cancelUrl2);
+            }
+            json(res, 200, { received: true });
+            return;
+        }
+
         // ---- SMS Credits purchase ----
         if (session.metadata?.type === 'sms_credits' && salonId) {
             const credits = parseInt(session.metadata.credits || '0', 10);
@@ -1325,7 +1351,97 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
         }
     }
 
+    // ---- Booking payment confirmed ----
+    if (event.type === 'checkout.session.completed') {
+        // (handled above, but also catch booking type here in case of duplicate handling)
+    } else if (event.type === 'account.updated') {
+        const account = event.data.object;
+        const salons = await db.findSalons({ 'stripeConnect.accountId': account.id });
+        if (salons.length > 0) {
+            const upd = {
+                'stripeConnect.chargesEnabled': account.charges_enabled,
+                'stripeConnect.payoutsEnabled': account.payouts_enabled,
+            };
+            if (account.charges_enabled && account.payouts_enabled) upd['stripeConnect.status'] = 'connected';
+            await db.updateSalon(salons[0]._id, upd);
+            console.log(`🔗 Stripe Connect ${account.id} updated (charges: ${account.charges_enabled})`);
+        }
+    }
+
     json(res, 200, { received: true });
+});
+
+// ==========================
+//  STRIPE CONNECT (paiements par salon)
+// ==========================
+
+// 1. Onboarding — crée un compte Connect Express et renvoie le lien
+route('POST', '/api/barber/stripe/connect/onboard', async (req, res) => {
+    if (!stripe) return json(res, 500, { success: false, error: 'Stripe non configuré' });
+    const user = verifyToken(req);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const salon = await db.findSalonById(user.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    try {
+        let accountId = salon.stripeConnect?.accountId;
+        if (!accountId) {
+            const account = await stripe.accounts.create({
+                type: 'express',
+                country: 'CH',
+                default_currency: 'chf',
+                email: salon.email || undefined,
+                metadata: { salonId: salon._id, salonName: salon.name }
+            });
+            accountId = account.id;
+            await db.updateSalon(salon._id, {
+                'stripeConnect.accountId': accountId,
+                'stripeConnect.status': 'pending'
+            });
+        }
+        const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+        const link = await stripe.accountLinks.create({
+            account: accountId,
+            refresh_url: `${baseUrl}/pro?stripe_connect=refresh`,
+            return_url: `${baseUrl}/pro?stripe_connect=success`,
+            type: 'account_onboarding',
+        });
+        json(res, 200, { success: true, data: { url: link.url } });
+    } catch (err) {
+        console.error('Stripe Connect onboard error:', err.message);
+        json(res, 500, { success: false, error: err.message });
+    }
+});
+
+// 2. Status — vérifie si le compte Connect est actif
+route('GET', '/api/barber/stripe/connect/status', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const salon = await db.findSalonById(user.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const accountId = salon.stripeConnect?.accountId;
+    if (!accountId || !stripe) return json(res, 200, { success: true, data: { connected: false } });
+
+    try {
+        const account = await stripe.accounts.retrieve(accountId);
+        const connected = account.charges_enabled && account.payouts_enabled;
+        if (connected && salon.stripeConnect?.status !== 'connected') {
+            await db.updateSalon(salon._id, {
+                'stripeConnect.status': 'connected',
+                'stripeConnect.chargesEnabled': true,
+                'stripeConnect.payoutsEnabled': true,
+            });
+        }
+        json(res, 200, { success: true, data: {
+            connected,
+            chargesEnabled: account.charges_enabled,
+            payoutsEnabled: account.payouts_enabled,
+            accountId,
+        }});
+    } catch (err) {
+        json(res, 200, { success: true, data: { connected: false } });
+    }
 });
 
 // ==========================
@@ -1396,6 +1512,85 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     // SMS notification to owner (if toggle on + ownerPhone configured)
     if (salon.smsSettings?.ownerNotification && salon.smsSettings?.ownerPhone) {
         sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone);
+    }
+});
+
+// Paiement en ligne avant réservation — crée booking pending + session Stripe
+route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
+    if (!stripe) return json(res, 500, { success: false, error: 'Stripe non configuré' });
+    const salon = await db.findSalonBySlug(params.slug);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const connectId = salon.stripeConnect?.accountId;
+    if (!connectId || salon.stripeConnect?.status !== 'connected') {
+        return json(res, 400, { success: false, error: 'Paiement en ligne non activé pour ce salon' });
+    }
+
+    const body = await parseBody(req);
+    const service = (salon.services || []).find(s => s.name === body.serviceName && s.active !== false);
+    if (!service) return json(res, 404, { success: false, error: 'Service non trouvé' });
+
+    const paymentMode = service.paymentMode || 'none';
+    if (paymentMode === 'none') return json(res, 400, { success: false, error: 'Pas de paiement en ligne pour ce service' });
+
+    // Calcule le montant à encaisser
+    let amountCHF = service.price;
+    if (paymentMode === 'deposit') {
+        amountCHF = service.depositType === 'percent'
+            ? Math.ceil(service.price * (service.depositAmount || 30) / 100)
+            : (service.depositAmount || 20);
+    }
+    const amountCents = Math.round(amountCHF * 100);
+
+    // Frais plateforme SalonPro (2.5% du prix total du service)
+    const platformFeeCents = Math.round(service.price * 100 * 2.5 / 100);
+
+    // Crée le booking en statut pending_payment
+    const client = await db.findOrCreateClient(salon._id, {
+        name: body.clientName, email: body.clientEmail, phone: body.clientPhone, price: 0
+    });
+    const booking = await db.createBooking({
+        salon: salon._id, client: client._id,
+        clientName: body.clientName, clientEmail: body.clientEmail, clientPhone: body.clientPhone,
+        serviceName: body.serviceName, serviceIcon: body.serviceIcon || '✂️',
+        price: service.price, duration: body.duration || service.duration || 30,
+        date: body.date, time: body.time, notes: body.notes || '',
+        employeeId: body.employeeId || null, employeeName: body.employeeName || null,
+        status: 'pending', source: 'website',
+        paymentStatus: 'pending_payment',
+        amountPaid: 0,
+        cancelToken: crypto.randomBytes(16).toString('hex'),
+    });
+
+    const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+    const label = paymentMode === 'deposit'
+        ? `Acompte — ${service.name}`
+        : service.name;
+    const desc = paymentMode === 'deposit'
+        ? `Acompte pour votre RDV du ${body.date} à ${body.time} chez ${salon.name}. Reste à payer sur place.`
+        : `Réservation du ${body.date} à ${body.time} chez ${salon.name}`;
+
+    try {
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            mode: 'payment',
+            line_items: [{ price_data: { currency: 'chf', product_data: { name: label, description: desc }, unit_amount: amountCents }, quantity: 1 }],
+            payment_intent_data: {
+                application_fee_amount: platformFeeCents,
+                transfer_data: { destination: connectId },
+            },
+            metadata: { type: 'booking', bookingId: booking._id, salonId: salon._id, paymentMode, amountPaid: String(amountCHF) },
+            customer_email: body.clientEmail || undefined,
+            success_url: `${baseUrl}/s/${salon.slug}?booking_success=true&booking_id=${booking._id}`,
+            cancel_url: `${baseUrl}/s/${salon.slug}?booking_cancel=true&booking_id=${booking._id}`,
+        });
+        console.log(`  💳 Paiement créé: ${body.clientName} - ${service.name} @ ${salon.name} (${amountCHF} CHF)`);
+        json(res, 200, { success: true, data: { checkoutUrl: session.url, bookingId: booking._id } });
+    } catch (err) {
+        // Annule le booking pending si Stripe échoue
+        await db.updateBooking(booking._id, { status: 'cancelled', paymentStatus: 'failed' }).catch(() => {});
+        console.error('Stripe checkout error:', err.message);
+        json(res, 500, { success: false, error: err.message });
     }
 });
 

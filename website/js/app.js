@@ -20,7 +20,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   initCounters();
   initScrollReveal();
   initBookingModal();
+
+  // Retour depuis Stripe Checkout (paiement booking)
+  const urlP = new URLSearchParams(window.location.search);
+  if (urlP.get('booking_success') === 'true') {
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(() => showPaymentSuccess(), 300);
+  } else if (urlP.get('booking_cancel') === 'true') {
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(() => showPaymentCancelled(), 300);
+  }
 });
+
+function showPaymentSuccess() {
+  const modal = document.getElementById('bookingModal');
+  if (!modal) return;
+  document.getElementById('bookingModalBody').style.display = 'none';
+  const stepsEl = document.querySelector('.booking-modal-steps');
+  const footerEl = document.querySelector('.booking-modal-footer');
+  if (stepsEl) stepsEl.style.display = 'none';
+  if (footerEl) footerEl.style.display = 'none';
+  const successView = document.getElementById('bmSuccessView');
+  if (successView) {
+    successView.style.display = 'flex';
+    successView.innerHTML = `
+      <div style="text-align:center;padding:2rem 1rem">
+        <div style="font-size:4rem;margin-bottom:1rem;animation:fadeInUp 0.5s ease-out">✅</div>
+        <h3 style="margin-bottom:0.5rem;font-size:1.3rem">Paiement reçu — Rendez-vous confirmé !</h3>
+        <p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:2rem">Vous recevrez une confirmation par email avec tous les détails.</p>
+        <button class="btn btn-primary" onclick="closeBooking()" style="margin:0 auto">Parfait, merci ! 🎉</button>
+      </div>
+    `;
+  }
+  modal.classList.add('active');
+}
+
+function showPaymentCancelled() {
+  // Paiement annulé — on ouvre juste le modal de réservation pour qu'ils réessaient
+  openBooking();
+}
 
 /* ============================================
    SALON BRANDING
@@ -394,19 +432,29 @@ function populateServices() {
     { name: 'Soin Capillaire', icon: '🧴', price: 30, duration: 35 },
     { name: 'Épilation', icon: '✨', price: 20, duration: 20 },
   ];
-  grid.innerHTML = services.map(s => `
-    <div class="bm-service-card" data-name="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">
+  grid.innerHTML = services.map(s => {
+    const pm = s.paymentMode || 'none';
+    let payBadge = '';
+    if (pm === 'deposit') {
+      const amt = s.depositType === 'percent' ? `${s.depositAmount || 30}%` : `${s.depositAmount || 20} CHF`;
+      payBadge = `<div style="font-size:.7rem;color:var(--color-primary);margin-top:3px;font-weight:500">💳 Acompte ${amt}</div>`;
+    } else if (pm === 'full_online') {
+      payBadge = `<div style="font-size:.7rem;color:var(--color-primary);margin-top:3px;font-weight:500">💳 Paiement en ligne</div>`;
+    }
+    return `
+    <div class="bm-service-card" data-name="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}" data-payment-mode="${pm}">
       <div class="bm-service-icon">${s.icon}</div>
       <div class="bm-service-name">${s.name}</div>
       <div class="bm-service-price">${s.price} CHF</div>
       <div class="bm-service-dur">${s.duration} min</div>
+      ${payBadge}
     </div>
-  `).join('');
+  `}).join('');
   grid.addEventListener('click', (ev) => {
     const card = ev.target.closest('.bm-service-card'); if (!card) return;
     grid.querySelectorAll('.bm-service-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
-    bmState.service = { name: card.dataset.name, icon: card.dataset.icon, price: parseInt(card.dataset.price), duration: parseInt(card.dataset.duration) };
+    bmState.service = { name: card.dataset.name, icon: card.dataset.icon, price: parseInt(card.dataset.price), duration: parseInt(card.dataset.duration), paymentMode: card.dataset.paymentMode || 'none' };
   });
 }
 
@@ -565,13 +613,32 @@ function renderBmTimeSlots() {
 function populateConfirmation() {
   document.getElementById('bmConfService').textContent = bmState.service?.name || '-';
   document.getElementById('bmConfDuration').textContent = bmState.service ? bmState.service.duration + ' min' : '-';
-  document.getElementById('bmConfTotal').textContent = bmState.service ? bmState.service.price + ' CHF' : '-';
+
+  // Affiche le bon montant selon le mode de paiement
+  const pm = bmState.service?.paymentMode || 'none';
+  const price = bmState.service?.price || 0;
+  let totalLabel = price + ' CHF';
+  if (pm === 'deposit') {
+    const s = bmState.service;
+    const amt = s.depositType === 'percent' ? Math.ceil(price * (s.depositAmount || 30) / 100) : (s.depositAmount || 20);
+    totalLabel = `${price} CHF (acompte ${amt} CHF en ligne, reste sur place)`;
+  } else if (pm === 'full_online') {
+    totalLabel = `${price} CHF (paiement en ligne)`;
+  }
+  document.getElementById('bmConfTotal').textContent = totalLabel;
+
   if (bmState.date) document.getElementById('bmConfDate').textContent = bmState.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   document.getElementById('bmConfTime').textContent = bmState.time || '-';
   const fn = document.getElementById('bmFirstName').value, ln = document.getElementById('bmLastName').value;
   document.getElementById('bmConfName').textContent = fn && ln ? `${fn} ${ln}` : '-';
   document.getElementById('bmConfEmail').textContent = document.getElementById('bmEmail').value || '-';
   document.getElementById('bmConfPhone').textContent = document.getElementById('bmPhone').value || '-';
+
+  // Change le bouton si paiement requis
+  const nextBtn = document.getElementById('bmNext');
+  if (nextBtn && (pm === 'deposit' || pm === 'full_online')) {
+    nextBtn.textContent = '💳 Payer maintenant';
+  }
 }
 
 /* ---- Submit ---- */
@@ -592,6 +659,24 @@ async function submitBooking() {
     notes: document.getElementById('bmNotes').value || '',
   };
 
+  const paymentMode = bmState.service?.paymentMode || 'none';
+
+  // Si paiement en ligne requis → Stripe Checkout
+  if (slug && (paymentMode === 'deposit' || paymentMode === 'full_online')) {
+    try {
+      const res = await fetch(`/api/salon/${slug}/payment/checkout`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(booking)
+      });
+      const data = await res.json();
+      if (data.success && data.data?.checkoutUrl) {
+        window.location.href = data.data.checkoutUrl;
+        return;
+      }
+      // Si erreur paiement (ex: Stripe non configuré), bascule sur réservation classique
+    } catch (e) { /* bascule sur flow classique */ }
+  }
+
+  // Flow standard (sans paiement en ligne)
   try {
     const endpoint = slug ? `/api/salon/${slug}/book` : '/api/bookings';
     await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(booking) });
@@ -600,7 +685,6 @@ async function submitBooking() {
     b.push(booking); localStorage.setItem('salonpro_bookings', JSON.stringify(b));
   }
 
-  // Show success inside same modal
   showBookingSuccess();
 }
 
