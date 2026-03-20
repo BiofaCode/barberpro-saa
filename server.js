@@ -642,6 +642,46 @@ route('GET', '/api/barber/salon/:salonId/stats', async (req, res, params) => {
     json(res, 200, { success: true, data: { todayBookings: todayBookings.length, todayRevenue, totalBookings: allBookings.length, totalClients: totalClientsCount, totalRevenue } });
 });
 
+// Analytics (last 6 months)
+route('GET', '/api/barber/salon/:salonId/analytics', async (req, res, params) => {
+    const user = verifyToken(req);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
+
+    const query = { salon: params.salonId };
+    if (user.role === 'employee') query.employeeId = user.employeeId;
+
+    const allBookings = await db.findBookings(query);
+
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const year = String(d.getFullYear());
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const label = d.toLocaleDateString('fr-FR', { month: 'short' });
+        const monthBookings = allBookings.filter(b => {
+            if (!b.date) return false;
+            const [y, mo] = b.date.split('-');
+            return y === year && mo === month;
+        });
+        const revenue = monthBookings.reduce((s, b) => s + (b.price || 0), 0);
+        const completed = monthBookings.filter(b => b.status === 'completed' || b.status === 'confirmed').length;
+        months.push({ label, bookings: monthBookings.length, completed, revenue });
+    }
+
+    // Top services
+    const svcMap = {};
+    allBookings.forEach(b => {
+        if (!b.serviceName) return;
+        if (!svcMap[b.serviceName]) svcMap[b.serviceName] = { name: b.serviceName, icon: b.serviceIcon || '✂️', count: 0, revenue: 0 };
+        svcMap[b.serviceName].count++;
+        svcMap[b.serviceName].revenue += b.price || 0;
+    });
+    const topServices = Object.values(svcMap).sort((a, b) => b.count - a.count).slice(0, 5);
+
+    json(res, 200, { success: true, data: { months, topServices } });
+});
+
 // Services
 route('GET', '/api/barber/salon/:salonId/services', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
@@ -874,6 +914,26 @@ route('DELETE', '/api/barber/salon/:salonId/employees/:empId', async (req, res, 
     json(res, 200, { success: true, message: 'Membre supprimé' });
 });
 
+route('PUT', '/api/barber/salon/:salonId/employees/:empId/password', async (req, res, params) => {
+    const user = verifyToken(req);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
+    if (user.role === 'employee' && user.employeeId !== params.empId) {
+        return json(res, 403, { success: false, error: 'Non autorisé' });
+    }
+    const url = new URL(req.url, `http://localhost`);
+    const role = url.searchParams.get('role');
+    const body = await parseBody(req);
+    if (!body.password || body.password.length < 6) {
+        return json(res, 400, { success: false, error: 'Mot de passe trop court (min 6 caractères)' });
+    }
+    if (role === 'owner') {
+        await db.updateOwner(params.empId, { password: body.password });
+    } else {
+        await db.updateEmployee(params.empId, { password: body.password });
+    }
+    json(res, 200, { success: true, message: 'Mot de passe mis à jour' });
+});
+
 route('PUT', '/api/barber/salon/:salonId/employees/:empId/hours', async (req, res, params) => {
     const body = await parseBody(req);
     const salon = await db.findSalonById(params.salonId);
@@ -896,12 +956,27 @@ route('GET', '/api/barber/salon/:salonId/bookings', async (req, res, params) => 
     const user = verifyToken(req);
     const url = new URL(req.url, `http://localhost`);
     const dateFilter = url.searchParams.get('date');
+    const fromFilter = url.searchParams.get('from');
+    const toFilter = url.searchParams.get('to');
+    const statusFilter = url.searchParams.get('status');
+    const searchFilter = url.searchParams.get('search');
     const query = { salon: params.salonId };
     if (dateFilter) query.date = dateFilter;
+    if (statusFilter) query.status = statusFilter;
     if (user?.role === 'employee') {
         query.employeeId = user.employeeId;
     }
-    const bookings = await db.findBookings(query);
+    let bookings = await db.findBookings(query);
+    if (fromFilter) bookings = bookings.filter(b => b.date >= fromFilter);
+    if (toFilter) bookings = bookings.filter(b => b.date <= toFilter);
+    if (searchFilter) {
+        const s = searchFilter.toLowerCase();
+        bookings = bookings.filter(b =>
+            (b.clientName || '').toLowerCase().includes(s) ||
+            (b.serviceName || '').toLowerCase().includes(s) ||
+            (b.clientPhone || '').includes(s)
+        );
+    }
     json(res, 200, { success: true, data: bookings });
 });
 
