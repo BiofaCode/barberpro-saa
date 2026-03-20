@@ -1,183 +1,212 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0A0A14">
     <title>SalonPro | Espace Pro</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/pro/css/barber.css">
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💇</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💇</text></svg>">
 </head>
-
 <body>
-    <!-- Login Screen -->
-    <div id="loginScreen" class="login-screen">
-        <div class="login-card">
-            <div class="login-logo">
-                <div class="login-logo-icon">✨</div>
-                <h1>Salon<span>Pro</span></h1>
-                <p>Espace professionnel</p>
-            </div>
-            <div id="loginError" class="login-error" style="display:none"></div>
-            <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" class="form-input form-input-full" id="loginEmail" placeholder="votre@email.com">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Mot de passe</label>
-                <input type="password" class="form-input form-input-full" id="loginPassword" placeholder="••••••••">
-            </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doLogin()">Se connecter</button>
-            <p style="text-align:center;margin-top:14px;font-size:13px">
-                <button type="button" class="btn-link-forgot" onclick="openForgotModal()">Mot de passe oublié ?</button>
-            </p>
+
+<!-- ======== LOGIN ======== -->
+<div id="loginScreen" class="login-screen">
+    <div class="login-card">
+        <div class="login-logo">
+            <div class="login-logo-icon">✨</div>
+            <h1>Salon<span>Pro</span></h1>
+            <p>Espace professionnel</p>
         </div>
+        <div id="loginError" class="login-error" style="display:none"></div>
+        <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" inputmode="email" autocomplete="email" class="form-input" id="loginEmail" placeholder="votre@email.com">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Mot de passe</label>
+            <input type="password" autocomplete="current-password" class="form-input" id="loginPassword" placeholder="••••••••">
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doLogin()">Se connecter</button>
+        <p style="text-align:center;margin-top:14px;font-size:13px">
+            <button type="button" class="btn-link-forgot" onclick="openForgotModal()">Mot de passe oublié ?</button>
+        </p>
     </div>
+</div>
 
-    <!-- Forgot Password Modal -->
-    <div id="forgotModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;padding:20px">
-        <div style="background:#12121E;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:36px;width:100%;max-width:400px;box-shadow:0 24px 80px rgba(0,0,0,.6)">
-            <h2 style="font-size:20px;margin-bottom:8px">🔐 Mot de passe oublié</h2>
-            <p style="font-size:13px;color:#5A5A66;margin-bottom:20px;line-height:1.6">Entrez votre email. Si un compte existe, vous recevrez un lien valable 1 heure.</p>
-            <div id="forgotMsg" style="display:none;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:14px"></div>
-            <input type="email" id="forgotEmail" placeholder="votre@email.com"
-                style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#1A1A2E;color:#E8E6E3;font-size:14px;font-family:inherit;margin-bottom:12px"
-                onkeydown="if(event.key==='Enter')submitForgotPassword()">
-            <button type="button" id="forgotSubmitBtn" onclick="submitForgotPassword()"
-                style="width:100%;padding:13px;border-radius:12px;background:#6366F1;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit">
-                Envoyer le lien
-            </button>
-            <button type="button" onclick="closeForgotModal()"
-                style="width:100%;padding:10px;margin-top:8px;border-radius:12px;background:transparent;color:#5A5A66;font-size:13px;border:1px solid rgba(255,255,255,.06);cursor:pointer;font-family:inherit">
-                Annuler
+<!-- ======== FORGOT PASSWORD MODAL ======== -->
+<div id="forgotModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:flex-end;justify-content:center">
+    <div style="background:#12121E;border:1px solid rgba(255,255,255,.08);border-radius:22px 22px 0 0;padding:28px 24px 32px;width:100%;max-width:480px;box-shadow:0 -8px 40px rgba(0,0,0,.6)">
+        <div style="width:36px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin:0 auto 20px"></div>
+        <h2 style="font-size:19px;margin-bottom:8px">🔐 Mot de passe oublié</h2>
+        <p style="font-size:13px;color:#5A5A66;margin-bottom:18px;line-height:1.6">Entrez votre email. Si un compte existe, vous recevrez un lien valable 1 heure.</p>
+        <div id="forgotMsg" style="display:none;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:14px"></div>
+        <input type="email" inputmode="email" autocomplete="email" id="forgotEmail" placeholder="votre@email.com"
+            style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#1A1A2E;color:#E8E6E3;font-size:15px;font-family:inherit;margin-bottom:12px;min-height:48px"
+            onkeydown="if(event.key==='Enter')submitForgotPassword()">
+        <button type="button" id="forgotSubmitBtn" onclick="submitForgotPassword()"
+            style="width:100%;padding:14px;border-radius:12px;background:#6366F1;color:#fff;font-weight:600;font-size:15px;border:none;cursor:pointer;font-family:inherit;min-height:48px">
+            Envoyer le lien
+        </button>
+        <button type="button" onclick="closeForgotModal()"
+            style="width:100%;padding:12px;margin-top:8px;border-radius:12px;background:transparent;color:#5A5A66;font-size:14px;border:1px solid rgba(255,255,255,.06);cursor:pointer;font-family:inherit;min-height:44px">
+            Annuler
+        </button>
+    </div>
+</div>
+
+<!-- ======== RESET PASSWORD MODAL ======== -->
+<div id="resetModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:flex-end;justify-content:center">
+    <div style="background:#12121E;border:1px solid rgba(255,255,255,.08);border-radius:22px 22px 0 0;padding:28px 24px 32px;width:100%;max-width:480px;box-shadow:0 -8px 40px rgba(0,0,0,.6)">
+        <div style="width:36px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;margin:0 auto 20px"></div>
+        <h2 style="font-size:19px;margin-bottom:8px">🔑 Nouveau mot de passe</h2>
+        <p style="font-size:13px;color:#5A5A66;margin-bottom:18px">Choisissez un nouveau mot de passe (min. 6 caractères).</p>
+        <div id="resetMsg" style="display:none;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:14px"></div>
+        <input type="password" autocomplete="new-password" id="resetPassword" placeholder="Nouveau mot de passe"
+            style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#1A1A2E;color:#E8E6E3;font-size:15px;font-family:inherit;margin-bottom:10px;min-height:48px">
+        <input type="password" autocomplete="new-password" id="resetPasswordConfirm" placeholder="Confirmer le mot de passe"
+            style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#1A1A2E;color:#E8E6E3;font-size:15px;font-family:inherit;margin-bottom:14px;min-height:48px"
+            onkeydown="if(event.key==='Enter')submitResetPassword()">
+        <button type="button" id="resetSubmitBtn" onclick="submitResetPassword()"
+            style="width:100%;padding:14px;border-radius:12px;background:#6366F1;color:#fff;font-weight:600;font-size:15px;border:none;cursor:pointer;font-family:inherit;min-height:48px">
+            Enregistrer le mot de passe
+        </button>
+    </div>
+</div>
+
+<!-- ======== MAIN APP ======== -->
+<div id="appScreen" class="app" style="display:none">
+
+    <!-- Sidebar overlay (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar (full nav — mobile drawer / desktop fixed) -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">✨</span>
+                <span class="logo-text" id="sidebarSalonName">Mon <span>Salon</span></span>
+            </div>
+            <span class="logo-badge">PRO</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a class="nav-item active" onclick="showPage('dashboard');closeSidebar()">
+                <span class="nav-icon">📊</span>Tableau de bord
+            </a>
+            <a class="nav-item" onclick="showPage('bookings');closeSidebar()">
+                <span class="nav-icon">📅</span>Rendez-vous
+            </a>
+            <a class="nav-item" onclick="showPage('clients');closeSidebar()">
+                <span class="nav-icon">👥</span>Mes Clients
+            </a>
+            <a class="nav-item" onclick="showPage('employees');closeSidebar()">
+                <span class="nav-icon">🤝</span>Mon Équipe
+            </a>
+            <a class="nav-item" onclick="showPage('services');closeSidebar()">
+                <span class="nav-icon">✨</span>Prestations
+            </a>
+            <a class="nav-item" onclick="showPage('settings');closeSidebar()">
+                <span class="nav-icon">⚙️</span>Mon Salon
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">P</div>
+                <div>
+                    <div class="user-name" id="userName">Pro</div>
+                    <div class="user-role" id="userRole">Propriétaire</div>
+                </div>
+            </div>
+            <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px" onclick="doLogout()">
+                🚪 Déconnexion
             </button>
         </div>
-    </div>
+    </aside>
 
-    <!-- Reset Password Modal (shown when ?reset_token= in URL) -->
-    <div id="resetModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);align-items:center;justify-content:center;padding:20px">
-        <div style="background:#12121E;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:36px;width:100%;max-width:400px;box-shadow:0 24px 80px rgba(0,0,0,.6)">
-            <h2 style="font-size:20px;margin-bottom:8px">🔑 Nouveau mot de passe</h2>
-            <p style="font-size:13px;color:#5A5A66;margin-bottom:20px">Choisissez un nouveau mot de passe (min. 6 caractères).</p>
-            <div id="resetMsg" style="display:none;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:14px"></div>
-            <input type="password" id="resetPassword" placeholder="Nouveau mot de passe"
-                style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#1A1A2E;color:#E8E6E3;font-size:14px;font-family:inherit;margin-bottom:10px">
-            <input type="password" id="resetPasswordConfirm" placeholder="Confirmer le mot de passe"
-                style="width:100%;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:#1A1A2E;color:#E8E6E3;font-size:14px;font-family:inherit;margin-bottom:12px"
-                onkeydown="if(event.key==='Enter')submitResetPassword()">
-            <button type="button" id="resetSubmitBtn" onclick="submitResetPassword()"
-                style="width:100%;padding:13px;border-radius:12px;background:#6366F1;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit">
-                Enregistrer le mot de passe
-            </button>
+    <!-- Main content -->
+    <main class="main">
+
+        <!-- Topbar -->
+        <div class="topbar">
+            <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+            <span class="topbar-title" id="topbarTitle">Tableau de bord</span>
+            <div style="flex:1"></div>
+            <button class="btn btn-outline btn-sm" onclick="openWebsite()" style="white-space:nowrap">🌐 Mon site</button>
         </div>
-    </div>
 
-    <!-- Main App (hidden until login) -->
-    <div id="appScreen" class="app" style="display:none">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <span class="logo-icon">✨</span>
-                    <span class="logo-text" id="sidebarSalonName">Mon <span>Salon</span></span>
-                </div>
-                <span class="logo-badge">PRO</span>
-            </div>
-            <nav class="sidebar-nav">
-                <a class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>Tableau de
-                    bord</a>
-                <a class="nav-item" onclick="showPage('bookings')"><span class="nav-icon">📅</span>Rendez-vous</a>
-                <a class="nav-item" onclick="showPage('clients')"><span class="nav-icon">👥</span>Mes Clients</a>
-                <a class="nav-item" onclick="showPage('employees')"><span class="nav-icon">🤝</span>Mon Équipe</a>
-                <a class="nav-item" onclick="showPage('services')"><span class="nav-icon">✨</span>Prestations</a>
-                <a class="nav-item" onclick="showPage('settings')"><span class="nav-icon">⚙️</span>Mon Salon</a>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="user-info">
-                    <div class="user-avatar" id="userAvatar">P</div>
-                    <div>
-                        <div class="user-name" id="userName">Pro</div>
-                        <div class="user-role" id="userRole">Propriétaire</div>
-                    </div>
-                </div>
-                <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:12px" onclick="doLogout()">🚪
-                    Déconnexion</button>
-            </div>
-        </aside>
+        <!-- Pages -->
+        <div class="content">
 
-        <main class="main">
-            <div class="topbar">
-                <button class="hamburger" onclick="toggleSidebar()">☰</button>
-                <span class="topbar-title" id="topbarTitle">Tableau de bord</span>
-                <div style="flex:1"></div>
-                <button class="btn btn-outline btn-sm" onclick="openWebsite()">🌐 Voir mon site</button>
-            </div>
+            <!-- ── Dashboard ── -->
+            <div class="page active" id="page-dashboard">
+                <div class="stats-row" id="dashStats"></div>
 
-            <div class="content">
-                <!-- Dashboard -->
-                <div class="page active" id="page-dashboard">
-                    <div class="stats-row" id="dashStats"></div>
-                    <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:20px" id="dashCharts">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>📈 CA mensuel (6 mois)</h3>
-                            </div>
-                            <div class="card-body" id="chartRevenue" style="padding:16px 8px 8px">
-                                <div class="empty-state" style="min-height:120px"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement...</div></div>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>✂️ Top prestations</h3>
-                            </div>
-                            <div class="card-body" id="chartTopServices" style="padding:16px 8px 8px">
-                                <div class="empty-state" style="min-height:120px"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement...</div></div>
+                <div style="margin-top:16px;display:grid;gap:14px" id="dashCharts">
+                    <div class="card">
+                        <div class="card-header"><h3>📈 CA mensuel (6 mois)</h3></div>
+                        <div class="card-body" id="chartRevenue" style="padding:14px 10px 10px">
+                            <div class="empty-state" style="min-height:100px">
+                                <div class="empty-state-icon">⏳</div>
+                                <div class="empty-state-text">Chargement...</div>
                             </div>
                         </div>
                     </div>
-                    <div style="margin-top:20px">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3>📋 Rendez-vous du jour</h3>
-                            </div>
-                            <div class="card-body" id="todayBookings">
-                                <div class="empty-state">
-                                    <div class="empty-state-icon">📅</div>
-                                    <div class="empty-state-text">Chargement...</div>
-                                </div>
+                    <div class="card">
+                        <div class="card-header"><h3>✂️ Top prestations</h3></div>
+                        <div class="card-body" id="chartTopServices" style="padding:14px 16px 10px">
+                            <div class="empty-state" style="min-height:100px">
+                                <div class="empty-state-icon">⏳</div>
+                                <div class="empty-state-text">Chargement...</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bookings -->
-                <div class="page" id="page-bookings">
-                    <div class="page-header">
-                        <h2>📅 Rendez-vous</h2>
-                        <div style="display:flex;gap:8px">
-                            <button class="btn btn-primary btn-sm" onclick="showAddBooking()">+ Ajouter un RDV</button>
-                            <button class="btn btn-ghost btn-sm" onclick="exportBookingsCSV()" title="Exporter CSV">⬇️ CSV</button>
-                            <button class="btn btn-ghost btn-sm" onclick="loadBookings()">🔄</button>
+                <div style="margin-top:14px">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📋 Rendez-vous du jour</h3>
+                            <button class="btn btn-primary btn-sm" onclick="showPage('bookings');showAddBooking()">+ RDV</button>
+                        </div>
+                        <div class="card-body" id="todayBookings">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📅</div>
+                                <div class="empty-state-text">Chargement...</div>
+                            </div>
                         </div>
                     </div>
-                    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:flex-end">
-                        <div style="display:flex;flex-direction:column;gap:4px">
-                            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Recherche</label>
-                            <input type="text" id="bookingSearch" class="form-input" style="min-width:180px" placeholder="Nom, service..." oninput="applyBookingFilters()">
-                        </div>
-                        <div style="display:flex;flex-direction:column;gap:4px">
-                            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Du</label>
+                </div>
+            </div>
+
+            <!-- ── Bookings ── -->
+            <div class="page" id="page-bookings">
+                <div class="page-header">
+                    <h2>📅 Rendez-vous</h2>
+                    <div style="display:flex;gap:6px">
+                        <button class="btn btn-ghost btn-sm" onclick="exportBookingsCSV()" title="Export CSV">⬇️</button>
+                        <button class="btn btn-ghost btn-sm" onclick="loadBookings()" title="Rafraîchir">🔄</button>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters-bar">
+                    <input type="text" id="bookingSearch" class="form-input"
+                        placeholder="🔍  Chercher par nom, service, tél..." oninput="applyBookingFilters()"
+                        style="font-size:.9rem">
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <span class="filter-label">Du</span>
                             <input type="date" id="bookingFrom" class="form-input" onchange="applyBookingFilters()">
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:4px">
-                            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Au</label>
+                        <div class="filter-group">
+                            <span class="filter-label">Au</span>
                             <input type="date" id="bookingTo" class="form-input" onchange="applyBookingFilters()">
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:4px">
-                            <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Statut</label>
+                        <div class="filter-group">
+                            <span class="filter-label">Statut</span>
                             <select id="bookingStatus" class="form-input" onchange="applyBookingFilters()">
                                 <option value="">Tous</option>
                                 <option value="confirmed">Confirmé</option>
@@ -186,66 +215,96 @@
                                 <option value="cancelled">Annulé</option>
                             </select>
                         </div>
-                        <button class="btn btn-ghost btn-sm" onclick="resetBookingFilters()" style="align-self:flex-end">Réinitialiser</button>
                     </div>
-                    <div id="bookingsList">
-                        <div class="empty-state">
-                            <div class="empty-state-icon">📅</div>
-                            <div class="empty-state-text">Chargement...</div>
-                        </div>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-ghost btn-sm" onclick="resetBookingFilters()" style="flex:1">Réinitialiser</button>
+                        <button class="btn btn-primary btn-sm" onclick="showAddBooking()" style="flex:2">+ Ajouter un RDV</button>
                     </div>
                 </div>
 
-                <!-- Clients -->
-                <div class="page" id="page-clients">
-                    <div class="page-header">
-                        <h2>👥 Mes Clients</h2>
-                        <button class="btn btn-ghost btn-sm" onclick="exportClientsCSV()" title="Exporter CSV">⬇️ CSV</button>
+                <div id="bookingsList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📅</div>
+                        <div class="empty-state-text">Chargement...</div>
                     </div>
-                    <div id="clientsList"></div>
-                </div>
-
-                <!-- Employees -->
-                <div class="page" id="page-employees">
-                    <div class="page-header">
-                        <h2>💇 Mon Équipe</h2><button class="btn btn-primary btn-sm" onclick="showAddEmployee()">+
-                            Ajouter</button>
-                    </div>
-                    <div id="employeesList"></div>
-                </div>
-
-                <!-- Services -->
-                <div class="page" id="page-services">
-                    <div class="page-header">
-                        <h2>✨ Mes Prestations</h2><button class="btn btn-primary btn-sm" onclick="showAddService()">+
-                            Ajouter</button>
-                    </div>
-                    <div id="servicesList"></div>
-                </div>
-
-                <!-- Settings -->
-                <div class="page" id="page-settings">
-                    <div class="page-header">
-                        <h2>⚙️ Mon Salon</h2>
-                    </div>
-                    <div id="salonDetails"></div>
                 </div>
             </div>
-        </main>
-    </div>
 
-    <!-- Modal -->
-    <div class="modal-overlay" id="modal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3 id="modalTitle">Titre</h3><button class="modal-close" onclick="closeModal()">✕</button>
+            <!-- ── Clients ── -->
+            <div class="page" id="page-clients">
+                <div class="page-header">
+                    <h2>👥 Mes Clients</h2>
+                    <button class="btn btn-ghost btn-sm" onclick="exportClientsCSV()" title="Export CSV">⬇️ CSV</button>
+                </div>
+                <div id="clientsList"></div>
             </div>
-            <div class="modal-body" id="modalBody"></div>
-            <div class="modal-footer" id="modalFooter"></div>
+
+            <!-- ── Employees ── -->
+            <div class="page" id="page-employees">
+                <div class="page-header">
+                    <h2>🤝 Mon Équipe</h2>
+                    <button class="btn btn-primary btn-sm" onclick="showAddEmployee()">+ Ajouter</button>
+                </div>
+                <div id="employeesList"></div>
+            </div>
+
+            <!-- ── Services ── -->
+            <div class="page" id="page-services">
+                <div class="page-header">
+                    <h2>✨ Prestations</h2>
+                    <button class="btn btn-primary btn-sm" onclick="showAddService()">+ Ajouter</button>
+                </div>
+                <div id="servicesList"></div>
+            </div>
+
+            <!-- ── Settings ── -->
+            <div class="page" id="page-settings">
+                <div class="page-header"><h2>⚙️ Mon Salon</h2></div>
+                <div id="salonDetails"></div>
+            </div>
+
+        </div><!-- /content -->
+    </main><!-- /main -->
+
+    <!-- ======== BOTTOM NAV (mobile) ======== -->
+    <nav class="bottom-nav" id="bottomNav">
+        <button class="bottom-nav-item active" id="bnav-dashboard" onclick="showPage('dashboard')">
+            <span class="bottom-nav-icon">📊</span>
+            <span>Accueil</span>
+        </button>
+        <button class="bottom-nav-item" id="bnav-bookings" onclick="showPage('bookings')">
+            <span class="bottom-nav-icon">📅</span>
+            <span>RDV</span>
+        </button>
+        <!-- FAB central -->
+        <button class="bottom-nav-fab" onclick="showPage('bookings');showAddBooking()">
+            <div class="bottom-nav-fab-btn">+</div>
+            <span class="bottom-nav-fab-label">Nouveau</span>
+        </button>
+        <button class="bottom-nav-item" id="bnav-clients" onclick="showPage('clients')">
+            <span class="bottom-nav-icon">👥</span>
+            <span>Clients</span>
+        </button>
+        <button class="bottom-nav-item" id="bnav-settings" onclick="showPage('settings')">
+            <span class="bottom-nav-icon">⚙️</span>
+            <span>Salon</span>
+        </button>
+    </nav>
+
+</div><!-- /appScreen -->
+
+<!-- ======== MODAL ======== -->
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">Titre</h3>
+            <button class="modal-close" onclick="closeModal()">✕</button>
         </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-footer" id="modalFooter"></div>
     </div>
+</div>
 
-    <script src="/pro/js/barber.js"></script>
+<script src="/pro/js/barber.js"></script>
 </body>
-
 </html>

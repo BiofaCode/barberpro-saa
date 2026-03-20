@@ -125,16 +125,21 @@ function initApp() {
         const sidebarNav = document.querySelector('.sidebar-nav');
         if (isEmployee) {
             const linksToHide = ['dashboard', 'clients', 'employees', 'services', 'settings'];
-            linksToHide.forEach(pageId => {
-                const link = sidebarNav.querySelector(`a[onclick="showPage('${pageId}')"]`);
-                if (link) link.style.display = 'none';
+            Array.from(sidebarNav.querySelectorAll('a.nav-item')).forEach(link => {
+                const oc = link.getAttribute('onclick') || '';
+                if (linksToHide.some(p => oc.includes(`'${p}'`))) link.style.display = 'none';
+            });
+            // Also hide dashboard/clients/settings in bottom nav
+            ['bnav-dashboard', 'bnav-clients', 'bnav-settings'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
             });
             activatePage('bookings');
             setTimeout(loadBookings, 0);
         } else {
             Array.from(sidebarNav.querySelectorAll('a')).forEach(a => a.style.display = 'flex');
             activatePage('dashboard');
-            setTimeout(loadDashboard, 0); // defer after DOM paint
+            setTimeout(loadDashboard, 0);
         }
     }
 
@@ -196,9 +201,14 @@ function activatePage(page) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(`page-${page}`).classList.add('active');
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const navLink = document.querySelector(`.nav-item[onclick="showPage('${page}')"]`);
-    if (navLink) navLink.classList.add('active');
-    const titles = { dashboard: 'Tableau de bord', bookings: 'Rendez-vous', clients: 'Mes Clients', employees: 'Mon Équipe', services: 'Mes Prestations', settings: 'Mon Salon' };
+    Array.from(document.querySelectorAll('.nav-item')).forEach(n => {
+        if ((n.getAttribute('onclick') || '').includes(`'${page}'`)) n.classList.add('active');
+    });
+    // Update bottom nav
+    document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+    const bnavId = { dashboard: 'bnav-dashboard', bookings: 'bnav-bookings', clients: 'bnav-clients', settings: 'bnav-settings' };
+    if (bnavId[page]) document.getElementById(bnavId[page])?.classList.add('active');
+    const titles = { dashboard: 'Tableau de bord', bookings: 'Rendez-vous', clients: 'Mes Clients', employees: 'Mon Équipe', services: 'Prestations', settings: 'Mon Salon' };
     const titleEl = document.getElementById('topbarTitle');
     if (titleEl) titleEl.textContent = titles[page] || page;
 }
@@ -211,7 +221,7 @@ function openWebsite() {
     }
 }
 
-// ---- Pages (called from nav clicks only) ----
+// ---- Pages ----
 function showPage(page) {
     activatePage(page);
     if (page === 'dashboard') loadDashboard();
@@ -220,11 +230,22 @@ function showPage(page) {
     else if (page === 'employees') loadEmployees();
     else if (page === 'services') loadServices();
     else if (page === 'settings') loadSettings();
-    document.getElementById('sidebar').classList.remove('open');
 }
 
+// ---- Sidebar (mobile drawer) ----
 function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('open');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const isOpen = sidebar.classList.toggle('open');
+    overlay.classList.toggle('active', isOpen);
+    // Prevent body scroll when drawer is open
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+}
+
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay')?.classList.remove('active');
+    document.body.style.overflow = '';
 }
 
 // ---- Analytics Charts ----
