@@ -847,6 +847,10 @@ body {
         flex-direction: column;
         gap: 0;
     }
+
+    #dashCharts {
+        grid-template-columns: 1fr !important;
+    }
 }
 
 ::-webkit-scrollbar {

@@ -227,18 +227,64 @@ function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
 }
 
+// ---- Analytics Charts ----
+function renderRevenueChart(months) {
+    const el = document.getElementById('chartRevenue');
+    if (!el) return;
+    if (!months.length) { el.innerHTML = '<div class="empty-state" style="min-height:120px"><div class="empty-state-icon">📊</div><div class="empty-state-text">Pas encore de données</div></div>'; return; }
+    const maxRev = Math.max(...months.map(m => m.revenue), 1);
+    const bars = months.map(m => {
+        const pct = Math.round((m.revenue / maxRev) * 100);
+        return `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0">
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600">${m.revenue > 0 ? m.revenue + ' CHF' : ''}</div>
+            <div style="width:100%;background:rgba(255,255,255,.05);border-radius:6px;height:100px;position:relative;display:flex;align-items:flex-end">
+                <div style="width:100%;background:linear-gradient(180deg,#C8973A,#A07D4A);border-radius:6px;height:${Math.max(pct, 2)}%;transition:height .4s ease"></div>
+            </div>
+            <div style="font-size:11px;color:var(--text-sec);text-align:center">${m.label}</div>
+            <div style="font-size:10px;color:var(--text-muted)">${m.bookings} RDV</div>
+        </div>`;
+    }).join('');
+    el.innerHTML = `<div style="display:flex;gap:8px;align-items:flex-end;padding:0 4px">${bars}</div>`;
+}
+
+function renderTopServices(services) {
+    const el = document.getElementById('chartTopServices');
+    if (!el) return;
+    if (!services.length) { el.innerHTML = '<div class="empty-state" style="min-height:120px"><div class="empty-state-icon">✂️</div><div class="empty-state-text">Pas encore de données</div></div>'; return; }
+    const maxCount = Math.max(...services.map(s => s.count), 1);
+    el.innerHTML = services.map(s => {
+        const pct = Math.round((s.count / maxCount) * 100);
+        return `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="font-size:18px;width:28px;text-align:center">${s.icon}</div>
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+                    <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${s.name}</span>
+                    <span style="color:var(--text-muted)">${s.count}× · ${s.revenue} CHF</span>
+                </div>
+                <div style="height:6px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden">
+                    <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#C8973A,#A07D4A);border-radius:4px;transition:width .4s ease"></div>
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
 // ---- Dashboard ----
 async function loadDashboard(_retry = 0) {
     try {
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 8000); // 8s timeout (Render cold start)
-        const [statsRes, bookingsRes] = await Promise.all([
+        const [statsRes, bookingsRes, analyticsRes] = await Promise.all([
             apiFetch(`${API}/api/barber/salon/${salonId}/stats`, { signal: ctrl.signal }),
-            apiFetch(`${API}/api/barber/salon/${salonId}/bookings?date=${todayStr()}`, { signal: ctrl.signal })
+            apiFetch(`${API}/api/barber/salon/${salonId}/bookings?date=${todayStr()}`, { signal: ctrl.signal }),
+            apiFetch(`${API}/api/barber/salon/${salonId}/analytics`, { signal: ctrl.signal })
         ]);
         clearTimeout(t);
         const stats = (await statsRes.json()).data || {};
         const bookings = (await bookingsRes.json()).data || [];
+        const analyticsData = (await analyticsRes.json()).data || { months: [], topServices: [] };
 
         // Subscription banner
         let subBanner = '';
@@ -294,6 +340,10 @@ async function loadDashboard(_retry = 0) {
             </div>
         `;
 
+        // Analytics charts
+        renderRevenueChart(analyticsData.months || []);
+        renderTopServices(analyticsData.topServices || []);
+
         const container = document.getElementById('todayBookings');
         if (bookings.length === 0) {
             container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-text">Aucun rendez-vous aujourd\'hui</div></div>';
@@ -326,6 +376,8 @@ async function loadDashboard(_retry = 0) {
 }
 
 // ---- Bookings ----
+let _allBookings = [];
+
 async function loadBookings(_retry = 0) {
     try {
         const ctrl = new AbortController();
@@ -333,26 +385,8 @@ async function loadBookings(_retry = 0) {
         const res = await apiFetch(`${API}/api/barber/salon/${salonId}/bookings`, { signal: ctrl.signal });
         clearTimeout(t);
         const data = await res.json();
-        const bookings = data.data || [];
-
-        const container = document.getElementById('bookingsList');
-        if (bookings.length === 0) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-text">Aucun rendez-vous</div></div>';
-        } else {
-            container.innerHTML = '<div class="data-grid">' + bookings.map(b => `
-                <div class="data-card">
-                    <div class="data-card-icon">${b.serviceIcon || '✂️'}</div>
-                    <div class="data-card-info">
-                        <div class="data-card-name">${b.clientName}</div>
-                        <div class="data-card-sub">${b.serviceName} · ${b.date} à ${b.time} · ${b.duration || 30}min${b.employeeName ? ' · ' + b.employeeName : ''}</div>
-                    </div>
-                    <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
-                    <div class="data-card-right">
-                        <div class="data-card-value">${b.price || 0} CHF</div>
-                    </div>
-                </div>
-            `).join('') + '</div>';
-        }
+        _allBookings = data.data || [];
+        renderBookingsList(_allBookings);
     } catch (e) {
         console.error('Bookings error:', e);
         if (_retry < 2) {
@@ -364,6 +398,85 @@ async function loadBookings(_retry = 0) {
             document.getElementById('bookingsList').innerHTML =
                 `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadBookings()">Réessayer</button></div></div>`;
         }
+    }
+}
+
+function renderBookingsList(bookings) {
+    const container = document.getElementById('bookingsList');
+    if (bookings.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-text">Aucun rendez-vous correspondant</div></div>';
+        return;
+    }
+    container.innerHTML = '<div class="data-grid">' + bookings.map(b => `
+        <div class="data-card">
+            <div class="data-card-icon">${b.serviceIcon || '✂️'}</div>
+            <div class="data-card-info">
+                <div class="data-card-name">${b.clientName}</div>
+                <div class="data-card-sub">${b.serviceName} · ${b.date} à ${b.time} · ${b.duration || 30}min${b.employeeName ? ' · ' + b.employeeName : ''}</div>
+            </div>
+            <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
+            <div class="data-card-right">
+                <div class="data-card-value">${b.price || 0} CHF</div>
+            </div>
+        </div>
+    `).join('') + '</div>';
+}
+
+function applyBookingFilters() {
+    const search = (document.getElementById('bookingSearch')?.value || '').toLowerCase();
+    const from = document.getElementById('bookingFrom')?.value || '';
+    const to = document.getElementById('bookingTo')?.value || '';
+    const status = document.getElementById('bookingStatus')?.value || '';
+
+    let filtered = _allBookings;
+    if (search) filtered = filtered.filter(b =>
+        (b.clientName || '').toLowerCase().includes(search) ||
+        (b.serviceName || '').toLowerCase().includes(search) ||
+        (b.clientPhone || '').includes(search)
+    );
+    if (from) filtered = filtered.filter(b => b.date >= from);
+    if (to) filtered = filtered.filter(b => b.date <= to);
+    if (status) filtered = filtered.filter(b => (b.status || 'confirmed') === status);
+    renderBookingsList(filtered);
+}
+
+function resetBookingFilters() {
+    const fields = ['bookingSearch', 'bookingFrom', 'bookingTo', 'bookingStatus'];
+    fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    renderBookingsList(_allBookings);
+}
+
+// ---- CSV Export ----
+function downloadCSV(filename, rows) {
+    const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+}
+
+function exportBookingsCSV() {
+    const data = _allBookings.length ? _allBookings : [];
+    if (!data.length) { showToast('Aucun rendez-vous à exporter', 'error'); return; }
+    const rows = [['Date', 'Heure', 'Client', 'Téléphone', 'Email', 'Prestation', 'Durée (min)', 'Prix (CHF)', 'Statut', 'Employé']];
+    data.forEach(b => rows.push([b.date, b.time, b.clientName, b.clientPhone, b.clientEmail, b.serviceName, b.duration || 30, b.price || 0, statusLabel(b.status), b.employeeName || '']));
+    downloadCSV(`rdv_${todayStr()}.csv`, rows);
+    showToast('Export CSV téléchargé ✅');
+}
+
+async function exportClientsCSV() {
+    try {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/clients`);
+        const data = await res.json();
+        const clients = data.data || [];
+        if (!clients.length) { showToast('Aucun client à exporter', 'error'); return; }
+        const rows = [['Nom', 'Email', 'Téléphone', 'Total RDV', 'Total dépensé (CHF)', 'Dernière visite', 'Notes']];
+        clients.forEach(c => rows.push([c.name, c.email, c.phone, c.totalBookings || 0, c.totalSpent || 0, c.lastVisit ? c.lastVisit.split('T')[0] : '', c.notes || '']));
+        downloadCSV(`clients_${todayStr()}.csv`, rows);
+        showToast('Export CSV téléchargé ✅');
+    } catch (e) {
+        showToast('Erreur lors de l\'export', 'error');
     }
 }
 
@@ -560,12 +673,54 @@ async function loadEmployees() {
                     <div><span class="badge badge-active">${e.role === 'owner' ? 'Propriétaire' : 'Employé'}</span></div>
                     <div style="display:flex;gap:5px;">
                         <button class="btn btn-outline btn-sm" onclick='showEditSchedule(${JSON.stringify(e).replace(/'/g, "&#39;")})' title="Modifier les horaires">🕐</button>
-                        <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e._id}', '${e.role || 'employee'}')" title="Supprimer">🗑</button>
+                        ${isOwner ? `<button class="btn btn-outline btn-sm" onclick="showChangePassword('${e._id}','${e.role || 'employee'}')" title="Changer mot de passe">🔑</button>` : ''}
+                        ${isOwner ? `<button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e._id}', '${e.role || 'employee'}')" title="Supprimer">🗑</button>` : ''}
                     </div>
                 </div>
             `).join('') + '</div>';
         }
     } catch (e) { console.error(e); }
+}
+
+function showChangePassword(empId, role) {
+    document.getElementById('modalTitle').textContent = '🔑 Changer le mot de passe';
+    document.getElementById('modalBody').innerHTML = `
+        <div class="form-group">
+            <label class="form-label">Nouveau mot de passe</label>
+            <input type="password" class="form-input form-input-full" id="newEmpPassword" placeholder="Minimum 6 caractères" autocomplete="new-password">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Confirmer</label>
+            <input type="password" class="form-input form-input-full" id="newEmpPasswordConfirm" placeholder="••••••••" autocomplete="new-password">
+        </div>
+        <div id="changePwdError" style="display:none;color:#ef4444;font-size:13px;margin-top:4px"></div>
+    `;
+    document.getElementById('modalFooter').innerHTML = `
+        <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="submitChangePassword('${empId}','${role}')">Enregistrer</button>
+    `;
+    document.getElementById('modal').classList.add('active');
+}
+
+async function submitChangePassword(empId, role) {
+    const pwd = document.getElementById('newEmpPassword').value;
+    const confirm = document.getElementById('newEmpPasswordConfirm').value;
+    const errEl = document.getElementById('changePwdError');
+    if (pwd.length < 6) { errEl.style.display = 'block'; errEl.textContent = 'Minimum 6 caractères'; return; }
+    if (pwd !== confirm) { errEl.style.display = 'block'; errEl.textContent = 'Les mots de passe ne correspondent pas'; return; }
+    errEl.style.display = 'none';
+    try {
+        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees/${empId}/password?role=${role}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pwd })
+        });
+        const data = await res.json();
+        if (data.success) { closeModal(); showToast('Mot de passe mis à jour ✅'); }
+        else { errEl.style.display = 'block'; errEl.textContent = data.error || 'Erreur'; }
+    } catch (e) {
+        errEl.style.display = 'block'; errEl.textContent = 'Erreur de connexion';
+    }
 }
 
 function toggleSpecsField() {
