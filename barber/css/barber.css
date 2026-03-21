@@ -524,6 +524,9 @@ body {
     /* Touch target */
     min-height: 44px;
     width: 100%;
+    /* Fix iOS date input overflow */
+    -webkit-appearance: none;
+    appearance: none;
 }
 .form-input:focus { outline: none; border-color: var(--primary); }
 .form-input-full { width: 100%; }
