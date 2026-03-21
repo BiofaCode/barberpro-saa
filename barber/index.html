@@ -199,22 +199,22 @@
                     <div class="filters-row">
                         <div class="filter-group">
                             <span class="filter-label">Du</span>
-                            <input type="date" id="bookingFrom" class="form-input" onchange="applyBookingFilters()">
+                            <input type="date" id="bookingFrom" class="form-input" onchange="applyBookingFilters()" style="min-width:0">
                         </div>
                         <div class="filter-group">
                             <span class="filter-label">Au</span>
-                            <input type="date" id="bookingTo" class="form-input" onchange="applyBookingFilters()">
+                            <input type="date" id="bookingTo" class="form-input" onchange="applyBookingFilters()" style="min-width:0">
                         </div>
-                        <div class="filter-group">
-                            <span class="filter-label">Statut</span>
-                            <select id="bookingStatus" class="form-input" onchange="applyBookingFilters()">
-                                <option value="">Tous</option>
-                                <option value="confirmed">Confirmé</option>
-                                <option value="completed">Terminé</option>
-                                <option value="pending">En attente</option>
-                                <option value="cancelled">Annulé</option>
-                            </select>
-                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <span class="filter-label">Statut</span>
+                        <select id="bookingStatus" class="form-input" onchange="applyBookingFilters()">
+                            <option value="">Tous</option>
+                            <option value="confirmed">Confirmé</option>
+                            <option value="completed">Terminé</option>
+                            <option value="pending">En attente</option>
+                            <option value="cancelled">Annulé</option>
+                        </select>
                     </div>
                     <div style="display:flex;gap:8px">
                         <button class="btn btn-ghost btn-sm" onclick="resetBookingFilters()" style="flex:1">Réinitialiser</button>
