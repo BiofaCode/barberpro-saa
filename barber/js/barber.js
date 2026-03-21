@@ -1467,16 +1467,18 @@ async function loadSettings() {
                 <div class="card-header"><h3>📸 Galerie Photos</h3></div>
                 <div class="card-body">
                     <p style="font-size:.85rem;color:var(--text-sec);margin-bottom:12px">Ajoutez des photos de vos réalisations. Elles seront affichées sur votre site public.</p>
-                    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
-                        <div class="form-group" style="flex:2;margin-bottom:0">
+                    <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:16px">
+                        <div class="form-group" style="margin-bottom:0">
                             <label class="form-label">Image</label>
                             <input type="file" id="galleryFile" accept="image/*" class="form-input form-input-full">
                         </div>
-                        <div class="form-group" style="flex:1;margin-bottom:0">
-                            <label class="form-label">Titre (optionnel)</label>
-                            <input class="form-input form-input-full" id="galleryTitle" placeholder="Coupe Fade...">
+                        <div style="display:flex;gap:10px;align-items:flex-end">
+                            <div class="form-group" style="flex:1;margin-bottom:0">
+                                <label class="form-label">Titre (optionnel)</label>
+                                <input class="form-input form-input-full" id="galleryTitle" placeholder="Coupe Fade...">
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="uploadGalleryPhoto()" style="white-space:nowrap;flex-shrink:0">📤 Ajouter</button>
                         </div>
-                        <button class="btn btn-primary btn-sm" onclick="uploadGalleryPhoto()" style="white-space:nowrap">📤 Ajouter</button>
                     </div>
                     <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
                         ${(salon.gallery || []).map(p => `
@@ -1547,20 +1549,22 @@ async function loadSettings() {
                 <div class="card-header"><h3>🏖 Congés & Fermetures</h3></div>
                 <div class="card-body">
                     <p style="font-size:.85rem;color:var(--text-sec);margin-bottom:12px">Ajoutez les jours de fermeture exceptionnelle (vacances, jours fériés...). Ces jours seront grisés dans le calendrier de réservation.</p>
-                    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
-                        <div class="form-group" style="flex:1;margin-bottom:0">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                        <div class="form-group" style="margin-bottom:0">
                             <label class="form-label">Date de début</label>
                             <input type="date" class="form-input form-input-full" id="closedDateStart">
                         </div>
-                        <div class="form-group" style="flex:1;margin-bottom:0">
+                        <div class="form-group" style="margin-bottom:0">
                             <label class="form-label">Date de fin</label>
                             <input type="date" class="form-input form-input-full" id="closedDateEnd">
                         </div>
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px">
                         <div class="form-group" style="flex:1;margin-bottom:0">
                             <label class="form-label">Motif (optionnel)</label>
                             <input class="form-input form-input-full" id="closedDateReason" placeholder="Vacances d'été...">
                         </div>
-                        <button class="btn btn-primary btn-sm" onclick="addClosedDate()" style="white-space:nowrap">+ Ajouter</button>
+                        <button class="btn btn-primary btn-sm" onclick="addClosedDate()" style="white-space:nowrap;flex-shrink:0">+ Ajouter</button>
                     </div>
                     <div id="closedDatesList">${renderClosedDates(salon.closedDates || [])}</div>
                 </div>
