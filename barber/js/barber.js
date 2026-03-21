@@ -1410,7 +1410,7 @@ async function loadSettings() {
                     <div class="form-group"><label class="form-label">Sous-titre du site</label><input class="form-input form-input-full" id="set-heroSubtitle" value="${salon.branding?.heroSubtitle || ''}" placeholder="Excellence, style et précision"></div>
                     
                     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
                             <div style="font-weight:600;font-size:.9rem">📊 Statistiques d'accroche (Hero)</div>
                             <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--text-sec);cursor:pointer">
                                 <input type="checkbox" id="set-heroStatsHide" ${salon.branding?.heroStats?.hide ? 'checked' : ''}>
