@@ -691,8 +691,8 @@ async function loadEmployees() {
                         <div class="data-card-name">${e.name}</div>
                         <div class="data-card-sub">${(e.specialties || []).join(', ')}</div>
                     </div>
-                    <div><span class="badge badge-active">${e.role === 'owner' ? 'Propriétaire' : 'Employé'}</span></div>
-                    <div style="display:flex;gap:5px;">
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex-shrink:0;">
+                        <span class="badge badge-active">${e.role === 'owner' ? 'Propriétaire' : 'Employé'}</span>
                         <button class="btn btn-outline btn-sm" onclick='showEditSchedule(${JSON.stringify(e).replace(/'/g, "&#39;")})' title="Modifier les horaires">🕐</button>
                         ${isOwner ? `<button class="btn btn-outline btn-sm" onclick="showChangePassword('${e._id}','${e.role || 'employee'}')" title="Changer mot de passe">🔑</button>` : ''}
                         ${isOwner ? `<button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e._id}', '${e.role || 'employee'}')" title="Supprimer">🗑</button>` : ''}
@@ -1355,9 +1355,9 @@ async function loadSettings() {
                 <div class="card-body">
                     <div class="form-group"><label class="form-label">Nom du salon</label><input class="form-input form-input-full" id="set-name" value="${salon.name || ''}" placeholder="Mon Salon"></div>
                     <div class="form-group"><label class="form-label">Description</label><input class="form-input form-input-full" id="set-description" value="${salon.description || ''}" placeholder="Salon de coiffure premium..."></div>
-                    <div style="display:flex;gap:12px">
-                        <div class="form-group" style="flex:1"><label class="form-label">Adresse</label><input class="form-input form-input-full" id="set-address" value="${salon.address || ''}" placeholder="12 Rue du Style, Paris"></div>
-                        <div class="form-group" style="flex:1"><label class="form-label">Téléphone</label><input class="form-input form-input-full" id="set-phone" value="${salon.phone || ''}" placeholder="06 12 34 56 78"></div>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap">
+                        <div class="form-group" style="flex:1;min-width:200px"><label class="form-label">Adresse</label><input class="form-input form-input-full" id="set-address" value="${salon.address || ''}" placeholder="12 Rue du Style, Paris"></div>
+                        <div class="form-group" style="flex:1;min-width:160px"><label class="form-label">Téléphone</label><input class="form-input form-input-full" id="set-phone" value="${salon.phone || ''}" placeholder="06 12 34 56 78"></div>
                     </div>
                     <div class="form-group"><label class="form-label">Email</label><input class="form-input form-input-full" id="set-email" value="${salon.email || ''}" placeholder="contact@monsalon.fr"></div>
                     <div style="display:flex;align-items:center;gap:8px;margin-top:4px;font-size:.82rem;color:var(--text-muted)">
@@ -1371,29 +1371,29 @@ async function loadSettings() {
             <div class="card" style="margin-bottom:20px">
                 <div class="card-header"><h3>🎨 Personnalisation du site</h3></div>
                 <div class="card-body">
-                    <div style="display:flex;gap:12px;margin-bottom:12px">
-                        <div class="form-group" style="flex:1">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+                        <div class="form-group" style="margin-bottom:0">
                             <label class="form-label">Couleur principale</label>
                             <div style="display:flex;align-items:center;gap:10px">
                                 <input type="color" id="set-color1" value="${salon.branding?.primaryColor || '#6366F1'}" style="width:50px;height:40px;border:none;border-radius:8px;cursor:pointer" oninput="updateColorPreview()">
                                 <span id="colorLabel1" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.primaryColor || '#6366F1'}</span>
                             </div>
                         </div>
-                        <div class="form-group" style="flex:1">
+                        <div class="form-group" style="margin-bottom:0">
                             <label class="form-label">Couleur accent</label>
                             <div style="display:flex;align-items:center;gap:10px">
                                 <input type="color" id="set-color2" value="${salon.branding?.accentColor || '#818CF8'}" style="width:50px;height:40px;border:none;border-radius:8px;cursor:pointer" oninput="updateColorPreview()">
                                 <span id="colorLabel2" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.accentColor || '#818CF8'}</span>
                             </div>
                         </div>
-                        <div class="form-group" style="flex:1">
+                        <div class="form-group" style="margin-bottom:0">
                             <label class="form-label">Couleur du texte</label>
                             <div style="display:flex;align-items:center;gap:10px">
                                 <input type="color" id="set-color-text" value="${salon.branding?.textColor || '#F5F0E8'}" style="width:50px;height:40px;border:none;border-radius:8px;cursor:pointer" oninput="updateColorPreview()">
                                 <span id="colorLabelText" style="font-family:monospace;font-size:.82rem;color:var(--text-sec)">${salon.branding?.textColor || '#F5F0E8'}</span>
                             </div>
                         </div>
-                        <div class="form-group" style="flex:1">
+                        <div class="form-group" style="margin-bottom:0">
                             <label class="form-label">Fond du site</label>
                             <div style="display:flex;align-items:center;gap:10px">
                                 <input type="color" id="set-color-bg" value="${salon.branding?.backgroundColor || '#0a0a0f'}" style="width:50px;height:40px;border:none;border-radius:8px;cursor:pointer" oninput="updateColorPreview()">
@@ -1450,7 +1450,7 @@ async function loadSettings() {
             <div class="card" style="margin-bottom:20px; position:relative; overflow:hidden">
                 <div class="card-header"><h3>📸 Galerie Photos</h3></div>
                 <div class="card-body" style="filter: blur(4px); opacity: 0.5; pointer-events: none;">
-                    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px">
+                    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
                         <div class="form-group" style="flex:2;margin-bottom:0"><label class="form-label">Image</label><input type="file" class="form-input form-input-full"></div>
                         <div class="form-group" style="flex:1;margin-bottom:0"><label class="form-label">Titre (optionnel)</label><input class="form-input form-input-full" placeholder="Coupe Fade..."></div>
                         <button class="btn btn-primary btn-sm" style="white-space:nowrap">📤 Ajouter</button>
@@ -1467,7 +1467,7 @@ async function loadSettings() {
                 <div class="card-header"><h3>📸 Galerie Photos</h3></div>
                 <div class="card-body">
                     <p style="font-size:.85rem;color:var(--text-sec);margin-bottom:12px">Ajoutez des photos de vos réalisations. Elles seront affichées sur votre site public.</p>
-                    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px">
+                    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
                         <div class="form-group" style="flex:2;margin-bottom:0">
                             <label class="form-label">Image</label>
                             <input type="file" id="galleryFile" accept="image/*" class="form-input form-input-full">
@@ -1547,7 +1547,7 @@ async function loadSettings() {
                 <div class="card-header"><h3>🏖 Congés & Fermetures</h3></div>
                 <div class="card-body">
                     <p style="font-size:.85rem;color:var(--text-sec);margin-bottom:12px">Ajoutez les jours de fermeture exceptionnelle (vacances, jours fériés...). Ces jours seront grisés dans le calendrier de réservation.</p>
-                    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px">
+                    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
                         <div class="form-group" style="flex:1;margin-bottom:0">
                             <label class="form-label">Date de début</label>
                             <input type="date" class="form-input form-input-full" id="closedDateStart">

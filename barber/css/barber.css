@@ -339,7 +339,8 @@ body {
     padding: 14px 16px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
     transition: background .15s;
     /* Tap highlight */
     -webkit-tap-highlight-color: transparent;
