@@ -472,7 +472,10 @@ body {
     flex-direction: column;
     gap: 4px;
     flex: 1;
-    min-width: 140px;
+    min-width: 0;
+}
+.filter-group .form-input {
+    min-width: 0;
 }
 .filter-label {
     font-size: 10px;
