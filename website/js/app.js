@@ -83,9 +83,23 @@ function applySalonBranding(salon) {
   }
 
   const logoEl = document.querySelector('.nav-logo-text');
-  const logoIcon = document.querySelector('.nav-logo-icon');
-  if (salon.logo && logoIcon) logoIcon.innerHTML = `<img src="${salon.logo}" alt="${salon.name}" style="width:36px;height:36px;object-fit:cover;border-radius:8px">`;
+  const salonIcon = salon.branding?.icon || '✂️';
+  document.querySelectorAll('.nav-logo-icon').forEach(el => {
+    el.innerHTML = salon.logo
+      ? `<img src="${salon.logo}" alt="${salon.name}" style="width:36px;height:36px;object-fit:cover;border-radius:8px">`
+      : salonIcon;
+  });
   if (logoEl) logoEl.innerHTML = salon.name.split(' ').map((w, i) => i === 0 ? w : `<span>${w}</span>`).join(' ');
+
+  // Update booking CTA button icon
+  const ctaBtn = document.querySelector('.booking-cta-card .btn');
+  if (ctaBtn) ctaBtn.textContent = `${salonIcon} Réserver Maintenant`;
+
+  // Update favicon dynamically
+  const faviconLink = document.getElementById('faviconLink');
+  if (faviconLink) {
+    faviconLink.href = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E${encodeURIComponent(salonIcon)}%3C/text%3E%3C/svg%3E`;
+  }
 
   const heroTitle = document.querySelector('.hero h1');
   const heroSub = document.querySelector('.hero-description');
