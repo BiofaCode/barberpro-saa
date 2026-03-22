@@ -8,8 +8,8 @@ let salonId = null;
 let currentUser = null;
 let currentSalon = null;
 
-// ---- Custom Fetch that injects the auth token + enforces 12s timeout ----
-async function apiFetch(url, options = {}, timeoutMs = 12000) {
+// ---- Custom Fetch that injects the auth token + enforces timeout ----
+async function apiFetch(url, options = {}, timeoutMs = 25000) {
     const headers = options.headers || {};
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -488,22 +488,32 @@ let _allBookings = [];
 async function loadBookings(_retry = 0) {
     const listEl = document.getElementById('bookingsList');
     if (_retry === 0 && listEl) {
-        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement des rendez-vous…</div></div>';
+        listEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement des rendez-vous…${_retry > 0 ? `<br><small style="color:var(--text-muted);margin-top:4px;display:block">Tentative ${_retry + 1}/3</small>` : ''}</div></div>`;
+    }
+    if (!salonId) {
+        if (listEl) listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Session expirée — veuillez vous reconnecter</div></div>';
+        return;
     }
     try {
         const res = await apiFetch(`${API}/api/pro/salon/${salonId}/bookings`);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || `Erreur ${res.status}`);
+        }
         const data = await res.json();
         _allBookings = data.data || [];
         populateEmployeeFilter(_allBookings);
         renderBookingsList(_allBookings);
         renderAdvancedStats(_allBookings);
     } catch (e) {
-        console.error('Bookings error:', e);
+        console.error('Bookings error:', e.message);
         if (_retry < 2) {
-            setTimeout(() => loadBookings(_retry + 1), (_retry + 1) * 2000);
+            const delay = (_retry + 1) * 3000;
+            if (listEl) listEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Connexion lente, nouvelle tentative…<br><small style="color:var(--text-muted);margin-top:4px;display:block">Tentative ${_retry + 2}/3</small></div></div>`;
+            setTimeout(() => loadBookings(_retry + 1), delay);
         } else {
             if (listEl) listEl.innerHTML =
-                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger les rendez-vous<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadBookings()">Réessayer</button></div></div>`;
+                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger les rendez-vous<br><small style="color:var(--text-muted);font-size:.8rem;display:block;margin-top:4px">${e.message}</small><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadBookings()">Réessayer</button></div></div>`;
         }
     }
 }
