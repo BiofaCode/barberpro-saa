@@ -8,14 +8,23 @@ let salonId = null;
 let currentUser = null;
 let currentSalon = null;
 
-// ---- Custom Fetch that injects the auth token ----
-async function apiFetch(url, options = {}) {
+// ---- Custom Fetch that injects the auth token + enforces 12s timeout ----
+async function apiFetch(url, options = {}, timeoutMs = 12000) {
     const headers = options.headers || {};
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
-    const finalOptions = { ...options, headers };
-    return fetch(url, finalOptions);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const res = await fetch(url, { ...options, headers, signal: controller.signal });
+        clearTimeout(timer);
+        return res;
+    } catch (e) {
+        clearTimeout(timer);
+        if (e.name === 'AbortError') throw new Error('Timeout — serveur trop long à répondre');
+        throw e;
+    }
 }
 
 // ---- Login ----
@@ -368,14 +377,23 @@ async function loadDashboard(_retry = 0) {
         if (currentSalon) renderOnboardingChecklist(currentSalon);
     }
     try {
-        const [statsRes, bookingsRes, analyticsRes] = await Promise.all([
-            apiFetch(`${API}/api/pro/salon/${salonId}/stats`),
-            apiFetch(`${API}/api/pro/salon/${salonId}/bookings?date=${todayStr()}`),
-            apiFetch(`${API}/api/pro/salon/${salonId}/analytics`)
+        // allSettled: analytics failure won't block stats + bookings
+        const [statsResult, bookingsResult, analyticsResult] = await Promise.allSettled([
+            apiFetch(`${API}/api/pro/salon/${salonId}/stats`).then(r => r.json()),
+            apiFetch(`${API}/api/pro/salon/${salonId}/bookings?date=${todayStr()}`).then(r => r.json()),
+            apiFetch(`${API}/api/pro/salon/${salonId}/analytics`).then(r => r.json())
         ]);
-        const stats = (await statsRes.json()).data || {};
-        const bookings = (await bookingsRes.json()).data || [];
-        const analyticsData = (await analyticsRes.json()).data || { months: [], topServices: [] };
+
+        // If both critical calls failed, trigger retry
+        if (statsResult.status === 'rejected' && bookingsResult.status === 'rejected') {
+            throw new Error(statsResult.reason?.message || 'Erreur réseau');
+        }
+
+        const stats = statsResult.status === 'fulfilled' ? (statsResult.value?.data || {}) : {};
+        const bookings = bookingsResult.status === 'fulfilled' ? (bookingsResult.value?.data || []) : [];
+        const analyticsData = analyticsResult.status === 'fulfilled'
+            ? (analyticsResult.value?.data || { months: [], topServices: [] })
+            : { months: [], topServices: [] };
 
         // Subscription banner
         let subBanner = '';
@@ -455,8 +473,8 @@ async function loadDashboard(_retry = 0) {
         }
     } catch (e) {
         console.error('Dashboard error:', e);
-        if (_retry < 3) {
-            setTimeout(() => loadDashboard(_retry + 1), (_retry + 1) * 4000);
+        if (_retry < 2) {
+            setTimeout(() => loadDashboard(_retry + 1), (_retry + 1) * 2000);
         } else {
             document.getElementById('todayBookings').innerHTML =
                 `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger les données<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadDashboard()">Réessayer</button></div></div>`;
@@ -481,10 +499,8 @@ async function loadBookings(_retry = 0) {
         renderAdvancedStats(_allBookings);
     } catch (e) {
         console.error('Bookings error:', e);
-        if (_retry < 3) {
-            const delay = Math.min((_retry + 1) * 3000, 10000);
-            setTimeout(() => loadBookings(_retry + 1), delay);
-            // Keep spinner visible — no scary counter message
+        if (_retry < 2) {
+            setTimeout(() => loadBookings(_retry + 1), (_retry + 1) * 2000);
         } else {
             if (listEl) listEl.innerHTML =
                 `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger les rendez-vous<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadBookings()">Réessayer</button></div></div>`;
