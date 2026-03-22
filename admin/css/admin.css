@@ -747,6 +747,89 @@ body {
     }
 }
 
+/* ---- Mobile Bottom Nav ---- */
+.admin-bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    z-index: 200;
+    padding: 0 0 env(safe-area-inset-bottom);
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.admin-bnav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 10px 4px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 20px;
+    cursor: pointer;
+    transition: color .2s;
+}
+
+.admin-bnav-item.active { color: var(--primary); }
+.admin-bnav-label { font-size: 10px; font-weight: 600; font-family: 'Outfit', sans-serif; }
+
+/* ---- Revenue page ---- */
+.revenue-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.revenue-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+}
+.revenue-card-title { font-size: .75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+.revenue-card-value { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--text); }
+.revenue-card-sub { font-size: .8rem; color: var(--text-muted); margin-top: 4px; }
+.revenue-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.revenue-table th { text-align: left; padding: 10px 14px; font-size: .72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); }
+.revenue-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.04); color: var(--text-sec); }
+.revenue-table tr:last-child td { border-bottom: none; }
+.revenue-table tr:hover td { background: rgba(255,255,255,.02); }
+
+/* ---- Activity page ---- */
+.activity-list { display: flex; flex-direction: column; gap: 0; }
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.activity-dot.new-salon { background: rgba(99,102,241,.15); }
+.activity-dot.booking { background: rgba(52,211,153,.12); }
+.activity-dot.revenue { background: rgba(245,158,11,.12); }
+.activity-body { flex: 1; min-width: 0; }
+.activity-title { font-size: .88rem; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.activity-sub { font-size: .78rem; color: var(--text-muted); }
+.activity-time { font-size: .75rem; color: var(--text-muted); white-space: nowrap; }
+
+@media (max-width: 768px) {
+    .admin-bottom-nav { display: grid; }
+    .main { padding-bottom: 64px; }
+    .toast { bottom: 80px; }
+}
+
 /* ---- Scrollbar ---- */
 ::-webkit-scrollbar {
     width: 6px;

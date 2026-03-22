@@ -22,7 +22,7 @@
                     <div class="logo-icon">⚙️</div>
                     <div class="logo-text">Salon<span>Pro</span></div>
                 </div>
-                <div class="logo-badge">SaaS</div>
+                <div class="logo-badge">Admin</div>
             </div>
             <nav class="sidebar-nav">
                 <a href="#" class="nav-item active" data-page="dashboard" id="nav-dashboard">
@@ -30,6 +30,12 @@
                 </a>
                 <a href="#" class="nav-item" data-page="salons" id="nav-salons">
                     <span class="nav-icon">🏪</span> Mes Clients
+                </a>
+                <a href="#" class="nav-item" data-page="revenue" id="nav-revenue">
+                    <span class="nav-icon">💰</span> Revenus
+                </a>
+                <a href="#" class="nav-item" data-page="activity" id="nav-activity">
+                    <span class="nav-icon">🔔</span> Activité
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -58,7 +64,7 @@
                     <div class="card" style="margin-top:20px">
                         <div class="card-header">
                             <h3>🏪 Derniers salons créés</h3>
-                            <button class="btn btn-primary" onclick="openCreateSalonModal()">+ Créer un Salon</button>
+                            <button class="btn btn-primary btn-sm" onclick="openCreateSalonModal()">+ Créer</button>
                         </div>
                         <div class="card-body" id="recentSalonsList">
                             <div class="empty-state">Chargement...</div>
@@ -69,16 +75,44 @@
                 <!-- MES CLIENTS (SALONS) -->
                 <section class="page" id="page-salons">
                     <div class="page-header">
-                        <h2>🏪 Mes Clients (Salons)</h2>
-                        <button class="btn btn-primary" onclick="openCreateSalonModal()">+ Créer un Salon</button>
+                        <h2>🏪 Mes Clients</h2>
+                        <button class="btn btn-primary btn-sm" onclick="openCreateSalonModal()">+ Créer</button>
                     </div>
                     <div style="margin-bottom:16px">
                         <input type="text" id="salonSearch" class="form-input" placeholder="🔍 Rechercher par nom, slug, email..." style="width:100%;max-width:420px" oninput="filterSalons(this.value)">
                     </div>
                     <div class="salons-grid" id="salonsList"></div>
                 </section>
+
+                <!-- REVENUS -->
+                <section class="page" id="page-revenue">
+                    <div class="page-header"><h2>💰 Revenus & Abonnements</h2></div>
+                    <div id="revenuePage"></div>
+                </section>
+
+                <!-- ACTIVITÉ -->
+                <section class="page" id="page-activity">
+                    <div class="page-header"><h2>🔔 Activité Récente</h2></div>
+                    <div id="activityPage"></div>
+                </section>
             </div>
         </main>
+
+        <!-- Mobile bottom nav -->
+        <nav class="admin-bottom-nav" id="adminBottomNav">
+            <button class="admin-bnav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+                <span>📊</span><span class="admin-bnav-label">Dashboard</span>
+            </button>
+            <button class="admin-bnav-item" data-page="salons" onclick="navigateTo('salons')">
+                <span>🏪</span><span class="admin-bnav-label">Salons</span>
+            </button>
+            <button class="admin-bnav-item" data-page="revenue" onclick="navigateTo('revenue')">
+                <span>💰</span><span class="admin-bnav-label">Revenus</span>
+            </button>
+            <button class="admin-bnav-item" data-page="activity" onclick="navigateTo('activity')">
+                <span>🔔</span><span class="admin-bnav-label">Activité</span>
+            </button>
+        </nav>
     </div>
 
     <!-- Modal -->
@@ -102,7 +136,7 @@
             </div>
             <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="loginAdmin()">Se
                 Connecter</button>
-            <div id="loginError" style="color: var(--danger); font-size: 0.85rem; margin-top: 10px; display: none;">Mot
+            <div id="loginError" style="color: var(--error); font-size: 0.85rem; margin-top: 10px; display: none;">Mot
                 de passe incorrect</div>
         </div>
     </div>

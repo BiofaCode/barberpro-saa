@@ -1590,12 +1590,12 @@ h3 {
 
   /* Testimonials mobile */
   .testimonials-grid {
-    padding-left: var(--space-md);
-    padding-right: var(--space-md);
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .testimonial-card {
-    min-width: 280px;
+    min-width: 0; /* grid items don't need min-width */
   }
 
   .testimonial-card {

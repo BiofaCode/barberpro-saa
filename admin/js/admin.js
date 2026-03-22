@@ -126,11 +126,11 @@ async function submitEditSalon(salonId) {
 async function changePlan(salonId, newPlan) {
   const res = await api(`/api/admin/salons/${salonId}/plan`, 'PUT', { plan: newPlan });
   if (res.success) {
-    alert(`Plan mis à jour : ${newPlan.toUpperCase()}`);
+    toast(`Plan mis à jour : ${newPlan.toUpperCase()}`);
     loadDashboard();
     loadSalons();
   } else {
-    alert(res.error || 'Erreur lors de la mise à jour du plan');
+    toast(res.error || 'Erreur lors de la mise à jour du plan', 'error');
   }
 }
 
@@ -144,15 +144,22 @@ document.querySelectorAll('.nav-item').forEach(item => {
 
 function navigateTo(page) {
   state.currentPage = page;
+  // Sidebar active
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+  document.querySelectorAll(`.nav-item[data-page="${page}"]`).forEach(n => n.classList.add('active'));
+  // Bottom nav active
+  document.querySelectorAll('.admin-bnav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll(`.admin-bnav-item[data-page="${page}"]`).forEach(n => n.classList.add('active'));
+  // Pages
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById(`page-${page}`)?.classList.add('active');
-  const titles = { dashboard: 'Dashboard Plateforme', salons: 'Mes Clients (Salons)' };
+  const titles = { dashboard: 'Dashboard', salons: 'Mes Clients', revenue: 'Revenus', activity: 'Activité' };
   document.getElementById('pageTitle').textContent = titles[page] || page;
   document.getElementById('sidebar').classList.remove('open');
   if (page === 'dashboard') loadDashboard();
   else if (page === 'salons') loadSalons();
+  else if (page === 'revenue') loadRevenuePage();
+  else if (page === 'activity') loadActivityPage();
 }
 
 document.getElementById('hamburger').addEventListener('click', () => {
@@ -548,6 +555,97 @@ function initApp() {
 
     loadDashboard();
   }
+}
+
+// ============ REVENUE PAGE ============
+async function loadRevenuePage() {
+  const el = document.getElementById('revenuePage');
+  el.innerHTML = '<div class="empty-state">Chargement…</div>';
+  const res = await api('/api/admin/salons');
+  if (!res.success) { el.innerHTML = '<div class="empty-state">Erreur de chargement</div>'; return; }
+  const salons = res.data;
+  const prices = { starter: 29.9, pro: 49.9, premium: 89.9 };
+  const mrr = salons.reduce((s, x) => s + (prices[x.subscription?.plan || 'pro'] || 49.9), 0);
+  const arr = mrr * 12;
+  const counts = salons.reduce((a, x) => { const p = x.subscription?.plan || 'pro'; a[p] = (a[p] || 0) + 1; return a; }, {});
+
+  el.innerHTML = `
+    <div class="revenue-grid">
+      <div class="revenue-card">
+        <div class="revenue-card-title">MRR estimé</div>
+        <div class="revenue-card-value">${mrr.toFixed(0)} CHF</div>
+        <div class="revenue-card-sub">Revenus mensuels récurrents</div>
+      </div>
+      <div class="revenue-card">
+        <div class="revenue-card-title">ARR estimé</div>
+        <div class="revenue-card-value">${arr.toFixed(0)} CHF</div>
+        <div class="revenue-card-sub">Revenus annuels récurrents</div>
+      </div>
+      <div class="revenue-card">
+        <div class="revenue-card-title">Salons actifs</div>
+        <div class="revenue-card-value">${salons.length}</div>
+        <div class="revenue-card-sub">${counts.starter||0} Starter · ${counts.pro||0} Pro · ${counts.premium||0} Premium</div>
+      </div>
+      <div class="revenue-card">
+        <div class="revenue-card-title">ARPU moyen</div>
+        <div class="revenue-card-value">${salons.length ? (mrr / salons.length).toFixed(0) : 0} CHF</div>
+        <div class="revenue-card-sub">Revenu moyen par salon</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>📋 Détail par salon</h3></div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <table class="revenue-table">
+          <thead><tr>
+            <th>Salon</th><th>Plan</th><th>CHF/mois</th><th>RDV</th><th>Clients</th><th>Actions</th>
+          </tr></thead>
+          <tbody>
+            ${salons.map(s => `
+              <tr>
+                <td>
+                  <div style="font-weight:600;color:var(--text)">${s.name}</div>
+                  <div style="font-size:.75rem;font-family:monospace;color:var(--text-muted)">/s/${s.slug}</div>
+                </td>
+                <td><span class="badge badge-${s.subscription?.plan === 'premium' ? 'active' : s.subscription?.plan === 'pro' ? 'pending' : 'cancelled'}">${s.subscription?.plan || 'pro'}</span></td>
+                <td style="font-weight:700;color:var(--primary)">${(prices[s.subscription?.plan || 'pro'] || 49.9).toFixed(2)}</td>
+                <td>${s.stats?.bookings || 0}</td>
+                <td>${s.stats?.clients || 0}</td>
+                <td>
+                  <button class="btn btn-sm btn-outline" onclick="quickLogin('${s._id}')">🚀 PRO</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ============ ACTIVITY PAGE ============
+async function loadActivityPage() {
+  const el = document.getElementById('activityPage');
+  el.innerHTML = '<div class="empty-state">Chargement…</div>';
+  const res = await api('/api/admin/salons');
+  if (!res.success) { el.innerHTML = '<div class="empty-state">Erreur</div>'; return; }
+
+  const salons = res.data;
+  // Build activity feed from salons (sort by createdAt desc)
+  const items = salons
+    .filter(s => s.createdAt)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 20)
+    .map(s => {
+      const date = new Date(s.createdAt).toLocaleDateString('fr-CH', { day:'2-digit', month:'short', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+      return `<div class="activity-item">
+        <div class="activity-dot new-salon">🏪</div>
+        <div class="activity-body">
+          <div class="activity-title">Nouveau salon : <strong>${s.name}</strong></div>
+          <div class="activity-sub">${s.owner?.email || '—'} · /s/${s.slug} · Plan ${s.subscription?.plan || 'pro'}</div>
+        </div>
+        <div class="activity-time">${date}</div>
+      </div>`;
+    }).join('') || '<div class="empty-state">Aucune activité récente</div>';
+
+  el.innerHTML = `<div class="card"><div class="card-header"><h3>🏪 Nouveaux salons (récents → anciens)</h3></div><div class="card-body"><div class="activity-list">${items}</div></div></div>`;
 }
 
 initApp();

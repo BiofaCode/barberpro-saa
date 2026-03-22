@@ -210,7 +210,8 @@ function applySalonBranding(salon) {
           }
         }
         // ≤3 dynamic OR static hardcoded cards → grid layout (no scroll)
-        testimonialsGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--space-xl);overflow:visible;scroll-snap-type:none';
+        const cols = window.innerWidth < 640 ? '1fr' : 'repeat(auto-fit,minmax(260px,1fr))';
+        testimonialsGrid.style.cssText = `display:grid;grid-template-columns:${cols};gap:20px;overflow:visible;scroll-snap-type:none;padding:0`;
       }
     }
   }
