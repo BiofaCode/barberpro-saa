@@ -1042,6 +1042,22 @@ route('GET', '/api/pro/salon/:salonId/clients', async (req, res, params) => {
     json(res, 200, { success: true, data: clients });
 });
 
+// Client search autocomplete (must be before /:clientId route)
+route('GET', '/api/pro/salon/:salonId/clients/search', async (req, res, params) => {
+    const user = verifyToken(req);
+    if (!user) return json(res, 401, { success: false });
+    const url = new URL(req.url, 'http://localhost');
+    const q = (url.searchParams.get('q') || '').toLowerCase().trim();
+    if (q.length < 2) return json(res, 200, { success: true, data: [] });
+    const clients = await db.findClients({ salon: params.salonId });
+    const filtered = clients.filter(c =>
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.phone || '').includes(q) ||
+        (c.email || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+    json(res, 200, { success: true, data: filtered });
+});
+
 // Single client + booking history
 route('GET', '/api/pro/salon/:salonId/clients/:clientId', async (req, res, params) => {
     const user = verifyToken(req);
