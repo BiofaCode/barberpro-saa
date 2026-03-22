@@ -1,5 +1,5 @@
 /* ============================================
-  * BARBER PRO - Espace Pro JS
+  * SALON PRO - Espace Pro JS
    ============================================ */
 
 const API = '';
@@ -31,7 +31,7 @@ async function doLogin() {
     }
 
     try {
-        const res = await fetch(`${API}/api/barber/login`, {
+        const res = await fetch(`${API}/api/pro/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
@@ -71,7 +71,7 @@ async function doLogin() {
             document.getElementById('appScreen').style.display = 'flex';
             
             // Save session
-            localStorage.setItem('barberSession', JSON.stringify({ token, user: currentUser, salonId, salon: currentSalon }));
+            localStorage.setItem('proSession', JSON.stringify({ token, user: currentUser, salonId, salon: currentSalon }));
             
             initApp();
         } else {
@@ -86,7 +86,7 @@ async function doLogin() {
 
 function doLogout() {
     token = null; salonId = null; currentUser = null; currentSalon = null;
-    localStorage.removeItem('barberSession');
+    localStorage.removeItem('proSession');
     document.getElementById('appScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
 }
@@ -157,7 +157,7 @@ async function setupPushNotifications() {
         const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
 
         // Get VAPID public key from server
-        const keyRes = await apiFetch('/api/barber/push/vapid-key');
+        const keyRes = await apiFetch('/api/pro/push/vapid-key');
         const { key } = await keyRes.json();
         if (!key) return;
 
@@ -178,7 +178,7 @@ async function setupPushNotifications() {
         }
 
         // Save subscription to server
-        await apiFetch('/api/barber/push/subscribe', {
+        await apiFetch('/api/pro/push/subscribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(sub.toJSON())
@@ -298,9 +298,9 @@ async function loadDashboard(_retry = 0) {
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 8000); // 8s timeout (Render cold start)
         const [statsRes, bookingsRes, analyticsRes] = await Promise.all([
-            apiFetch(`${API}/api/barber/salon/${salonId}/stats`, { signal: ctrl.signal }),
-            apiFetch(`${API}/api/barber/salon/${salonId}/bookings?date=${todayStr()}`, { signal: ctrl.signal }),
-            apiFetch(`${API}/api/barber/salon/${salonId}/analytics`, { signal: ctrl.signal })
+            apiFetch(`${API}/api/pro/salon/${salonId}/stats`, { signal: ctrl.signal }),
+            apiFetch(`${API}/api/pro/salon/${salonId}/bookings?date=${todayStr()}`, { signal: ctrl.signal }),
+            apiFetch(`${API}/api/pro/salon/${salonId}/analytics`, { signal: ctrl.signal })
         ]);
         clearTimeout(t);
         const stats = (await statsRes.json()).data || {};
@@ -364,6 +364,8 @@ async function loadDashboard(_retry = 0) {
         // Analytics charts
         renderRevenueChart(analyticsData.months || []);
         renderTopServices(analyticsData.topServices || []);
+        // Advanced stats use the full bookings list (loaded separately in loadBookings)
+        if (_allBookings.length) renderAdvancedStats(_allBookings);
 
         const container = document.getElementById('todayBookings');
         if (bookings.length === 0) {
@@ -403,11 +405,13 @@ async function loadBookings(_retry = 0) {
     try {
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 8000);
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/bookings`, { signal: ctrl.signal });
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/bookings`, { signal: ctrl.signal });
         clearTimeout(t);
         const data = await res.json();
         _allBookings = data.data || [];
+        populateEmployeeFilter(_allBookings);
         renderBookingsList(_allBookings);
+        renderAdvancedStats(_allBookings);
     } catch (e) {
         console.error('Bookings error:', e);
         if (_retry < 2) {
@@ -429,7 +433,7 @@ function renderBookingsList(bookings) {
         return;
     }
     container.innerHTML = '<div class="data-grid">' + bookings.map(b => `
-        <div class="data-card">
+        <div class="data-card" style="cursor:pointer" onclick='showBookingDetail(${JSON.stringify(b).replace(/'/g,"&#39;")})'>
             <div class="data-card-icon">${b.serviceIcon || '✂️'}</div>
             <div class="data-card-info">
                 <div class="data-card-name">${b.clientName}</div>
@@ -448,6 +452,7 @@ function applyBookingFilters() {
     const from = document.getElementById('bookingFrom')?.value || '';
     const to = document.getElementById('bookingTo')?.value || '';
     const status = document.getElementById('bookingStatus')?.value || '';
+    const emp = document.getElementById('bookingEmployee')?.value || '';
 
     let filtered = _allBookings;
     if (search) filtered = filtered.filter(b =>
@@ -458,13 +463,268 @@ function applyBookingFilters() {
     if (from) filtered = filtered.filter(b => b.date >= from);
     if (to) filtered = filtered.filter(b => b.date <= to);
     if (status) filtered = filtered.filter(b => (b.status || 'confirmed') === status);
-    renderBookingsList(filtered);
+    if (emp) filtered = filtered.filter(b => b.employeeName === emp);
+    if (_calendarView === 'calendar') renderCalendar(filtered);
+    else renderBookingsList(filtered);
 }
 
 function resetBookingFilters() {
-    const fields = ['bookingSearch', 'bookingFrom', 'bookingTo', 'bookingStatus'];
-    fields.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    renderBookingsList(_allBookings);
+    ['bookingSearch', 'bookingFrom', 'bookingTo', 'bookingStatus', 'bookingEmployee'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+    });
+    applyBookingFilters();
+}
+
+// Populate employee filter dropdown
+function populateEmployeeFilter(bookings) {
+    const sel = document.getElementById('bookingEmployee');
+    if (!sel) return;
+    const names = [...new Set(bookings.map(b => b.employeeName).filter(Boolean))].sort();
+    // Keep current value
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Tous</option>' + names.map(n => `<option value="${n}" ${n === cur ? 'selected' : ''}>${n}</option>`).join('');
+}
+
+// ---- Booking Detail Modal ----
+function showBookingDetail(b) {
+    const reviewLink = `${location.origin}/review/${b._id}`;
+    document.getElementById('modalTitle').textContent = '📅 Détails du RDV';
+    document.getElementById('modalBody').innerHTML = `
+        <div style="display:grid;gap:8px;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--text-muted)">Client</span><strong>${b.clientName}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--text-muted)">Date</span><strong>${b.date} à ${b.time}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--text-muted)">Prestation</span><strong>${b.serviceName || '—'}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--text-muted)">Durée</span><strong>${b.duration || 30} min</strong>
+            </div>
+            ${b.employeeName ? `<div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text-muted)">Styliste</span><strong>${b.employeeName}</strong></div>` : ''}
+            <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--text-muted)">Prix</span><strong>${b.price || 0} CHF</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:.9rem;padding:8px 0">
+                <span style="color:var(--text-muted)">Statut</span>
+                <select class="form-input" style="width:auto;padding:6px 10px;font-size:.85rem" onchange="updateBookingStatus('${b._id}',this.value)">
+                    <option value="confirmed" ${(b.status||'confirmed')==='confirmed'?'selected':''}>Confirmé</option>
+                    <option value="completed" ${b.status==='completed'?'selected':''}>Terminé</option>
+                    <option value="pending" ${b.status==='pending'?'selected':''}>En attente</option>
+                    <option value="cancelled" ${b.status==='cancelled'?'selected':''}>Annulé</option>
+                </select>
+            </div>
+            ${b.reviewRating ? `<div style="padding:8px 0;font-size:.9rem"><span style="color:var(--text-muted)">Avis client : </span><span class="review-stars">${'★'.repeat(b.reviewRating)}${'☆'.repeat(5-b.reviewRating)}</span>${b.reviewComment ? ' · ' + b.reviewComment : ''}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('${reviewLink}').then(()=>showToast('Lien copié ✅'))" style="flex:1">🔗 Lien avis</button>
+            <button class="btn btn-ghost btn-sm" onclick="printInvoice(${JSON.stringify(b).replace(/"/g,'&quot;')})" style="flex:1">🖨 Facture</button>
+        </div>
+    `;
+    document.getElementById('modalFooter').innerHTML = `<button class="btn btn-ghost" onclick="closeModal()">Fermer</button>`;
+    document.getElementById('modal').classList.add('active');
+}
+
+async function updateBookingStatus(bookingId, status) {
+    try {
+        await apiFetch(`${API}/api/pro/salon/${salonId}/bookings/${bookingId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        showToast('Statut mis à jour ✅');
+        loadBookings();
+    } catch (e) { showToast('Erreur', 'error'); }
+}
+
+// ---- PDF Invoice ----
+function printInvoice(b) {
+    const salon = currentSalon || {};
+    const win = window.open('', '_blank', 'width=640,height=800');
+    win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Reçu ${b.clientName}</title>
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:40px;color:#1a1a1a;max-width:520px;margin:0 auto}.header{border-bottom:2px solid #1a1a1a;padding-bottom:20px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-start}.salon-name{font-size:22px;font-weight:700}.salon-sub{font-size:12px;color:#666;margin-top:4px;line-height:1.5}.receipt-num{font-size:12px;color:#666;text-align:right}.receipt-title{font-size:16px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px}.line{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eee;font-size:14px}.total-line{display:flex;justify-content:space-between;padding:14px 0;font-size:18px;font-weight:700}.footer{margin-top:36px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:16px}.print-btn{margin-top:24px;padding:10px 24px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px}@media print{.print-btn{display:none}}</style>
+    </head><body>
+    <div class="header"><div><div class="salon-name">${salon.name||'Salon'}</div><div class="salon-sub">${salon.address||''}${salon.city?' · '+salon.city:''}${salon.phone?' · '+salon.phone:''}</div></div><div class="receipt-num">Reçu #${(b._id||'').slice(-6).toUpperCase()}<br>${new Date().toLocaleDateString('fr-FR')}</div></div>
+    <div class="receipt-title">Reçu de prestation</div>
+    <div class="line"><span>Client</span><span>${b.clientName}</span></div>
+    <div class="line"><span>Date</span><span>${b.date} à ${b.time}</span></div>
+    <div class="line"><span>Prestation</span><span>${b.serviceName||'—'}</span></div>
+    <div class="line"><span>Durée</span><span>${b.duration||30} min</span></div>
+    ${b.employeeName?`<div class="line"><span>Styliste</span><span>${b.employeeName}</span></div>`:''}
+    <div class="total-line"><span>Total</span><span>${b.price||0} CHF</span></div>
+    <div class="footer">Merci de votre visite ! — ${salon.name||'Salon'}</div>
+    <br><button class="print-btn" onclick="window.print()">🖨 Imprimer / Enregistrer PDF</button>
+    </body></html>`);
+    win.document.close();
+}
+
+// ---- Calendar View ----
+let _calendarDate = new Date();
+let _calendarView = 'list';
+
+function toggleCalendarView() {
+    _calendarView = _calendarView === 'list' ? 'calendar' : 'list';
+    const btn = document.getElementById('calViewBtn');
+    const calEl = document.getElementById('calendarContainer');
+    const listEl = document.getElementById('bookingsList');
+    if (_calendarView === 'calendar') {
+        if (btn) btn.textContent = '📋 Liste';
+        if (listEl) listEl.style.display = 'none';
+        if (calEl) calEl.style.display = 'block';
+        renderCalendar(_allBookings);
+    } else {
+        if (btn) btn.textContent = '📅 Calendrier';
+        if (calEl) calEl.style.display = 'none';
+        if (listEl) listEl.style.display = 'block';
+        renderBookingsList(_allBookings);
+    }
+}
+
+function _weekDates(ref) {
+    const d = new Date(ref);
+    const dow = d.getDay(); // 0=Sun
+    const diff = dow === 0 ? -6 : 1 - dow;
+    const mon = new Date(d);
+    mon.setDate(d.getDate() + diff);
+    return Array.from({length: 7}, (_, i) => { const dd = new Date(mon); dd.setDate(mon.getDate() + i); return dd; });
+}
+function _isoDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function _fmtDay(d) { return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`; }
+
+function renderCalendar(bookings) {
+    const container = document.getElementById('calendarContainer');
+    if (!container) return;
+    const weekDays = _weekDates(_calendarDate);
+    const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const todayISO = todayStr();
+    const hours = Array.from({length: 13}, (_, i) => i + 8);
+
+    const navRow = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="navWeek(-1)">← Précédente</button>
+            <span style="font-weight:600;font-size:.88rem">${_fmtDay(weekDays[0])} — ${_fmtDay(weekDays[6])}</span>
+            <div style="display:flex;gap:6px">
+                <button class="btn btn-ghost btn-sm" onclick="navWeek(0)">Aujourd'hui</button>
+                <button class="btn btn-ghost btn-sm" onclick="navWeek(1)">Suivante →</button>
+            </div>
+        </div>`;
+
+    const gridRows = hours.map(h => {
+        const timeLbl = `<div class="cal-time-cell">${h}h</div>`;
+        const slots = weekDays.map(d => {
+            const iso = _isoDate(d);
+            const slotBkgs = bookings.filter(b => b.date === iso && b.time && parseInt(b.time) === h);
+            return `<div class="cal-slot${iso === todayISO ? ' cal-today-col' : ''}" onclick="showAddBookingOnDate('${iso}','${String(h).padStart(2,'0')}:00')">
+                ${slotBkgs.map(b => `<div class="cal-booking cal-booking-${b.status||'confirmed'}" onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})"><div class="cal-booking-name">${b.clientName}</div><div class="cal-booking-svc">${b.serviceName||''}</div></div>`).join('')}
+            </div>`;
+        }).join('');
+        return timeLbl + slots;
+    }).join('');
+
+    const headers = `<div class="cal-corner"></div>` + weekDays.map((d, i) => {
+        const iso = _isoDate(d);
+        return `<div class="cal-day-header${iso === todayISO ? ' cal-today' : ''}"><div class="cal-day-name">${dayNames[i]}</div><div class="cal-day-num">${d.getDate()}</div></div>`;
+    }).join('');
+
+    container.innerHTML = navRow + `<div class="cal-wrap"><div class="cal-grid">${headers}${gridRows}</div></div>`;
+}
+
+function navWeek(dir) {
+    if (dir === 0) _calendarDate = new Date();
+    else { _calendarDate = new Date(_calendarDate); _calendarDate.setDate(_calendarDate.getDate() + dir * 7); }
+    renderCalendar(_allBookings);
+}
+
+function showAddBookingOnDate(date, time) {
+    showAddBooking();
+    setTimeout(() => {
+        const d = document.getElementById('mbDate'); if (d) d.value = date;
+        const t = document.getElementById('mbTime'); if (t) t.value = time;
+    }, 80);
+}
+
+// ---- Advanced Stats (occupancy + per-employee revenue) ----
+function renderAdvancedStats(bookings) {
+    const el = document.getElementById('advancedStats');
+    if (!el) return;
+
+    // Occupancy this week
+    const weekDays = _weekDates(new Date());
+    const weekISOs = weekDays.map(_isoDate);
+    const weekBookings = bookings.filter(b => weekISOs.includes(b.date) && b.status !== 'cancelled');
+    const workDays = (currentSalon?.hours || []).filter(h => h.open).length || 5;
+    const slotsPerDay = 8; // avg 8h × 30min slots / 30min avg = ~16 slots, approximate
+    const totalSlots = workDays * slotsPerDay;
+    const occ = totalSlots > 0 ? Math.min(100, Math.round((weekBookings.length / totalSlots) * 100)) : 0;
+
+    // Revenue per employee (all time from loaded bookings)
+    const empMap = {};
+    bookings.filter(b => b.employeeName && b.status !== 'cancelled').forEach(b => {
+        empMap[b.employeeName] = (empMap[b.employeeName] || 0) + (b.price || 0);
+    });
+    const empEntries = Object.entries(empMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const maxEmp = empEntries[0]?.[1] || 1;
+
+    el.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="card" style="padding:0">
+                <div class="card-body">
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Occupation cette semaine</div>
+                    <div style="font-size:28px;font-weight:700;color:${occ>70?'#22c55e':occ>40?'#f59e0b':'var(--text-muted)'}">${occ}%</div>
+                    <div class="occ-bar-wrap" style="margin-top:8px"><div class="occ-bar" style="width:${occ}%;background:${occ>70?'#22c55e':occ>40?'#f59e0b':'#6366f1'}"></div></div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:6px">${weekBookings.length} RDV / ~${totalSlots} créneaux</div>
+                </div>
+            </div>
+            <div class="card" style="padding:0">
+                <div class="card-body">
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">CA par styliste</div>
+                    ${empEntries.length ? empEntries.map(([name, rev]) => `
+                        <div style="margin-bottom:8px">
+                            <div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:3px">
+                                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px">${name}</span>
+                                <span style="font-weight:600;flex-shrink:0">${rev} CHF</span>
+                            </div>
+                            <div class="occ-bar-wrap"><div class="occ-bar" style="width:${Math.round((rev/maxEmp)*100)}%;background:var(--primary)"></div></div>
+                        </div>
+                    `).join('') : '<div style="color:var(--text-muted);font-size:.85rem">Aucune donnée</div>'}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// ---- PWA Install Banner ----
+let _installPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    _installPrompt = e;
+    setTimeout(showInstallBanner, 3000);
+});
+function showInstallBanner() {
+    if (!_installPrompt || localStorage.getItem('pwaInstallDismissed')) return;
+    if (document.getElementById('pwaBanner')) return;
+    const banner = document.createElement('div');
+    banner.id = 'pwaBanner';
+    banner.innerHTML = `
+        <div><div style="font-size:.9rem;font-weight:600">📲 Installer l'appli</div><div style="font-size:.75rem;color:#9ca3af;margin-top:2px">Accès rapide depuis votre écran d'accueil</div></div>
+        <div style="display:flex;gap:8px;flex-shrink:0">
+            <button class="btn btn-ghost btn-sm" onclick="dismissInstallBanner()">Plus tard</button>
+            <button class="btn btn-primary btn-sm" onclick="triggerInstall()">Installer</button>
+        </div>`;
+    document.body.appendChild(banner);
+}
+async function triggerInstall() {
+    if (!_installPrompt) return;
+    _installPrompt.prompt();
+    await _installPrompt.userChoice;
+    _installPrompt = null;
+    document.getElementById('pwaBanner')?.remove();
+}
+function dismissInstallBanner() {
+    localStorage.setItem('pwaInstallDismissed', '1');
+    document.getElementById('pwaBanner')?.remove();
 }
 
 // ---- CSV Export ----
@@ -488,7 +748,7 @@ function exportBookingsCSV() {
 
 async function exportClientsCSV() {
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/clients`);
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/clients`);
         const data = await res.json();
         const clients = data.data || [];
         if (!clients.length) { showToast('Aucun client à exporter', 'error'); return; }
@@ -507,8 +767,8 @@ async function showAddBooking() {
     let services = [], employees = [];
     try {
         const [svcRes, empRes] = await Promise.all([
-            apiFetch(`${API}/api/barber/salon/${salonId}/services`),
-            apiFetch(`${API}/api/barber/salon/${salonId}/employees`),
+            apiFetch(`${API}/api/pro/salon/${salonId}/services`),
+            apiFetch(`${API}/api/pro/salon/${salonId}/employees`),
         ]);
         services = (await svcRes.json()).data || [];
         employees = (await empRes.json()).data || [];
@@ -599,7 +859,7 @@ async function addManualBooking() {
     };
 
     try {
-        await apiFetch(`${API}/api/barber/salon/${salonId}/bookings`, {
+        await apiFetch(`${API}/api/pro/salon/${salonId}/bookings`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(booking)
@@ -616,7 +876,7 @@ async function addManualBooking() {
 // ---- Clients ----
 async function loadClients() {
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/clients`);
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/clients`);
         const data = await res.json();
         const clients = data.data || [];
 
@@ -624,27 +884,109 @@ async function loadClients() {
         if (clients.length === 0) {
             container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><div class="empty-state-text">Aucun client pour le moment</div></div>';
         } else {
-            container.innerHTML = '<div class="data-grid">' + clients.map(c => `
-                <div class="data-card">
+            container.innerHTML = '<div class="data-grid">' + clients.map(c => {
+                const visits = c.totalBookings ?? 0;
+                const loyalty = visits >= 20 ? '🥇' : visits >= 10 ? '🥈' : visits >= 5 ? '🥉' : '';
+                return `
+                <div class="data-card" style="cursor:pointer" onclick="showClientProfile('${c._id}')">
                     <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),#A07D4A);color:var(--bg);font-weight:700;font-size:16px">${(c.name || '?')[0].toUpperCase()}</div>
                     <div class="data-card-info">
-                        <div class="data-card-name">${c.name}</div>
+                        <div class="data-card-name">${c.name} ${loyalty}</div>
                         <div class="data-card-sub">${c.email || ''} ${c.phone ? '· ' + c.phone : ''}</div>
                     </div>
                     <div class="data-card-right">
-                        <div class="data-card-value">${c.totalBookings ?? 0}</div>
+                        <div class="data-card-value">${visits}</div>
                         <div class="data-card-label">visites</div>
                     </div>
-                </div>
-            `).join('') + '</div>';
+                </div>`;
+            }).join('') + '</div>';
         }
     } catch (e) { console.error(e); }
+}
+
+// ---- Client Profile (enriched) ----
+async function showClientProfile(clientId) {
+    document.getElementById('modalTitle').textContent = '👤 Fiche client';
+    document.getElementById('modalBody').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">Chargement…</div>';
+    document.getElementById('modalFooter').innerHTML = '';
+    document.getElementById('modal').classList.add('active');
+
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/clients/${clientId}`);
+        const data = await res.json();
+        if (!data.success) { showToast('Client introuvable', 'error'); closeModal(); return; }
+        const c = data.data;
+        const visits = c.totalBookings || 0;
+        const loyaltyLabel = visits >= 20 ? '🥇 Gold' : visits >= 10 ? '🥈 Silver' : visits >= 5 ? '🥉 Bronze' : '🌱 Nouveau';
+
+        document.getElementById('modalTitle').textContent = `👤 ${c.name}`;
+        document.getElementById('modalBody').innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+                <div style="background:var(--bg-surface);border-radius:10px;padding:12px;text-align:center">
+                    <div style="font-size:20px;font-weight:700;color:var(--primary)">${visits}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Visites</div>
+                </div>
+                <div style="background:var(--bg-surface);border-radius:10px;padding:12px;text-align:center">
+                    <div style="font-size:18px;font-weight:700;color:#22c55e">${c.totalSpent || 0}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">CHF dépensé</div>
+                </div>
+                <div style="background:var(--bg-surface);border-radius:10px;padding:12px;text-align:center">
+                    <div style="font-size:15px;font-weight:700">${loyaltyLabel}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">Fidélité</div>
+                </div>
+            </div>
+            <div style="font-size:.85rem;margin-bottom:14px;color:var(--text-muted)">
+                ${c.email || '—'} ${c.phone ? '· ' + c.phone : ''}
+                ${c.lastVisit ? ' · Dernière visite : ' + c.lastVisit.split('T')[0] : ''}
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notes internes</label>
+                <textarea class="form-input form-input-full" id="clientNotesField" rows="3" placeholder="Allergies, préférences, notes…">${c.notes || ''}</textarea>
+            </div>
+            ${(c.recentBookings || []).length ? `
+                <div style="margin-top:14px">
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Historique des visites</div>
+                    ${c.recentBookings.slice(0, 6).map(b => `
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.83rem">
+                            <div>
+                                <div style="font-weight:600">${b.serviceName || '—'}</div>
+                                <div style="color:var(--text-muted)">${b.date} à ${b.time}</div>
+                            </div>
+                            <div style="text-align:right;flex-shrink:0">
+                                <div style="font-weight:600">${b.price || 0} CHF</div>
+                                <span class="badge badge-${b.status || 'confirmed'}" style="font-size:10px">${statusLabel(b.status)}</span>
+                                ${b.reviewRating ? '<div class="review-stars">' + '★'.repeat(b.reviewRating) + '</div>' : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+        `;
+        document.getElementById('modalFooter').innerHTML = `
+            <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
+            <button class="btn btn-primary" onclick="saveClientNotes('${clientId}')">💾 Enregistrer</button>
+        `;
+    } catch (e) { showToast('Erreur de chargement', 'error'); closeModal(); }
+}
+
+async function saveClientNotes(clientId) {
+    const notes = document.getElementById('clientNotesField')?.value || '';
+    try {
+        await apiFetch(`${API}/api/pro/salon/${salonId}/clients/${clientId}/notes`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes })
+        });
+        showToast('Notes enregistrées ✅');
+        closeModal();
+        loadClients();
+    } catch (e) { showToast('Erreur', 'error'); }
 }
 
 // ---- Employees ----
 async function loadEmployees() {
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees`);
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/employees`);
         const data = await res.json();
         const emps = data.data || [];
 
@@ -731,7 +1073,7 @@ async function submitChangePassword(empId, role) {
     if (pwd !== confirm) { errEl.style.display = 'block'; errEl.textContent = 'Les mots de passe ne correspondent pas'; return; }
     errEl.style.display = 'none';
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees/${empId}/password?role=${role}`, {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/employees/${empId}/password?role=${role}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password: pwd })
@@ -781,7 +1123,7 @@ async function addEmployee() {
     const specs = role === 'owner' ? [] : document.getElementById('empSpecs').value.split(',').map(s => s.trim()).filter(Boolean);
     if (!name) return;
 
-    const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees`, {
+    const res = await apiFetch(`${API}/api/pro/salon/${salonId}/employees`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password, phone, role, specialties: specs })
@@ -800,7 +1142,7 @@ async function addEmployee() {
 
 async function deleteEmployee(id, role) {
     if (!confirm('Voulez-vous vraiment supprimer ce membre ?')) return;
-    const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees/${id}?role=${role}`, { method: 'DELETE' });
+    const res = await apiFetch(`${API}/api/pro/salon/${salonId}/employees/${id}?role=${role}`, { method: 'DELETE' });
     const data = await res.json();
     if (!data.success) {
         alert(data.error || 'Erreur lors de la suppression');
@@ -871,7 +1213,7 @@ async function saveEmployeeSchedule(empId) {
     });
 
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees/${empId}/hours`, {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/employees/${empId}/hours`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ hours: newHours })
         });
@@ -891,7 +1233,7 @@ async function saveEmployeeSchedule(empId) {
 // ---- Services ----
 async function loadServices() {
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/services`);
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/services`);
         const data = await res.json();
         const svcs = data.data || [];
 
@@ -969,7 +1311,7 @@ async function showAddService() {
     document.getElementById('modal').classList.add('active');
 
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees`);
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/employees`);
         const data = await res.json();
         const emps = data.data || [];
         if (emps.length === 0) {
@@ -1017,7 +1359,7 @@ async function addService() {
 
     if (!name) return;
 
-    await apiFetch(`${API}/api/barber/salon/${salonId}/services`, {
+    await apiFetch(`${API}/api/pro/salon/${salonId}/services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees, paymentMode, depositType, depositAmount })
@@ -1077,7 +1419,7 @@ async function showEditService(svc) {
     document.getElementById('modal').classList.add('active');
 
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/employees`);
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/employees`);
         const data = await res.json();
         const emps = data.data || [];
         if (emps.length === 0) {
@@ -1106,7 +1448,7 @@ async function editService(id) {
 
     if (!name) return;
 
-    await apiFetch(`${API}/api/barber/salon/${salonId}/services/${id}`, {
+    await apiFetch(`${API}/api/pro/salon/${salonId}/services/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees, paymentMode, depositType, depositAmount })
@@ -1118,7 +1460,7 @@ async function editService(id) {
 
 async function deleteService(id) {
     if (!confirm('Supprimer cette prestation ?')) return;
-    await apiFetch(`${API}/api/barber/salon/${salonId}/services/${id}`, { method: 'DELETE' });
+    await apiFetch(`${API}/api/pro/salon/${salonId}/services/${id}`, { method: 'DELETE' });
     loadServices();
     showToast('Prestation supprimée');
 }
@@ -1132,7 +1474,7 @@ async function saveSMSSettings() {
         ownerPhone: document.getElementById('sms-owner-phone')?.value?.trim() || '',
     };
     try {
-        await apiFetch(`${API}/api/barber/salon/${salonId}/sms-settings`, {
+        await apiFetch(`${API}/api/pro/salon/${salonId}/sms-settings`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(settings)
         });
@@ -1142,7 +1484,7 @@ async function saveSMSSettings() {
 
 async function loadSMSStatus() {
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/sms-status`);
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/sms-status`);
         const data = await res.json();
         const { credits = 0, packs = {}, configured = false, settings = {} } = data.data || {};
         const el = document.getElementById('smsCardBody');
@@ -1208,7 +1550,7 @@ async function buySMSPack(packKey) {
         const btn = event.currentTarget;
         btn.disabled = true;
         btn.textContent = '…';
-        const res = await apiFetch('/api/barber/sms/buy', {
+        const res = await apiFetch('/api/pro/sms/buy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ pack: packKey })
@@ -1248,7 +1590,7 @@ async function loadStripeConnect(plan) {
     }
 
     try {
-        const res = await apiFetch(`${API}/api/barber/stripe/connect/status`);
+        const res = await apiFetch(`${API}/api/pro/stripe/connect/status`);
         const data = await res.json();
         const d = data.data || {};
 
@@ -1289,7 +1631,7 @@ async function loadStripeConnect(plan) {
 
 async function stripeConnectOnboard() {
     try {
-        const res = await apiFetch(`${API}/api/barber/stripe/connect/onboard`, { method: 'POST' });
+        const res = await apiFetch(`${API}/api/pro/stripe/connect/onboard`, { method: 'POST' });
         const data = await res.json();
         if (data.success && data.data?.url) {
             window.location.href = data.data.url;
@@ -1303,7 +1645,7 @@ async function stripeConnectOnboard() {
 
 async function loadSettings() {
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}`);
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}`);
         const data = await res.json();
         const salon = data.data || {};
         currentSalon = salon;
@@ -1621,7 +1963,7 @@ async function saveInfo() {
     };
     if (!updates.name) return showToast('Le nom du salon est obligatoire', 'error');
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}`, {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updates)
         });
@@ -1663,7 +2005,7 @@ async function saveBranding() {
         }
     };
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/branding`, {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/branding`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(branding)
         });
@@ -1741,7 +2083,7 @@ async function saveHours() {
     });
 
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/hours`, {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/hours`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newHours)
         });
@@ -1788,7 +2130,7 @@ async function addClosedDate() {
     closedDates.sort((a, b) => a.start.localeCompare(b.start));
 
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/closed-dates`, {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/closed-dates`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(closedDates)
         });
@@ -1808,7 +2150,7 @@ async function removeClosedDate(idx) {
     const dates = (currentSalon.closedDates || []).filter((_, i) => i !== idx);
 
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/closed-dates`, {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/closed-dates`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dates)
         });
@@ -1830,7 +2172,7 @@ async function uploadLogo() {
     formData.append('logo', fileInput.files[0]);
 
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/logo`, {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/logo`, {
             method: 'POST',
             body: formData
         });
@@ -1848,7 +2190,7 @@ async function uploadLogo() {
 
 async function deleteLogo() {
     if (!confirm('Supprimer le logo ?')) return;
-    await apiFetch(`${API}/api/barber/salon/${salonId}/logo`, { method: 'DELETE' });
+    await apiFetch(`${API}/api/pro/salon/${salonId}/logo`, { method: 'DELETE' });
     showToast('Logo supprimé');
     loadSettings();
 }
@@ -1863,7 +2205,7 @@ async function uploadGalleryPhoto() {
     formData.append('title', document.getElementById('galleryTitle').value || '');
 
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/gallery`, {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/gallery`, {
             method: 'POST',
             body: formData
         });
@@ -1882,7 +2224,7 @@ async function uploadGalleryPhoto() {
 async function deleteGalleryPhoto(photoId) {
     if (!confirm('Supprimer cette photo ?')) return;
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/gallery/${photoId}`, { method: 'DELETE' });
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/gallery/${photoId}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.success) {
             showToast('Photo supprimée');
@@ -1932,7 +2274,7 @@ async function submitTestimonial(id) {
     if (!body.name || !body.text) return showToast('Remplissez le nom et l\'avis', 'error');
 
     try {
-        const url = id ? `${API}/api/barber/salon/${salonId}/testimonials/${id}` : `${API}/api/barber/salon/${salonId}/testimonials`;
+        const url = id ? `${API}/api/pro/salon/${salonId}/testimonials/${id}` : `${API}/api/pro/salon/${salonId}/testimonials`;
         const method = id ? 'PUT' : 'POST';
         const res = await apiFetch(url, {
             method,
@@ -1958,7 +2300,7 @@ function editTestimonial(id) {
 async function deleteTestimonial(id) {
     if (!confirm('Supprimer cet avis ?')) return;
     try {
-        const res = await apiFetch(`${API}/api/barber/salon/${salonId}/testimonials/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/testimonials/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (data.success) {
             showToast('Avis supprimé');
@@ -2000,7 +2342,7 @@ document.getElementById('loginEmail').addEventListener('keydown', e => {
 // Magic Login & Persistent Session
 document.addEventListener('DOMContentLoaded', () => {
     const magic = localStorage.getItem('magic_login');
-    const sessionStr = localStorage.getItem('barberSession');
+    const sessionStr = localStorage.getItem('proSession');
     
     if (magic) {
         localStorage.removeItem('magic_login');
@@ -2012,7 +2354,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentSalon = data.salon;
             
             // Overwrite normal session with magic user
-            localStorage.setItem('barberSession', JSON.stringify({ token, user: currentUser, salonId, salon: currentSalon }));
+            localStorage.setItem('proSession', JSON.stringify({ token, user: currentUser, salonId, salon: currentSalon }));
             
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'flex';
@@ -2048,7 +2390,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) {
             console.error('Session restore failed', e);
-            localStorage.removeItem('barberSession');
+            localStorage.removeItem('proSession');
         }
     }
 });
@@ -2074,7 +2416,7 @@ async function submitForgotPassword() {
     if (!email) { setForgotMsg('Veuillez entrer votre email.', 'error'); return; }
     btn.textContent = 'Envoi…'; btn.disabled = true;
     try {
-        await fetch('/api/barber/forgot-password', {
+        await fetch('/api/pro/forgot-password', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })
         });
@@ -2107,7 +2449,7 @@ async function submitResetPassword() {
     if (password !== confirm) { setResetMsg('Les mots de passe ne correspondent pas.', 'error'); return; }
     btn.textContent = 'Enregistrement…'; btn.disabled = true;
     try {
-        const res = await fetch('/api/barber/reset-password', {
+        const res = await fetch('/api/pro/reset-password', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token: urlToken, password })
         });

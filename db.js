@@ -291,6 +291,13 @@ const db = {
 
         return await col.findOne({ _id: client._id });
     },
+    async findClientById(id) {
+        return await getDB().collection('clients').findOne({ _id: id });
+    },
+    async updateClient(id, updates) {
+        await getDB().collection('clients').updateOne({ _id: id }, { $set: updates });
+        return await getDB().collection('clients').findOne({ _id: id });
+    },
     async countClients(query = {}) {
         return await getDB().collection('clients').countDocuments(query);
     },

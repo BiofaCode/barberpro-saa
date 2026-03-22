@@ -430,7 +430,7 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
 //  BARBER (OWNER) API
 // ==========================
 
-route('POST', '/api/barber/login', async (req, res) => {
+route('POST', '/api/pro/login', async (req, res) => {
     const body = await parseBody(req);
     console.log(`\n🔑 Login attempt for email: "${body.email}"`);
 
@@ -499,7 +499,7 @@ route('POST', '/api/barber/login', async (req, res) => {
 });
 
 // Forgot password — always returns 200 to avoid email enumeration
-route('POST', '/api/barber/forgot-password', async (req, res) => {
+route('POST', '/api/pro/forgot-password', async (req, res) => {
     const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
     if (rateLimit(ip, 'forgot', 5, 15 * 60 * 1000)) {
         return json(res, 429, { success: false, error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
@@ -523,7 +523,7 @@ route('POST', '/api/barber/forgot-password', async (req, res) => {
 });
 
 // Reset password — validates token and sets new password
-route('POST', '/api/barber/reset-password', async (req, res) => {
+route('POST', '/api/pro/reset-password', async (req, res) => {
     const body = await parseBody(req);
     const { token, password } = body;
 
@@ -542,7 +542,7 @@ route('POST', '/api/barber/reset-password', async (req, res) => {
     json(res, 200, { success: true });
 });
 
-route('GET', '/api/barber/salon/:salonId', async (req, res, params) => {
+route('GET', '/api/pro/salon/:salonId', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const employees = await db.findEmployees({ salon: params.salonId });
@@ -550,7 +550,7 @@ route('GET', '/api/barber/salon/:salonId', async (req, res, params) => {
     json(res, 200, { success: true, data: { ...salon, employees, owner: owner ? db.ownerToJSON(owner) : null } });
 });
 
-route('PUT', '/api/barber/salon/:salonId', async (req, res, params) => {
+route('PUT', '/api/pro/salon/:salonId', async (req, res, params) => {
     const body = await parseBody(req);
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
@@ -570,7 +570,7 @@ route('PUT', '/api/barber/salon/:salonId', async (req, res, params) => {
 });
 
 // Upload logo
-route('POST', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
+route('POST', '/api/pro/salon/:salonId/logo', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
@@ -598,7 +598,7 @@ route('POST', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
     }
 });
 
-route('DELETE', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
+route('DELETE', '/api/pro/salon/:salonId/logo', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
@@ -611,7 +611,7 @@ route('DELETE', '/api/barber/salon/:salonId/logo', async (req, res, params) => {
 });
 
 // Stats
-route('GET', '/api/barber/salon/:salonId/stats', async (req, res, params) => {
+route('GET', '/api/pro/salon/:salonId/stats', async (req, res, params) => {
     const user = verifyToken(req);
     const isEmployee = user?.role === 'employee';
 
@@ -643,7 +643,7 @@ route('GET', '/api/barber/salon/:salonId/stats', async (req, res, params) => {
 });
 
 // Analytics (last 6 months)
-route('GET', '/api/barber/salon/:salonId/analytics', async (req, res, params) => {
+route('GET', '/api/pro/salon/:salonId/analytics', async (req, res, params) => {
     const user = verifyToken(req);
     if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
 
@@ -683,13 +683,13 @@ route('GET', '/api/barber/salon/:salonId/analytics', async (req, res, params) =>
 });
 
 // Services
-route('GET', '/api/barber/salon/:salonId/services', async (req, res, params) => {
+route('GET', '/api/pro/salon/:salonId/services', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     json(res, 200, { success: true, data: salon.services || [] });
 });
 
-route('POST', '/api/barber/salon/:salonId/services', async (req, res, params) => {
+route('POST', '/api/pro/salon/:salonId/services', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
@@ -708,7 +708,7 @@ route('POST', '/api/barber/salon/:salonId/services', async (req, res, params) =>
     json(res, 201, { success: true, data: svc });
 });
 
-route('PUT', '/api/barber/salon/:salonId/services/:svcId', async (req, res, params) => {
+route('PUT', '/api/pro/salon/:salonId/services/:svcId', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     const body = await parseBody(req);
@@ -717,7 +717,7 @@ route('PUT', '/api/barber/salon/:salonId/services/:svcId', async (req, res, para
     json(res, 200, { success: true, data: services.find(s => s._id === params.svcId) });
 });
 
-route('DELETE', '/api/barber/salon/:salonId/services/:svcId', async (req, res, params) => {
+route('DELETE', '/api/pro/salon/:salonId/services/:svcId', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     const services = (salon.services || []).filter(s => s._id !== params.svcId);
@@ -726,7 +726,7 @@ route('DELETE', '/api/barber/salon/:salonId/services/:svcId', async (req, res, p
 });
 
 // Branding & Hours
-route('PUT', '/api/barber/salon/:salonId/branding', async (req, res, params) => {
+route('PUT', '/api/pro/salon/:salonId/branding', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
@@ -750,7 +750,7 @@ route('PUT', '/api/barber/salon/:salonId/branding', async (req, res, params) => 
 });
 
 // ---- Gallery ----
-route('POST', '/api/barber/salon/:salonId/gallery', async (req, res, params) => {
+route('POST', '/api/pro/salon/:salonId/gallery', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
@@ -777,7 +777,7 @@ route('POST', '/api/barber/salon/:salonId/gallery', async (req, res, params) => 
     }
 });
 
-route('DELETE', '/api/barber/salon/:salonId/gallery/:photoId', async (req, res, params) => {
+route('DELETE', '/api/pro/salon/:salonId/gallery/:photoId', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
@@ -788,22 +788,22 @@ route('DELETE', '/api/barber/salon/:salonId/gallery/:photoId', async (req, res, 
 });
 
 // Retro-compatibility (old logo upload fallback just in case)
-route('POST', '/api/barber/salon/:salonId/logo_old', async (req, res, params) => {
+route('POST', '/api/pro/salon/:salonId/logo_old', async (req, res, params) => {
     json(res, 410, { success: false, error: 'Gone' });
 });
 
-route('DELETE', '/api/barber/salon/:salonId/logo_old', async (req, res, params) => {
+route('DELETE', '/api/pro/salon/:salonId/logo_old', async (req, res, params) => {
     json(res, 410, { success: false, error: 'Gone' });
 });
 
 // ---- Testimonials ----
-route('GET', '/api/barber/salon/:salonId/testimonials', async (req, res, params) => {
+route('GET', '/api/pro/salon/:salonId/testimonials', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     json(res, 200, { success: true, data: salon.testimonials || [] });
 });
 
-route('POST', '/api/barber/salon/:salonId/testimonials', async (req, res, params) => {
+route('POST', '/api/pro/salon/:salonId/testimonials', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
@@ -822,7 +822,7 @@ route('POST', '/api/barber/salon/:salonId/testimonials', async (req, res, params
     json(res, 201, { success: true, data: testimonial });
 });
 
-route('PUT', '/api/barber/salon/:salonId/testimonials/:tid', async (req, res, params) => {
+route('PUT', '/api/pro/salon/:salonId/testimonials/:tid', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
@@ -835,7 +835,7 @@ route('PUT', '/api/barber/salon/:salonId/testimonials/:tid', async (req, res, pa
     json(res, 200, { success: true, data: testimonials.find(t => t._id === params.tid) });
 });
 
-route('DELETE', '/api/barber/salon/:salonId/testimonials/:tid', async (req, res, params) => {
+route('DELETE', '/api/pro/salon/:salonId/testimonials/:tid', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
@@ -846,7 +846,7 @@ route('DELETE', '/api/barber/salon/:salonId/testimonials/:tid', async (req, res,
 });
 
 // Employees and Team Management
-route('GET', '/api/barber/salon/:salonId/employees', async (req, res, params) => {
+route('GET', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
     const employees = await db.findEmployees({ salon: params.salonId });
     const owners = await db.findOwners({ salon: params.salonId });
 
@@ -857,7 +857,7 @@ route('GET', '/api/barber/salon/:salonId/employees', async (req, res, params) =>
     json(res, 200, { success: true, data: team });
 });
 
-route('POST', '/api/barber/salon/:salonId/employees', async (req, res, params) => {
+route('POST', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
     const body = await parseBody(req);
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon introuvable' });
@@ -897,7 +897,7 @@ route('POST', '/api/barber/salon/:salonId/employees', async (req, res, params) =
     }
 });
 
-route('DELETE', '/api/barber/salon/:salonId/employees/:empId', async (req, res, params) => {
+route('DELETE', '/api/pro/salon/:salonId/employees/:empId', async (req, res, params) => {
     const url = new URL(req.url, `http://localhost`);
     const role = url.searchParams.get('role');
 
@@ -914,7 +914,7 @@ route('DELETE', '/api/barber/salon/:salonId/employees/:empId', async (req, res, 
     json(res, 200, { success: true, message: 'Membre supprimé' });
 });
 
-route('PUT', '/api/barber/salon/:salonId/employees/:empId/password', async (req, res, params) => {
+route('PUT', '/api/pro/salon/:salonId/employees/:empId/password', async (req, res, params) => {
     const user = verifyToken(req);
     if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     if (user.role === 'employee' && user.employeeId !== params.empId) {
@@ -934,7 +934,7 @@ route('PUT', '/api/barber/salon/:salonId/employees/:empId/password', async (req,
     json(res, 200, { success: true, message: 'Mot de passe mis à jour' });
 });
 
-route('PUT', '/api/barber/salon/:salonId/employees/:empId/hours', async (req, res, params) => {
+route('PUT', '/api/pro/salon/:salonId/employees/:empId/hours', async (req, res, params) => {
     const body = await parseBody(req);
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
@@ -952,7 +952,7 @@ route('PUT', '/api/barber/salon/:salonId/employees/:empId/hours', async (req, re
 });
 
 // Bookings
-route('GET', '/api/barber/salon/:salonId/bookings', async (req, res, params) => {
+route('GET', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
     const user = verifyToken(req);
     const url = new URL(req.url, `http://localhost`);
     const dateFilter = url.searchParams.get('date');
@@ -980,15 +980,15 @@ route('GET', '/api/barber/salon/:salonId/bookings', async (req, res, params) => 
     json(res, 200, { success: true, data: bookings });
 });
 
-route('PUT', '/api/barber/salon/:salonId/bookings/:bookingId', async (req, res, params) => {
+route('PUT', '/api/pro/salon/:salonId/bookings/:bookingId', async (req, res, params) => {
     const body = await parseBody(req);
     const booking = await db.updateBooking(params.bookingId, { status: body.status });
     if (!booking) return json(res, 404, { success: false });
     json(res, 200, { success: true, data: booking });
 });
 
-// Manual booking creation (from barber panel)
-route('POST', '/api/barber/salon/:salonId/bookings', async (req, res, params) => {
+// Manual booking creation (from pro panel)
+route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
     const body = await parseBody(req);
     if (!body.clientName) return json(res, 400, { success: false, error: 'Nom du client requis' });
 
@@ -1037,13 +1037,32 @@ route('POST', '/api/barber/salon/:salonId/bookings', async (req, res, params) =>
 });
 
 // Clients
-route('GET', '/api/barber/salon/:salonId/clients', async (req, res, params) => {
+route('GET', '/api/pro/salon/:salonId/clients', async (req, res, params) => {
     const clients = await db.findClients({ salon: params.salonId });
     json(res, 200, { success: true, data: clients });
 });
 
+// Single client + booking history
+route('GET', '/api/pro/salon/:salonId/clients/:clientId', async (req, res, params) => {
+    const user = verifyToken(req);
+    if (!user) return json(res, 401, { success: false });
+    const client = await db.findClientById(params.clientId);
+    if (!client || String(client.salon) !== String(params.salonId)) return json(res, 404, { success: false });
+    const bookings = await db.findBookings({ salon: params.salonId, client: params.clientId });
+    json(res, 200, { success: true, data: { ...client, recentBookings: bookings.slice(0, 15) } });
+});
+
+// Update client notes
+route('PUT', '/api/pro/salon/:salonId/clients/:clientId/notes', async (req, res, params) => {
+    const user = verifyToken(req);
+    if (!user) return json(res, 401, { success: false });
+    const body = await parseBody(req);
+    await db.updateClient(params.clientId, { notes: body.notes || '' });
+    json(res, 200, { success: true });
+});
+
 // SMS Status
-route('GET', '/api/barber/salon/:salonId/sms-status', async (req, res, params) => {
+route('GET', '/api/pro/salon/:salonId/sms-status', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     json(res, 200, {
@@ -1057,7 +1076,7 @@ route('GET', '/api/barber/salon/:salonId/sms-status', async (req, res, params) =
     });
 });
 
-route('PUT', '/api/barber/salon/:salonId/sms-settings', async (req, res, params) => {
+route('PUT', '/api/pro/salon/:salonId/sms-settings', async (req, res, params) => {
     const user = verifyToken(req);
     if (!user) return json(res, 401, { success: false });
     const body = await parseBody(req);
@@ -1072,7 +1091,7 @@ route('PUT', '/api/barber/salon/:salonId/sms-settings', async (req, res, params)
 });
 
 // Buy SMS credits via Stripe checkout
-route('POST', '/api/barber/sms/buy', async (req, res) => {
+route('POST', '/api/pro/sms/buy', async (req, res) => {
     const user = verifyToken(req);
     if (!user || user.role === 'employee') return json(res, 403, { success: false });
 
@@ -1455,7 +1474,7 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
 // ==========================
 
 // 1. Onboarding — crée un compte Connect Express et renvoie le lien
-route('POST', '/api/barber/stripe/connect/onboard', async (req, res) => {
+route('POST', '/api/pro/stripe/connect/onboard', async (req, res) => {
     if (!stripe) return json(res, 500, { success: false, error: 'Stripe non configuré' });
     const user = verifyToken(req);
     if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
@@ -1494,7 +1513,7 @@ route('POST', '/api/barber/stripe/connect/onboard', async (req, res) => {
 });
 
 // 2. Status — vérifie si le compte Connect est actif
-route('GET', '/api/barber/stripe/connect/status', async (req, res) => {
+route('GET', '/api/pro/stripe/connect/status', async (req, res) => {
     const user = verifyToken(req);
     if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
     const salon = await db.findSalonById(user.salonId);
@@ -1775,7 +1794,7 @@ async function sendPushToSalon(salonId, payload) {
 }
 
 // Save push subscription for the logged-in owner
-route('POST', '/api/barber/push/subscribe', async (req, res) => {
+route('POST', '/api/pro/push/subscribe', async (req, res) => {
     const user = verifyToken(req);
     if (!user || user.role === 'employee') return json(res, 403, { success: false });
     const body = await parseBody(req);
@@ -1793,7 +1812,7 @@ route('POST', '/api/barber/push/subscribe', async (req, res) => {
 });
 
 // Remove push subscription (logout / disable)
-route('POST', '/api/barber/push/unsubscribe', async (req, res) => {
+route('POST', '/api/pro/push/unsubscribe', async (req, res) => {
     const user = verifyToken(req);
     if (!user || user.role === 'employee') return json(res, 403, { success: false });
     const body = await parseBody(req);
@@ -1807,7 +1826,7 @@ route('POST', '/api/barber/push/unsubscribe', async (req, res) => {
 });
 
 // Serve VAPID public key to browser
-route('GET', '/api/barber/push/vapid-key', async (req, res) => {
+route('GET', '/api/pro/push/vapid-key', async (req, res) => {
     json(res, 200, { key: process.env.VAPID_PUBLIC_KEY || '' });
 });
 
@@ -1848,6 +1867,38 @@ route('POST', '/api/cancel-token/:token', async (req, res, params) => {
     const owner = await db.findOwnerBySalon(booking.salon);
     if (owner && owner.email) sendCancellationAlertToOwner(booking, salon || { name: 'SalonPro' }, owner.email);
 
+    json(res, 200, { success: true });
+});
+
+// ==========================
+//  CLIENT REVIEWS (public)
+// ==========================
+
+route('GET', '/api/review/:bookingId', async (req, res, params) => {
+    const booking = await db.findBookingById(params.bookingId);
+    if (!booking) return json(res, 404, { success: false, error: 'Introuvable' });
+    const salon = await db.findSalonById(booking.salon);
+    json(res, 200, { success: true, data: {
+        clientName: booking.clientName, serviceName: booking.serviceName,
+        date: booking.date, salonName: salon?.name || 'Salon', reviewed: booking.reviewed || false
+    }});
+});
+
+route('POST', '/api/review/:bookingId', async (req, res, params) => {
+    const body = await parseBody(req);
+    const booking = await db.findBookingById(params.bookingId);
+    if (!booking) return json(res, 404, { success: false, error: 'Introuvable' });
+    if (booking.reviewed) return json(res, 409, { success: false, error: 'Avis déjà soumis' });
+    const rating = Math.min(5, Math.max(1, parseInt(body.rating) || 5));
+    const comment = (body.comment || '').trim().slice(0, 500);
+    await db.updateBooking(booking._id, { reviewed: true, reviewRating: rating, reviewComment: comment, reviewDate: new Date().toISOString() });
+    // Update salon avg rating
+    const allReviewed = await db.findBookings({ salon: booking.salon, reviewed: true });
+    const ratings = allReviewed.map(b => b.reviewRating).filter(Boolean);
+    if (ratings.length) {
+        const avg = parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1));
+        await db.updateSalon(booking.salon, { rating: avg, reviewCount: ratings.length });
+    }
     json(res, 200, { success: true });
 });
 
@@ -1915,8 +1966,15 @@ const server = http.createServer(async (req, res) => {
         filePath = path.join(__dirname, adminPath);
     }
     else if (pathname.startsWith('/pro')) {
-        const proPath = pathname === '/pro' || pathname === '/pro/' ? '/barber/index.html' : pathname.replace(/^\/pro/, '/barber');
+        const proPath = pathname === '/pro' || pathname === '/pro/' ? '/pro/index.html' : pathname;
         filePath = path.join(__dirname, proPath);
+    }
+    else if (pathname.startsWith('/review/')) {
+        const bookingId = pathname.split('/review/')[1]?.split('?')[0] || '';
+        const reviewHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Votre avis</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#0a0a14;color:#f0f0f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{background:#13131f;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;max-width:420px;width:100%;text-align:center}.logo{font-size:40px;margin-bottom:16px}.title{font-size:22px;font-weight:700;margin-bottom:8px}.sub{color:#9ca3af;font-size:.9rem;margin-bottom:28px;line-height:1.5}.stars{display:flex;justify-content:center;gap:12px;margin-bottom:24px;font-size:36px;cursor:pointer}.star{opacity:.3;transition:all .15s;user-select:none}.star.active{opacity:1}.textarea{width:100%;background:#1e1e2e;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f0f0f0;font-family:inherit;font-size:.9rem;padding:12px;resize:none;margin-bottom:16px}.btn{width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:12px;padding:14px;font-size:1rem;font-weight:600;cursor:pointer}.success{color:#22c55e;font-size:1.2rem;font-weight:700;margin-top:16px}</style></head><body><div class="card"><div class="logo">⭐</div><div id="content"><div class="title">Votre avis compte !</div><div class="sub" id="subText">Chargement...</div><div class="stars" id="stars">${[1,2,3,4,5].map(i=>`<span class="star" data-v="${i}" onclick="setRating(${i})">★</span>`).join('')}</div><textarea class="textarea" id="comment" rows="3" placeholder="Partagez votre expérience (optionnel)..."></textarea><button class="btn" onclick="submitReview()">Envoyer mon avis</button></div></div><script>let rating=5;const id="${bookingId}";fetch('/api/review/'+id).then(r=>r.json()).then(d=>{if(d.success&&!d.data.reviewed){document.getElementById('subText').textContent=d.data.salonName+' · '+d.data.serviceName+' du '+d.data.date}else if(d.data?.reviewed){document.getElementById('content').innerHTML='<div class="success">✅ Merci pour votre avis !</div><p style="color:#9ca3af;margin-top:12px;font-size:.9rem">Votre retour a bien été enregistré.</p>'}else{document.getElementById('subText').textContent='Lien invalide ou expiré.'}});setRating(5);function setRating(v){rating=v;document.querySelectorAll('.star').forEach(s=>{s.classList.toggle('active',parseInt(s.dataset.v)<=v)})}async function submitReview(){const comment=document.getElementById('comment').value;const r=await fetch('/api/review/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rating,comment})});const d=await r.json();if(d.success){document.getElementById('content').innerHTML='<div class="success">✅ Merci pour votre avis !</div><p style="color:#9ca3af;margin-top:12px;font-size:.9rem">Votre retour a bien été enregistré.</p>'}else{alert(d.error||'Erreur')}}</script></body></html>`;
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(reviewHtml);
+        return;
     }
     else if (pathname.startsWith('/cancel/')) {
         const filePath = path.join(__dirname, 'website', 'cancel.html');
