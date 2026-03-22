@@ -1021,12 +1021,27 @@ function renderMapSection(salon) {
   const mapContainer = document.getElementById('mapEmbed');
   if (mapContainer) {
     mapContainer.innerHTML = `<iframe
-      src="https://maps.google.com/maps?q=${encoded}&output=embed&hl=fr"
+      src="https://www.openstreetmap.org/export/embed.html?bbox=&layer=mapnik&marker=0,0&query=${encoded}"
       allowfullscreen
       loading="lazy"
-      referrerpolicy="no-referrer-when-downgrade"
       title="Localisation de ${salon.name || 'notre salon'}"
+      style="border:0"
     ></iframe>`;
+    // Use Nominatim to geocode and get real bbox
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encoded}&limit=1`)
+      .then(r => r.json())
+      .then(results => {
+        if (!results || !results.length) return;
+        const { lat, lon, boundingbox } = results[0];
+        const latF = parseFloat(lat), lonF = parseFloat(lon);
+        const delta = 0.005;
+        const bbox = `${lonF - delta},${latF - delta},${lonF + delta},${latF + delta}`;
+        const iframe = mapContainer.querySelector('iframe');
+        if (iframe) {
+          iframe.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${latF},${lonF}`;
+        }
+      })
+      .catch(() => {});
   }
 }
 
@@ -1076,18 +1091,36 @@ function updateAvailabilityBadge(salon) {
    MOBILE STICKY BTN — hide when modal open
    ============================================ */
 function initMobileStickyBtn() {
-  const btn = document.getElementById('mobileStickyBtn');
-  if (!btn) return;
+  const fab = document.getElementById('mobileStickyBtn');
+  if (!fab) return;
+
+  let heroCTAVisible = true;
+  let modalOpen = false;
+
+  function updateFAB() {
+    if (!heroCTAVisible && !modalOpen) {
+      fab.classList.add('visible');
+    } else {
+      fab.classList.remove('visible');
+    }
+  }
 
   // Hide when hero CTA is visible, show when scrolled past it
   const heroCta = document.querySelector('.hero-actions');
   if (heroCta) {
     const io = new IntersectionObserver(entries => {
-      entries.forEach(e => {
-        btn.style.opacity = e.isIntersecting ? '0' : '1';
-        btn.style.pointerEvents = e.isIntersecting ? 'none' : '';
-      });
-    }, { threshold: 0.5 });
+      entries.forEach(e => { heroCTAVisible = e.isIntersecting; updateFAB(); });
+    }, { threshold: 0.3 });
     io.observe(heroCta);
+  }
+
+  // Hide when booking modal opens
+  const modal = document.getElementById('bookingModal');
+  if (modal) {
+    const mo = new MutationObserver(() => {
+      modalOpen = modal.classList.contains('active');
+      updateFAB();
+    });
+    mo.observe(modal, { attributes: true, attributeFilter: ['class'] });
   }
 }
