@@ -557,4 +557,52 @@ async function sendCancellationAlertToOwner(booking, salon, ownerEmail) {
   } catch(e) { console.error('Cancellation alert owner email critical:', e.message); }
 }
 
-module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner };
+// Send admin notification when a new paying salon subscribes
+async function sendAdminNewSubscriptionEmail(adminEmail, { salonName, ownerEmail, plan, salonId, baseUrl }) {
+  const fromName = process.env.SMTP_FROM_NAME || 'SalonPro';
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const planLabel = { starter: 'Starter', pro: 'Pro ⭐', premium: 'Premium 🚀' }[plan] || plan;
+  const adminUrl = (baseUrl || process.env.BASE_URL || 'https://barberpro-saa.onrender.com') + '/admin';
+  const now = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
+
+  try {
+    await resend.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: [adminEmail],
+      subject: `💰 Nouveau salon payant — ${salonName} (${planLabel})`,
+      html: `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Roboto,Arial,sans-serif">
+  <div style="max-width:520px;margin:32px auto;padding:0 12px">
+    <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:16px 16px 0 0;padding:28px 28px 24px;text-align:center">
+      <div style="font-size:36px;margin-bottom:8px">💰</div>
+      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">Nouvelle inscription payante !</h1>
+    </div>
+    <div style="background:#fff;padding:28px;border:1px solid #e4e4e7;border-top:none">
+      <table style="width:100%;border-collapse:collapse">
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:13px;width:120px">Salon</td><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;font-weight:600;font-size:14px">${salonName}</td></tr>
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:13px">Email</td><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;font-size:14px">${ownerEmail}</td></tr>
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:13px">Plan</td><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;font-size:14px"><strong>${planLabel}</strong></td></tr>
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:13px">ID Salon</td><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;font-size:12px;font-family:monospace">${salonId}</td></tr>
+        <tr><td style="padding:10px 0;color:#71717a;font-size:13px">Date</td><td style="padding:10px 0;font-size:14px">${now}</td></tr>
+      </table>
+      <div style="text-align:center;margin-top:24px">
+        <a href="${adminUrl}" style="display:inline-block;background:#6366F1;color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Voir le dashboard admin →</a>
+      </div>
+    </div>
+    <div style="background:#f9fafb;border:1px solid #e4e4e7;border-top:none;border-radius:0 0 16px 16px;padding:14px 28px;text-align:center">
+      <p style="margin:0;color:#9ca3af;font-size:12px">SalonPro — Notification automatique</p>
+    </div>
+  </div>
+</body>
+</html>`,
+    });
+    console.log(`  📧 Notification admin envoyée à ${adminEmail} pour nouveau salon: ${salonName}`);
+  } catch (e) {
+    console.error('Admin new subscription email error:', e.message);
+  }
+}
+
+module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail };

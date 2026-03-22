@@ -322,6 +322,15 @@ const db = {
         return await getDB().collection('bookings').countDocuments(query);
     },
 
+    // ---- Salon Logs ----
+    async addSalonLog(salonId, action, details = {}) {
+        const log = { salonId, action, details, timestamp: new Date().toISOString() };
+        await getDB().collection('salonLogs').insertOne(log);
+    },
+    async getSalonLogs(salonId, limit = 50) {
+        return await getDB().collection('salonLogs').find({ salonId }).sort({ timestamp: -1 }).limit(limit).toArray();
+    },
+
     // ---- Counts ----
     async countSalons() { return await getDB().collection('salons').countDocuments(); },
     async countOwners() { return await getDB().collection('owners').countDocuments(); },

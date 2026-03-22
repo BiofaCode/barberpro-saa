@@ -213,6 +213,16 @@ function activatePage(page) {
     if (titleEl) titleEl.textContent = titles[page] || page;
 }
 
+function copyShareLink() {
+    if (!currentSalon?.slug) return showToast('Salon non chargé', 'error');
+    const link = `${window.location.origin}/s/${currentSalon.slug}`;
+    navigator.clipboard.writeText(link).then(() => {
+        localStorage.setItem(`shared_${salonId}`, '1');
+        showToast('Lien copié ✅ — ' + link);
+        if (currentSalon) renderOnboardingChecklist(currentSalon);
+    }).catch(() => showToast('Impossible de copier', 'error'));
+}
+
 function openWebsite() {
     if (currentSalon?.slug) {
         window.open(`/s/${currentSalon.slug}`, '_blank');
@@ -293,10 +303,69 @@ function renderTopServices(services) {
 }
 
 // ---- Dashboard ----
+function renderOnboardingChecklist(salon) {
+    const container = document.getElementById('onboardingChecklist');
+    if (!container) return;
+
+    // Don't show if user dismissed it
+    const dismissedKey = `onboarding_dismissed_${salonId}`;
+    if (localStorage.getItem(dismissedKey)) return;
+
+    const steps = [
+        { id: 'logo', label: 'Ajouter votre logo', done: !!salon.logo, action: "showPage('settings')", icon: '🖼' },
+        { id: 'services', label: 'Configurer vos services', done: (salon.services?.length || 0) > 0, action: "showPage('services')", icon: '✨' },
+        { id: 'hours', label: 'Renseigner vos horaires', done: !!(salon.hours?.lundi?.open), action: "showPage('settings')", icon: '🕐' },
+        { id: 'address', label: 'Ajouter votre adresse', done: !!(salon.address && salon.address.trim()), action: "showPage('settings')", icon: '📍' },
+        { id: 'share', label: 'Partager votre lien de réservation', done: !!localStorage.getItem(`shared_${salonId}`), action: `copyShareLink()`, icon: '🔗' },
+    ];
+
+    const allDone = steps.every(s => s.done);
+    if (allDone) {
+        container.style.display = 'none';
+        return;
+    }
+
+    const completedCount = steps.filter(s => s.done).length;
+    const progress = Math.round((completedCount / steps.length) * 100);
+
+    container.style.display = 'block';
+    container.innerHTML = `
+        <div class="card" style="margin-bottom:16px;border:1px solid rgba(99,102,241,0.25);background:rgba(99,102,241,0.05)">
+            <div class="card-header" style="padding-bottom:8px">
+                <div>
+                    <h3 style="margin:0">🚀 Démarrage — ${completedCount}/${steps.length} étapes</h3>
+                    <div style="font-size:.8rem;color:var(--text-sec);margin-top:3px">Configurez votre salon pour le rendre visible et opérationnel.</div>
+                </div>
+                <button onclick="dismissOnboarding('${dismissedKey}')" style="background:none;border:none;color:var(--text-muted);font-size:1.1rem;cursor:pointer;padding:4px" title="Fermer">✕</button>
+            </div>
+            <div class="card-body" style="padding-top:4px">
+                <div style="background:rgba(255,255,255,.06);border-radius:4px;height:6px;margin-bottom:14px;overflow:hidden">
+                    <div style="background:var(--primary);height:100%;width:${progress}%;border-radius:4px;transition:width 0.5s ease"></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                    ${steps.map(s => `
+                        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,${s.done ? '.03' : '.06'});border:1px solid rgba(255,255,255,${s.done ? '.04' : '.08'});cursor:${s.done ? 'default' : 'pointer'}" ${!s.done ? `onclick="${s.action}"` : ''}>
+                            <span style="font-size:1.1rem">${s.done ? '✅' : s.icon}</span>
+                            <span style="flex:1;font-size:.88rem;color:${s.done ? 'var(--text-muted)' : 'var(--text-color)'};${s.done ? 'text-decoration:line-through;' : ''}">${s.label}</span>
+                            ${!s.done ? `<span style="font-size:.75rem;color:var(--primary)">Faire →</span>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>`;
+}
+
+function dismissOnboarding(key) {
+    localStorage.setItem(key, '1');
+    const el = document.getElementById('onboardingChecklist');
+    if (el) el.style.display = 'none';
+}
+
 async function loadDashboard(_retry = 0) {
     if (_retry === 0) {
         const tb = document.getElementById('todayBookings');
         if (tb) tb.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement…</div></div>';
+        if (currentSalon) renderOnboardingChecklist(currentSalon);
     }
     try {
         const [statsRes, bookingsRes, analyticsRes] = await Promise.all([
@@ -1816,6 +1885,7 @@ async function loadSettings() {
                     <div class="form-group"><label class="form-label">Email</label><input class="form-input form-input-full" id="set-email" value="${salon.email || ''}" placeholder="contact@monsalon.fr"></div>
                     <div style="display:flex;align-items:center;gap:8px;margin-top:4px;font-size:.82rem;color:var(--text-muted)">
                         <span>🌐</span> Site web : <a href="/s/${salon.slug}" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:600">/s/${salon.slug}</a>
+                        <button onclick="copyShareLink()" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.2);color:var(--primary);border-radius:6px;padding:2px 8px;font-size:.76rem;cursor:pointer">📋 Copier</button>
                     </div>
                     <button class="btn btn-primary" onclick="saveInfo()" style="margin-top:16px">💾 Enregistrer les infos</button>
                 </div>
@@ -1874,6 +1944,15 @@ async function loadSettings() {
                     </div>
                     <div class="form-group"><label class="form-label">Titre principal du site (hero)</label><input class="form-input form-input-full" id="set-heroTitle" value="${salon.branding?.heroTitle || ''}" placeholder="L'Art de la Coiffure Masculine"></div>
                     <div class="form-group"><label class="form-label">Sous-titre du site</label><input class="form-input form-input-full" id="set-heroSubtitle" value="${salon.branding?.heroSubtitle || ''}" placeholder="Excellence, style et précision"></div>
+                    <div class="form-group" style="margin-bottom:12px">
+                        <label class="form-label">🖼 Photo de fond du hero</label>
+                        ${salon.branding?.heroImage ? `<div style="margin-bottom:10px"><img src="${salon.branding.heroImage}" alt="Hero" style="width:100%;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--border)"><button class="btn btn-sm" onclick="deleteHeroImage()" style="margin-top:6px;border-color:var(--error);color:var(--error);background:transparent;width:100%">🗑 Supprimer la photo de fond</button></div>` : ''}
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <input type="file" id="heroImageFile" accept="image/*" class="form-input" style="flex:1">
+                            <button class="btn btn-primary btn-sm" onclick="uploadHeroImage()">📤 Uploader</button>
+                        </div>
+                        <div style="font-size:.75rem;color:var(--text-muted);margin-top:6px">Image affichée en fond de la section hero de votre page publique. JPG/PNG/WebP, max 5 Mo.</div>
+                    </div>
                     
                     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
                         <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
@@ -1908,6 +1987,23 @@ async function loadSettings() {
                         <div style="font-size:.75rem;color:var(--text-muted);margin-top:8px">Laissez vide pour ne pas afficher le réseau sur votre site.</div>
                     </div>
                     <button class="btn btn-primary" onclick="saveBranding()" style="margin-top:12px">🎨 Enregistrer le branding</button>
+                </div>
+            </div>
+
+            <!-- DOMAINE PERSONNALISÉ -->
+            <div class="card" style="margin-bottom:20px">
+                <div class="card-header"><h3>🌐 Domaine personnalisé</h3></div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Sous-domaine de réservation (optionnel)</label>
+                        <input class="form-input form-input-full" id="set-customDomain" value="${salon.customDomain || ''}" placeholder="reservations.mon-salon.com">
+                        <div style="font-size:.8rem;color:var(--text-muted);margin-top:6px;line-height:1.6">
+                            Renseignez ici votre sous-domaine souhaité (ex: <code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px">reservations.mon-salon.com</code>).<br>
+                            Ensuite, ajoutez un enregistrement CNAME chez votre registraire DNS :<br>
+                            <code style="background:rgba(99,102,241,.1);color:var(--primary);padding:4px 8px;border-radius:6px;display:inline-block;margin-top:6px;font-size:.78rem">reservations.mon-salon.com → ${window.location.hostname}</code>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" onclick="saveCustomDomain()" style="margin-top:8px">💾 Enregistrer le domaine</button>
                 </div>
             </div>
 
@@ -2318,6 +2414,59 @@ async function deleteLogo() {
     await apiFetch(`${API}/api/pro/salon/${salonId}/logo`, { method: 'DELETE' });
     showToast('Logo supprimé');
     loadSettings();
+}
+
+// ---- Custom Domain ----
+async function saveCustomDomain() {
+    const domain = document.getElementById('set-customDomain')?.value.trim() || '';
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customDomain: domain })
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentSalon = data.data;
+            showToast(domain ? 'Domaine enregistré ✅' : 'Domaine supprimé');
+        } else { showToast('Erreur', 'error'); }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+// ---- Hero Image Upload ----
+async function uploadHeroImage() {
+    const fileInput = document.getElementById('heroImageFile');
+    if (!fileInput?.files[0]) return showToast('Sélectionnez une image', 'error');
+
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/hero-image`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Photo de fond enregistrée ✅');
+            loadSettings();
+        } else {
+            showToast(data.error || 'Erreur upload', 'error');
+        }
+    } catch (e) {
+        showToast('Erreur de connexion', 'error');
+    }
+}
+
+async function deleteHeroImage() {
+    if (!confirm('Supprimer la photo de fond du hero ?')) return;
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/hero-image`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Photo de fond supprimée');
+            loadSettings();
+        }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
 }
 
 // ---- Gallery ----

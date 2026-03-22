@@ -37,11 +37,12 @@
   <!-- Hero Section -->
   <section class="hero" id="hero">
     <div class="hero-bg">
+      <img class="hero-bg-image" id="heroBgImage" src="" alt="" style="display:none">
       <div class="hero-bg-overlay"></div>
       <div class="hero-particles" id="heroParticles"></div>
     </div>
     <div class="hero-content">
-      <div class="hero-badge">
+      <div class="hero-badge" id="heroBadge">
         <span class="pulse"></span>
         Prêt à vous accueillir
       </div>
@@ -182,6 +183,16 @@
     </div>
   </section>
 
+  <!-- Team Section -->
+  <section class="team" id="teamSection">
+    <div class="reveal">
+      <span class="section-badge">Notre équipe</span>
+      <h2 class="section-title">Vos Experts</h2>
+      <p class="section-subtitle">Des professionnels passionnés qui mettent leur savoir-faire à votre service.</p>
+    </div>
+    <div class="team-grid" id="teamGrid"></div>
+  </section>
+
   <!-- Booking CTA Section (replaces inline booking) -->
   <section class="booking-cta-section" id="booking">
     <div class="reveal">
@@ -253,6 +264,15 @@
   </section>
 
 
+
+  <!-- Map Section -->
+  <section class="map-section" id="mapSection">
+    <div class="reveal">
+      <span class="section-badge">Nous trouver</span>
+      <h2 class="section-title">Notre Adresse</h2>
+    </div>
+    <div class="map-embed" id="mapEmbed"></div>
+  </section>
 
   <!-- Footer -->
   <footer class="footer" id="contact">
@@ -470,6 +490,13 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Mobile sticky CTA (hidden on desktop) -->
+  <div class="mobile-sticky-cta" id="mobileStickyBtn">
+    <button class="btn btn-primary mobile-sticky-btn" onclick="openBooking()">
+      📅 Réserver maintenant
+    </button>
   </div>
 
   <script src="js/app.js"></script>
