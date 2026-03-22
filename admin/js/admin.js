@@ -109,10 +109,7 @@ async function submitEditSalon(salonId) {
     description: document.getElementById('eSalonDesc').value.trim()
   };
 
-  const res = await api('/api/admin/salons/' + salonId, {
-    method: 'PUT',
-    body: JSON.stringify(updates)
-  });
+  const res = await api('/api/admin/salons/' + salonId, 'PUT', updates);
 
   if (res.success) {
     closeModal();
@@ -695,8 +692,19 @@ async function editAdminNotes(salonId, currentNotes) {
 }
 
 // ============ EXPORT CSV ============
-function exportSalonsCSV() {
-  window.location.href = '/api/admin/salons/export-csv';
+async function exportSalonsCSV() {
+  const token = localStorage.getItem('adminToken');
+  const res = await fetch('/api/admin/salons/export-csv', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) { toast('Erreur export CSV', 'error'); return; }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `salons-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 initApp();
