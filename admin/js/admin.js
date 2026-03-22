@@ -297,11 +297,14 @@ function renderSalonCards(salons) {
                     <div class="salon-card-stat-label">Services</div>
                 </div>
             </div>
+            ${s.adminNotes ? `<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:8px 10px;font-size:.8rem;color:#f59e0b;margin-bottom:8px">📌 ${s.adminNotes}</div>` : ''}
             <div class="salon-card-actions" style="flex-wrap:wrap;gap:8px">
                 <button class="btn btn-sm btn-primary" onclick="quickLogin('${s._id}')">🚀 PRO</button>
                 <a href="/s/${s.slug}" target="_blank" class="btn btn-sm btn-outline">🌐 Site</a>
                 <button class="btn btn-sm btn-outline" onclick="editSalon('${s._id}')">✏️ Edit</button>
                 <button class="btn btn-sm btn-outline" onclick="resetOwnerPassword('${s._id}', '${s.owner?._id}')">🔑 MDP</button>
+                <button class="btn btn-sm btn-ghost" onclick="showSalonLogs('${s._id}', '${s.name.replace(/'/g, "\\'")}')">📜 Logs</button>
+                <button class="btn btn-sm btn-ghost" onclick="editAdminNotes('${s._id}', '${(s.adminNotes || '').replace(/'/g, "\\'")}')">📌 Notes</button>
                 <button class="btn btn-sm btn-ghost" onclick="copySalonInfo('${s._id}')">📋 Infos</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteSalon('${s._id}')">🗑️</button>
             </div>
@@ -646,6 +649,54 @@ async function loadActivityPage() {
     }).join('') || '<div class="empty-state">Aucune activité récente</div>';
 
   el.innerHTML = `<div class="card"><div class="card-header"><h3>🏪 Nouveaux salons (récents → anciens)</h3></div><div class="card-body"><div class="activity-list">${items}</div></div></div>`;
+}
+
+// ============ SALON LOGS ============
+async function showSalonLogs(salonId, salonName) {
+  showModal(`📜 Historique — ${salonName}`, '<div id="logsContainer">Chargement…</div>');
+  const res = await api(`/api/admin/salons/${salonId}/logs`);
+  const container = document.getElementById('logsContainer');
+  if (!res.success || !res.data?.length) {
+    container.innerHTML = '<div style="color:var(--text-sec);text-align:center;padding:20px">Aucun historique disponible</div>';
+    return;
+  }
+  const ACTION_LABELS = {
+    salon_created: '🏪 Salon créé',
+    subscription_activated: '✅ Abonnement activé',
+    plan_change: '🔄 Changement de plan',
+  };
+  container.innerHTML = res.data.map(log => {
+    const date = new Date(log.timestamp).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    let detail = '';
+    if (log.action === 'plan_change') detail = `${log.details?.from} → ${log.details?.to}`;
+    else if (log.action === 'subscription_activated') detail = `Plan ${log.details?.plan}`;
+    else if (log.action === 'salon_created') detail = `${log.details?.name || ''} · ${log.details?.ownerEmail || ''}`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+      <div>
+        <div style="font-size:.88rem;font-weight:600">${ACTION_LABELS[log.action] || log.action}</div>
+        ${detail ? `<div style="font-size:.78rem;color:var(--text-sec);margin-top:2px">${detail}</div>` : ''}
+      </div>
+      <div style="font-size:.75rem;color:var(--text-muted);white-space:nowrap;margin-left:12px">${date}</div>
+    </div>`;
+  }).join('');
+}
+
+// ============ ADMIN NOTES ============
+async function editAdminNotes(salonId, currentNotes) {
+  const notes = prompt('Notes internes (non visible par le salon) :', currentNotes || '');
+  if (notes === null) return; // cancelled
+  const res = await api(`/api/admin/salons/${salonId}/notes`, 'PUT', { notes });
+  if (res.success) {
+    toast('Notes enregistrées');
+    loadSalons();
+  } else {
+    toast('Erreur', 'error');
+  }
+}
+
+// ============ EXPORT CSV ============
+function exportSalonsCSV() {
+  window.location.href = '/api/admin/salons/export-csv';
 }
 
 initApp();

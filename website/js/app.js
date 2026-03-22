@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initCounters();
   initScrollReveal();
   initBookingModal();
+  initMobileStickyBtn();
 
   // Retour depuis Stripe Checkout (paiement booking)
   const urlP = new URLSearchParams(window.location.search);
@@ -79,6 +80,16 @@ function applySalonBranding(salon) {
       document.documentElement.style.setProperty('--color-bg', b.backgroundColor);
       document.documentElement.style.setProperty('--color-bg-secondary', b.backgroundColor);
       document.body.style.background = b.backgroundColor;
+    }
+  }
+
+  // Apply hero background image if set
+  const heroBgImg = document.getElementById('heroBgImage');
+  if (heroBgImg) {
+    const heroImg = salon.branding?.heroImage;
+    if (heroImg) {
+      heroBgImg.src = heroImg;
+      heroBgImg.style.display = 'block';
     }
   }
 
@@ -217,6 +228,9 @@ function applySalonBranding(salon) {
   }
 
   updateFooter(salon);
+  renderTeamSection(salon);
+  renderMapSection(salon);
+  updateAvailabilityBadge(salon);
 }
 
 function toggleServices(extra) {
@@ -954,5 +968,126 @@ async function cancelBooking(id) {
     }
   } catch (e) {
     showToast('Erreur de connexion', 'error');
+  }
+}
+
+/* ============================================
+   TEAM SECTION
+   ============================================ */
+function renderTeamSection(salon) {
+  const employees = salon.employees;
+  const teamSection = document.getElementById('teamSection');
+  if (!teamSection) return;
+
+  if (!employees || employees.length === 0) {
+    teamSection.style.display = 'none';
+    document.querySelectorAll('a[href="#team"]').forEach(el => el.style.display = 'none');
+    return;
+  }
+
+  const grid = document.getElementById('teamGrid');
+  if (!grid) return;
+
+  grid.innerHTML = employees.map(emp => {
+    const initials = (emp.name || '?')[0].toUpperCase();
+    const avatarHtml = emp.photo
+      ? `<img src="${emp.photo}" alt="${emp.name}" loading="lazy">`
+      : initials;
+    const specialtiesHtml = (emp.specialties || []).length > 0
+      ? emp.specialties.map(s => `<span class="team-specialty-tag">${s}</span>`).join('')
+      : '<span class="team-specialties">Tous services</span>';
+
+    return `
+      <div class="team-card reveal active">
+        <div class="team-avatar">${avatarHtml}</div>
+        <div class="team-name">${emp.name || 'Professionnel'}</div>
+        <div class="team-specialties">${specialtiesHtml}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ============================================
+   GOOGLE MAPS EMBED
+   ============================================ */
+function renderMapSection(salon) {
+  const mapSection = document.getElementById('mapSection');
+  if (!mapSection || !salon.address) {
+    if (mapSection) mapSection.style.display = 'none';
+    return;
+  }
+
+  const encoded = encodeURIComponent(salon.address);
+  const mapContainer = document.getElementById('mapEmbed');
+  if (mapContainer) {
+    mapContainer.innerHTML = `<iframe
+      src="https://maps.google.com/maps?q=${encoded}&output=embed&hl=fr"
+      allowfullscreen
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+      title="Localisation de ${salon.name || 'notre salon'}"
+    ></iframe>`;
+  }
+}
+
+/* ============================================
+   BADGE "DISPONIBLE AUJOURD'HUI"
+   ============================================ */
+function updateAvailabilityBadge(salon) {
+  const badge = document.getElementById('heroBadge');
+  if (!badge) return;
+
+  const today = new Date();
+  const dayName = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'][today.getDay()];
+  const hours = salon.hours?.[dayName];
+
+  // Check if today is a closed date
+  const todayStr = today.toISOString().split('T')[0];
+  const isClosed = (salon.closedDates || []).some(cd => todayStr >= cd.start && todayStr <= cd.end);
+
+  if (isClosed || !hours?.open) {
+    badge.innerHTML = `<span class="pulse" style="background:var(--color-error)"></span> Fermé aujourd'hui`;
+    badge.style.borderColor = 'rgba(248, 113, 113, 0.2)';
+    badge.style.color = 'var(--color-error)';
+    return;
+  }
+
+  // Check if currently open
+  const now = today.getHours() * 60 + today.getMinutes();
+  const [openH, openM] = hours.open.split(':').map(Number);
+  const [closeH, closeM] = hours.close.split(':').map(Number);
+  const openMin = openH * 60 + openM;
+  const closeMin = closeH * 60 + closeM;
+
+  if (now >= openMin && now < closeMin) {
+    badge.innerHTML = `<span class="pulse"></span> Disponible aujourd'hui — ouvert jusqu'à ${hours.close}`;
+    badge.style.borderColor = 'rgba(74, 222, 128, 0.25)';
+    badge.style.color = 'var(--color-success)';
+  } else if (now < openMin) {
+    badge.innerHTML = `<span class="pulse"></span> Ouvre aujourd'hui à ${hours.open}`;
+  } else {
+    badge.innerHTML = `<span class="pulse" style="background:var(--color-warning)"></span> Fermé — rouvre demain`;
+    badge.style.borderColor = 'rgba(251, 191, 36, 0.2)';
+    badge.style.color = 'var(--color-warning)';
+  }
+}
+
+/* ============================================
+   MOBILE STICKY BTN — hide when modal open
+   ============================================ */
+function initMobileStickyBtn() {
+  const btn = document.getElementById('mobileStickyBtn');
+  if (!btn) return;
+
+  // Hide when hero CTA is visible, show when scrolled past it
+  const heroCta = document.querySelector('.hero-actions');
+  if (heroCta) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        btn.style.opacity = e.isIntersecting ? '0' : '1';
+        btn.style.pointerEvents = e.isIntersecting ? 'none' : '';
+      });
+    }, { threshold: 0.5 });
+    io.observe(heroCta);
   }
 }

@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
 const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
@@ -267,13 +267,32 @@ route('GET', '/robots.txt', async (req, res) => {
     });
 });
 
+// Dynamic sitemap.xml — generated from active salons in DB
 route('GET', '/sitemap.xml', async (req, res) => {
-    const file = path.join(__dirname, 'sitemap.xml');
-    fs.readFile(file, (err, data) => {
-        if (err) { res.writeHead(404); res.end(); return; }
-        res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
-        res.end(data);
-    });
+    try {
+        const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+        const salons = await db.findSalons({ active: true });
+        const now = new Date().toISOString().split('T')[0];
+
+        const staticUrls = [
+            `<url><loc>${baseUrl}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
+            `<url><loc>${baseUrl}/faq</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
+        ];
+
+        const salonUrls = salons.map(s =>
+            `<url><loc>${baseUrl}/s/${s.slug}</loc><lastmod>${now}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`
+        );
+
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${[...staticUrls, ...salonUrls].join('\n')}
+</urlset>`;
+
+        res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' });
+        res.end(xml);
+    } catch (err) {
+        res.writeHead(500); res.end('Error generating sitemap');
+    }
 });
 
 route('GET', '/api/admin/stats', async (req, res) => {
@@ -355,6 +374,7 @@ route('POST', '/api/admin/salons', async (req, res) => {
     console.log(`\n🏪 Nouveau salon créé: ${salon.name} (${salon.slug})`);
     console.log(`   👤 Propriétaire: ${owner.name} (${owner.email})`);
     console.log(`   🌐 Site: http://localhost:${PORT}/s/${salon.slug}`);
+    await db.addSalonLog(salon._id, 'salon_created', { name: salon.name, slug: salon.slug, plan: body.plan || 'pro', ownerEmail: body.ownerEmail });
 
     json(res, 201, { success: true, data: { salon, owner: db.ownerToJSON(owner) } });
 });
@@ -399,9 +419,54 @@ route('PUT', '/api/admin/salons/:id/plan', async (req, res, params) => {
         return json(res, 400, { success: false, error: 'Plan invalide' });
     }
 
+    const oldPlan = salon.subscription?.plan || 'starter';
     const subscription = { ...(salon.subscription || {}), plan: body.plan };
     await db.updateSalon(params.id, { subscription });
+    await db.addSalonLog(params.id, 'plan_change', { from: oldPlan, to: body.plan });
     json(res, 200, { success: true, message: 'Plan mis à jour', data: subscription });
+});
+
+// Admin: get salon change logs
+route('GET', '/api/admin/salons/:id/logs', async (req, res, params) => {
+    const logs = await db.getSalonLogs(params.id, 100);
+    json(res, 200, { success: true, data: logs });
+});
+
+// Admin: save/update internal notes for a salon
+route('PUT', '/api/admin/salons/:id/notes', async (req, res, params) => {
+    const body = await parseBody(req);
+    await db.updateSalon(params.id, { adminNotes: body.notes || '' });
+    json(res, 200, { success: true, message: 'Notes enregistrées' });
+});
+
+// Admin: export salons as CSV
+route('GET', '/api/admin/salons/export-csv', async (req, res) => {
+    const salons = await db.findSalons({});
+    const rows = [['Nom', 'Email', 'Slug', 'Plan', 'Statut', 'Date création', 'MRR estimé (CHF)']];
+    const MRR = { starter: 29.9, pro: 49.9, premium: 89.9 };
+    for (const s of salons) {
+        const plan = s.subscription?.plan || 'starter';
+        const status = s.subscription?.status || 'unknown';
+        const mrr = (status === 'active' || status === 'trial') ? (MRR[plan] || 0) : 0;
+        const ownerEmail = s.owner?.email || '';
+        const created = s.createdAt ? new Date(s.createdAt).toLocaleDateString('fr-FR') : '';
+        rows.push([
+            `"${(s.name || '').replace(/"/g, '""')}"`,
+            `"${ownerEmail.replace(/"/g, '""')}"`,
+            s.slug || '',
+            plan,
+            status,
+            created,
+            mrr,
+        ]);
+    }
+    const csv = rows.map(r => r.join(',')).join('\n');
+    res.writeHead(200, {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="salons-${new Date().toISOString().split('T')[0]}.csv"`,
+        'Access-Control-Allow-Origin': '*',
+    });
+    res.end('\uFEFF' + csv); // BOM for Excel UTF-8
 });
 
 route('PUT', '/api/admin/salons/:salonId/owners/:ownerId/password', async (req, res, params) => {
@@ -645,6 +710,46 @@ route('DELETE', '/api/pro/salon/:salonId/logo', async (req, res, params) => {
     }
     await db.updateSalon(params.salonId, { logo: '' });
     json(res, 200, { success: true, message: 'Logo supprimé' });
+});
+
+// Upload hero background image
+route('POST', '/api/pro/salon/:salonId/hero-image', async (req, res, params) => {
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.includes('multipart/form-data')) {
+        return json(res, 400, { success: false, error: 'Content-Type doit être multipart/form-data' });
+    }
+
+    const { fileBuffer, fileExt } = await parseMultipart(req);
+    if (!fileBuffer) return json(res, 400, { success: false, error: 'Image requise' });
+
+    try {
+        const heroImageUrl = await uploadImageBuffer(fileBuffer, fileExt, 'hero-images');
+        const oldHeroImage = salon.branding?.heroImage;
+        if (oldHeroImage && oldHeroImage.startsWith('/uploads/')) {
+            const oldPath = path.join(__dirname, oldHeroImage);
+            if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+        await db.updateSalon(params.salonId, { 'branding.heroImage': heroImageUrl });
+        return json(res, 200, { success: true, data: { heroImage: heroImageUrl } });
+    } catch (err) {
+        return json(res, 500, { success: false, error: 'Erreur pendant upload' });
+    }
+});
+
+route('DELETE', '/api/pro/salon/:salonId/hero-image', async (req, res, params) => {
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const oldHeroImage = salon.branding?.heroImage;
+    if (oldHeroImage && oldHeroImage.startsWith('/uploads/')) {
+        const oldPath = path.join(__dirname, oldHeroImage);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+    await db.updateSalon(params.salonId, { 'branding.heroImage': '' });
+    json(res, 200, { success: true, message: 'Photo de fond supprimée' });
 });
 
 // Stats
@@ -1479,12 +1584,23 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
                 'subscription.stripeSubscriptionId': session.subscription,
             });
             console.log(`✅ Salon ${salonId} activé (plan: ${plan}, trial jusqu'au ${trialEnd})`);
+            await db.addSalonLog(salonId, 'subscription_activated', { plan, trialEnd, stripeCustomerId: session.customer });
 
             // Send welcome email (non-blocking)
+            const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
             if (ownerEmail) {
                 const ownerNameMeta = session.metadata?.ownerName || '';
-                const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
                 sendWelcomeEmail(ownerEmail, ownerNameMeta || salonName, salonName || 'Votre salon', plan, baseUrl);
+            }
+            // Notify admin of new paying subscription
+            if (process.env.ADMIN_EMAIL) {
+                sendAdminNewSubscriptionEmail(process.env.ADMIN_EMAIL, {
+                    salonName: salonName || 'Inconnu',
+                    ownerEmail: ownerEmail || 'N/A',
+                    plan,
+                    salonId,
+                    baseUrl,
+                });
             }
         }
     } else if (event.type === 'customer.subscription.deleted') {
