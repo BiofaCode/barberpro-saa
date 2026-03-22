@@ -67,6 +67,14 @@ function editSalon(salonId) {
             <label class="form-label">Nom du salon</label>
             <input class="form-input form-input-full" id="eSalonName" value="${salon.name || ''}" />
         </div>
+        <div class="form-group">
+            <label class="form-label">Slug (URL du site)</label>
+            <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:.82rem;color:var(--text-sec);white-space:nowrap">/s/</span>
+                <input class="form-input form-input-full" id="eSalonSlug" value="${salon.slug || ''}" placeholder="nom-du-salon" style="font-family:monospace" />
+            </div>
+            <div style="font-size:.78rem;color:var(--text-sec);margin-top:4px">⚠️ Changer le slug casse les anciens liens partagés</div>
+        </div>
         <div class="form-row">
             <div class="form-group">
                 <label class="form-label">Adresse</label>
@@ -90,8 +98,11 @@ function editSalon(salonId) {
 }
 
 async function submitEditSalon(salonId) {
+  const newSlug = document.getElementById('eSalonSlug').value.trim()
+    .toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
   const updates = {
     name: document.getElementById('eSalonName').value.trim(),
+    slug: newSlug || undefined,
     address: document.getElementById('eSalonAddr').value.trim(),
     phone: document.getElementById('eSalonPhone').value.trim(),
     email: document.getElementById('eSalonEmail').value.trim(),
@@ -160,6 +171,16 @@ async function loadDashboard() {
 
   if (statsRes.success) {
     const s = statsRes.data;
+    // Compute MRR from salon plans
+    const salons = salonsRes.success ? salonsRes.data : [];
+    const planPrices = { starter: 29.9, pro: 49.9, premium: 89.9 };
+    const mrr = salons.reduce((sum, salon) => sum + (planPrices[salon.subscription?.plan || 'pro'] || 49.9), 0);
+    const planCounts = salons.reduce((acc, salon) => {
+      const p = salon.subscription?.plan || 'pro';
+      acc[p] = (acc[p] || 0) + 1;
+      return acc;
+    }, {});
+
     document.getElementById('statsRow').innerHTML = `
             <div class="stat-card gold">
                 <div class="stat-icon">🏪</div>
@@ -167,24 +188,29 @@ async function loadDashboard() {
                 <div class="stat-label">Salons actifs</div>
             </div>
             <div class="stat-card blue">
-                <div class="stat-icon">👤</div>
+                <div class="stat-icon">👥</div>
                 <div class="stat-value">${s.totalOwners}</div>
                 <div class="stat-label">Propriétaires</div>
             </div>
             <div class="stat-card green">
-                <div class="stat-icon">👥</div>
-                <div class="stat-value">${s.totalEmployees}</div>
-                <div class="stat-label">Employés total</div>
-            </div>
-            <div class="stat-card orange">
                 <div class="stat-icon">📅</div>
                 <div class="stat-value">${s.totalBookings}</div>
                 <div class="stat-label">RDV total</div>
             </div>
+            <div class="stat-card orange">
+                <div class="stat-icon">👤</div>
+                <div class="stat-value">${s.totalClients || 0}</div>
+                <div class="stat-label">Clients total</div>
+            </div>
             <div class="stat-card gold">
                 <div class="stat-icon">💰</div>
-                <div class="stat-value">${parseFloat(s.revenueEstimate || 0).toFixed(0)} CHF</div>
-                <div class="stat-label">Revenus estimés/mois</div>
+                <div class="stat-value">${mrr.toFixed(0)} CHF</div>
+                <div class="stat-label">MRR estimé</div>
+            </div>
+            <div class="stat-card blue" style="font-size:.78rem">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value" style="font-size:1rem">${planCounts.starter||0} / ${planCounts.pro||0} / ${planCounts.premium||0}</div>
+                <div class="stat-label">Starter / Pro / Premium</div>
             </div>
         `;
   }
@@ -211,35 +237,40 @@ async function loadDashboard() {
 }
 
 // ============ SALONS (tes clients) ============
-async function loadSalons() {
-  const res = await api('/api/admin/salons');
-  if (!res.success) return;
-  state.salons = res.data;
+const PLAN_PRICES = { starter: 29.9, pro: 49.9, premium: 89.9 };
+const PLAN_LABELS = { starter: '🥉 Starter', pro: '🥈 Pro', premium: '🥇 Premium' };
 
+function renderSalonCards(salons) {
   const container = document.getElementById('salonsList');
-  if (res.data.length === 0) {
-    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">🏪</div><div class="empty-state-text">Aucun salon créé</div></div>`;
+  if (!salons.length) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">🏪</div><div class="empty-state-text">Aucun salon trouvé</div></div>`;
     return;
   }
-
-  container.innerHTML = res.data.map(s => `
+  container.innerHTML = salons.map(s => {
+    const plan = s.subscription?.plan || 'pro';
+    const mrr = PLAN_PRICES[plan] || 49.9;
+    const createdDate = s.createdAt ? new Date(s.createdAt).toLocaleDateString('fr-CH', { day:'2-digit', month:'short', year:'2-digit' }) : '—';
+    return `
         <div class="salon-card">
             <div class="salon-card-header">
-                <div>
+                <div style="min-width:0">
                     <div class="salon-card-name">${s.name}</div>
-                    <div style="font-size:.8rem;color:var(--text-muted);margin-top:2px">/${s.slug}</div>
+                    <div style="font-size:.78rem;color:var(--text-muted);margin-top:2px;font-family:monospace">/s/${s.slug}</div>
                 </div>
-                <select class="plan-selector" onchange="changePlan('${s._id}', this.value)" style="padding:4px 8px; border-radius:4px; border:1px solid var(--border-color); background:var(--bg-card); color:var(--text-color); font-size:0.85rem; font-weight:600;">
-                    <option value="starter" ${(s.subscription?.plan || 'pro') === 'starter' ? 'selected' : ''}>Starter</option>
-                    <option value="pro" ${(s.subscription?.plan || 'pro') === 'pro' ? 'selected' : ''}>Pro</option>
-                    <option value="premium" ${(s.subscription?.plan || 'pro') === 'premium' ? 'selected' : ''}>Premium</option>
-                </select>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                    <select class="plan-selector" onchange="changePlan('${s._id}', this.value)" style="padding:4px 8px;border-radius:4px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-color);font-size:0.82rem;font-weight:600;">
+                        <option value="starter" ${plan === 'starter' ? 'selected' : ''}>Starter</option>
+                        <option value="pro" ${plan === 'pro' ? 'selected' : ''}>Pro</option>
+                        <option value="premium" ${plan === 'premium' ? 'selected' : ''}>Premium</option>
+                    </select>
+                    <span style="font-size:.75rem;color:var(--primary);font-weight:700">${mrr.toFixed(2)} CHF/mois</span>
+                </div>
             </div>
             <div class="salon-card-info">
                 <div>👤 <strong>${s.owner?.name || '—'}</strong></div>
                 <div>📧 ${s.owner?.email || '—'}</div>
                 <div>📍 ${s.address || '—'}</div>
-                <div>📞 ${s.phone || '—'}</div>
+                <div>📅 Créé le ${createdDate}</div>
             </div>
             <div class="salon-card-stats">
                 <div class="salon-card-stat">
@@ -259,16 +290,36 @@ async function loadSalons() {
                     <div class="salon-card-stat-label">Services</div>
                 </div>
             </div>
-            <div class="salon-card-actions" style="flex-wrap: wrap; gap: 8px;">
+            <div class="salon-card-actions" style="flex-wrap:wrap;gap:8px">
                 <button class="btn btn-sm btn-primary" onclick="quickLogin('${s._id}')">🚀 PRO</button>
                 <a href="/s/${s.slug}" target="_blank" class="btn btn-sm btn-outline">🌐 Site</a>
                 <button class="btn btn-sm btn-outline" onclick="editSalon('${s._id}')">✏️ Edit</button>
                 <button class="btn btn-sm btn-outline" onclick="resetOwnerPassword('${s._id}', '${s.owner?._id}')">🔑 MDP</button>
-                <button class="btn btn-sm btn-ghost" onclick="copySalonInfo('${s._id}')">📋 Info</button>
+                <button class="btn btn-sm btn-ghost" onclick="copySalonInfo('${s._id}')">📋 Infos</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteSalon('${s._id}')">🗑️</button>
             </div>
-        </div>
-    `).join('');
+        </div>`;
+  }).join('');
+}
+
+async function loadSalons() {
+  const res = await api('/api/admin/salons');
+  if (!res.success) return;
+  state.salons = res.data;
+  renderSalonCards(res.data);
+}
+
+function filterSalons(q) {
+  const query = q.toLowerCase().trim();
+  if (!query) { renderSalonCards(state.salons); return; }
+  const filtered = state.salons.filter(s =>
+    (s.name || '').toLowerCase().includes(query) ||
+    (s.slug || '').toLowerCase().includes(query) ||
+    (s.owner?.email || '').toLowerCase().includes(query) ||
+    (s.owner?.name || '').toLowerCase().includes(query) ||
+    (s.address || '').toLowerCase().includes(query)
+  );
+  renderSalonCards(filtered);
 }
 
 function openCreateSalonModal() {

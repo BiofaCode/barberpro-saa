@@ -49,8 +49,18 @@ if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 // ---- Helpers ----
 function slugify(text) {
     return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
-        + '-' + crypto.randomBytes(2).toString('hex');
+        .replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'salon';
+}
+
+async function makeUniqueSlug(name) {
+    const base = slugify(name);
+    let slug = base;
+    let i = 2;
+    while (await db.findSalonBySlug(slug)) {
+        slug = `${base}-${i}`;
+        i++;
+    }
+    return slug;
 }
 
 function json(res, status, data) {
@@ -279,7 +289,7 @@ route('GET', '/api/admin/salons', async (req, res) => {
 
 route('POST', '/api/admin/salons', async (req, res) => {
     const body = await parseBody(req);
-    const slug = slugify(body.name || 'salon');
+    const slug = await makeUniqueSlug(body.name || 'salon');
 
     const salon = await db.createSalon({
         slug,
@@ -343,10 +353,19 @@ route('PUT', '/api/admin/salons/:id', async (req, res, params) => {
 
     const updates = {};
     if (body.name) updates.name = body.name;
-    if (body.address) updates.address = body.address;
-    if (body.phone) updates.phone = body.phone;
-    if (body.email) updates.email = body.email;
-    if (body.description) updates.description = body.description;
+    if (body.slug) {
+        // Validate and deduplicate slug
+        const cleanSlug = body.slug.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/(^-|-$)/g, '');
+        if (cleanSlug && cleanSlug !== salon.slug) {
+            const existing = await db.findSalonBySlug(cleanSlug);
+            if (existing) return json(res, 409, { success: false, error: 'Ce slug est déjà utilisé par un autre salon' });
+            updates.slug = cleanSlug;
+        }
+    }
+    if (body.address !== undefined) updates.address = body.address;
+    if (body.phone !== undefined) updates.phone = body.phone;
+    if (body.email !== undefined) updates.email = body.email;
+    if (body.description !== undefined) updates.description = body.description;
     if (Object.keys(updates).length > 0) {
         await db.updateSalon(params.id, updates);
     }
@@ -732,6 +751,7 @@ route('PUT', '/api/pro/salon/:salonId/branding', async (req, res, params) => {
     const body = await parseBody(req);
 
     const branding = {
+        icon: body.icon !== undefined ? body.icon : (salon.branding?.icon || '✂️'),
         primaryColor: body.primaryColor || salon.branding?.primaryColor || '#6366F1',
         accentColor: body.accentColor || salon.branding?.accentColor || '#818CF8',
         heroTitle: body.heroTitle || salon.branding?.heroTitle || `Bienvenue chez ${salon.name}`,
@@ -1253,11 +1273,8 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
         return json(res, 400, { success: false, error: 'Un compte avec cet email existe déjà. Connectez-vous sur l\'Espace Pro.' });
     }
 
-    // Generate slug from salon name
-    const slug = salonName.toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-        + '-' + Date.now().toString(36);
+    // Generate slug from salon name (clean, with collision detection)
+    const slug = await makeUniqueSlug(salonName);
 
     try {
         // Create salon
