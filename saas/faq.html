@@ -12,171 +12,32 @@
     <link rel="stylesheet" href="/saas/css/saas.css">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E✨%3C/text%3E%3C/svg%3E">
     <style>
-        .faq-hero {
-            padding: 140px 0 64px;
-            text-align: center;
-        }
-
-        .faq-hero h1 {
-            font-size: clamp(32px, 5vw, 56px);
-            letter-spacing: -1.5px;
-            margin-bottom: 16px;
-        }
-
-        .faq-hero p {
-            color: var(--saas-muted);
-            font-size: 18px;
-            font-family: 'Inter', sans-serif;
-            max-width: 520px;
-            margin: 0 auto;
-        }
-
-        .faq-section {
-            padding: 0 0 100px;
-        }
-
-        .faq-category {
-            max-width: 760px;
-            margin: 0 auto 56px;
-        }
-
+        .faq-hero { padding: 140px 0 64px; text-align: center; }
+        .faq-hero h1 { font-size: clamp(32px, 5vw, 56px); letter-spacing: -1.5px; margin-bottom: 16px; }
+        .faq-hero p { color: var(--muted); font-size: 18px; max-width: 520px; margin: 0 auto; }
+        .faq-section { padding: 0 0 100px; }
+        .faq-page-wrap { max-width: 760px; margin: 0 auto; }
+        .faq-category { margin-bottom: 48px; }
         .faq-category-title {
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--saas-primary);
-            font-family: 'Inter', sans-serif;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+            font-size: 12px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 2px; color: var(--primary);
+            margin-bottom: 16px; padding-bottom: 12px;
+            border-bottom: 1px solid rgba(99,102,241,.2);
         }
-
-        .faq-item {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        }
-
-        .faq-question {
-            width: 100%;
-            background: none;
-            border: none;
-            color: var(--saas-text);
-            font-family: 'Inter', sans-serif;
-            font-size: 16px;
-            font-weight: 600;
-            text-align: left;
-            padding: 20px 0;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 16px;
-            transition: color 0.2s;
-        }
-
-        .faq-question:hover {
-            color: #a5b4fc;
-        }
-
-        .faq-chevron {
-            flex-shrink: 0;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            transition: transform 0.3s ease, background 0.2s;
-        }
-
-        .faq-item.open .faq-chevron {
-            transform: rotate(180deg);
-            background: rgba(99, 102, 241, 0.2);
-        }
-
-        .faq-answer {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.35s ease, padding 0.35s ease;
-        }
-
-        .faq-item.open .faq-answer {
-            max-height: 400px;
-        }
-
-        .faq-answer-inner {
-            padding: 0 0 20px;
-            color: var(--saas-muted);
-            font-family: 'Inter', sans-serif;
-            font-size: 15px;
-            line-height: 1.75;
-        }
-
-        .faq-answer-inner a {
-            color: #a5b4fc;
-            text-decoration: underline;
-            text-underline-offset: 3px;
-        }
-
-        .faq-answer-inner strong {
-            color: var(--saas-text);
-        }
-
         .faq-cta {
-            max-width: 760px;
-            margin: 0 auto;
-            padding: 40px;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.05));
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 24px;
-            text-align: center;
+            padding: 40px; margin-top: 16px;
+            background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(168,85,247,.05));
+            border: 1px solid rgba(99,102,241,.2); border-radius: 24px; text-align: center;
         }
-
-        .faq-cta h3 {
-            font-size: 22px;
-            margin-bottom: 8px;
-        }
-
-        .faq-cta p {
-            color: var(--saas-muted);
-            font-size: 15px;
-            font-family: 'Inter', sans-serif;
-            margin-bottom: 24px;
-        }
-
-        .faq-cta .btn-group {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
+        .faq-cta h3 { font-size: 22px; margin-bottom: 8px; }
+        .faq-cta p { color: var(--muted); font-size: 15px; margin-bottom: 24px; }
+        .faq-cta .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
         @media (max-width: 768px) {
-            .faq-hero {
-                padding: 120px 0 48px;
-            }
-
-            .faq-hero p {
-                font-size: 15px;
-                padding: 0 8px;
-            }
-
-            .faq-cta {
-                padding: 28px 20px;
-            }
-
-            .faq-cta .btn-group {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .faq-cta .btn-group .btn {
-                width: 100%;
-                max-width: 300px;
-            }
+            .faq-hero { padding: 120px 0 48px; }
+            .faq-hero p { font-size: 15px; padding: 0 8px; }
+            .faq-cta { padding: 28px 20px; }
+            .faq-cta .btn-group { flex-direction: column; align-items: center; }
+            .faq-cta .btn-group .btn { width: 100%; max-width: 300px; }
         }
     </style>
 </head>
@@ -221,229 +82,111 @@
     <!-- FAQ Content -->
     <section class="faq-section">
         <div class="wrap">
+            <div class="faq-page-wrap">
 
-            <!-- Catégorie : Démarrage -->
-            <div class="faq-category reveal">
-                <div class="faq-category-title">Démarrage & Inscription</div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Comment créer mon compte SalonPro ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Rendez-vous sur la <a href="/#pricing">page tarifs</a>, choisissez votre plan et cliquez sur "Commencer l'essai gratuit". Renseignez le nom de votre salon, vos informations personnelles et créez votre mot de passe. Vous serez ensuite redirigé vers le paiement sécurisé Stripe pour activer votre abonnement.
-                        </div>
+                <!-- Catégorie : Démarrage -->
+                <div class="faq-category reveal">
+                    <div class="faq-category-title">Démarrage & Inscription</div>
+                    <div class="faq-list">
+                        <details class="faq-item reveal">
+                            <summary>Comment créer mon compte SalonPro ?</summary>
+                            <p>Rendez-vous sur la <a href="/#pricing">page tarifs</a>, choisissez votre plan et cliquez sur "Commencer l'essai gratuit". Renseignez le nom de votre salon, vos informations et créez votre mot de passe. Vous serez ensuite redirigé vers le paiement sécurisé Stripe pour activer votre abonnement.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Est-ce qu'il y a une période d'essai gratuite ?</summary>
+                            <p>Oui, <strong>14 jours d'essai gratuit</strong> sont inclus sur tous les plans, sans engagement. Aucune carte bancaire n'est débitée pendant la période d'essai. Si vous décidez de ne pas continuer, votre compte est simplement désactivé à la fin de la période.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Combien de temps faut-il pour être opérationnel ?</summary>
+                            <p>La plupart de nos clients sont opérationnels en <strong>moins de 30 minutes</strong>. Après l'inscription, vous configurez vos prestations, horaires et couleurs depuis l'Espace Pro. Votre lien de réservation est ensuite prêt à être partagé.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Puis-je changer de plan après l'inscription ?</summary>
+                            <p>Oui, vous pouvez changer de plan à tout moment depuis votre Espace Pro → Facturation. Le changement prend effet immédiatement et la différence de prix est calculée au prorata.</p>
+                        </details>
                     </div>
                 </div>
 
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Est-ce qu'il y a une période d'essai gratuite ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Oui, <strong>14 jours d'essai gratuit</strong> sont inclus sur tous les plans, sans engagement. Aucune carte bancaire n'est débitée pendant la période d'essai. Si vous décidez de ne pas continuer, votre compte est simplement désactivé à la fin de la période.
-                        </div>
+                <!-- Catégorie : Fonctionnalités -->
+                <div class="faq-category reveal">
+                    <div class="faq-category-title">Fonctionnalités</div>
+                    <div class="faq-list">
+                        <details class="faq-item reveal">
+                            <summary>Mes clients peuvent-ils réserver eux-mêmes en ligne ?</summary>
+                            <p>Oui, c'est la fonctionnalité principale de SalonPro. Chaque salon dispose d'un <strong>site de réservation personnalisé</strong> (ex : salonpro.ch/s/votre-salon) accessible 24h/24, 7j/7. Vos clients choisissent la prestation, le collaborateur et le créneau, et reçoivent une confirmation par email automatiquement.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Combien d'employés puis-je ajouter ?</summary>
+                            <p>Cela dépend de votre plan : <strong>Starter</strong> — jusqu'à 2 employés, <strong>Pro</strong> — jusqu'à 5 employés, <strong>Premium</strong> — employés illimités. Chaque employé a ses propres horaires, ses propres prestations et son propre accès.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Y a-t-il une application mobile pour les employés ?</summary>
+                            <p>L'Espace Pro est une <strong>PWA installable</strong> sur iOS et Android depuis le navigateur. Vos collaborateurs peuvent consulter leur planning, gérer les réservations et recevoir des notifications depuis leur téléphone.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Puis-je personnaliser l'apparence de mon site ?</summary>
+                            <p>Absolument. Depuis l'Espace Pro → Paramètres, vous pouvez modifier les couleurs, votre logo, l'icône, le titre et sous-titre de votre page, vos liens réseaux sociaux (Instagram, Facebook, TikTok, YouTube) et vos statistiques vitrine.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Les rappels SMS sont-ils disponibles ?</summary>
+                            <p>Les rappels SMS sont inclus dans le plan <strong>Premium</strong> et sont actuellement en cours de déploiement. Des <strong>confirmations et rappels par email</strong> sont envoyés automatiquement à vos clients pour chaque réservation sur tous les plans.</p>
+                        </details>
                     </div>
                 </div>
 
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Combien de temps faut-il pour être opérationnel ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            La plupart de nos clients sont opérationnels en <strong>moins de 30 minutes</strong>. Après l'inscription, vous configurez vos prestations, horaires et couleurs depuis l'Espace Pro. Votre lien de réservation est ensuite prêt à être partagé avec vos clients.
-                        </div>
+                <!-- Catégorie : Facturation -->
+                <div class="faq-category reveal">
+                    <div class="faq-category-title">Facturation & Paiement</div>
+                    <div class="faq-list">
+                        <details class="faq-item reveal">
+                            <summary>Comment fonctionne la facturation ?</summary>
+                            <p>La facturation est mensuelle et gérée par <strong>Stripe</strong>. Vous recevez une facture par email chaque mois. Le paiement est prélevé automatiquement sur la carte enregistrée.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Y a-t-il des commissions sur mes réservations ?</summary>
+                            <p><strong>Absolument zéro commission.</strong> Vous payez uniquement votre abonnement mensuel fixe. Toutes vos réservations et vos revenus vous appartiennent à 100%, sans frais cachés ni prélèvement sur vos transactions.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Puis-je annuler à tout moment ?</summary>
+                            <p>Oui, sans engagement et sans frais d'annulation. Annulez depuis votre Espace Pro → Facturation → Gérer l'abonnement. Votre accès reste actif jusqu'à la fin de la période déjà payée.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Mes données sont-elles conservées après l'annulation ?</summary>
+                            <p>Vos données (clients, réservations, services) sont conservées pendant <strong>30 jours</strong> après l'annulation. Passé ce délai, elles sont supprimées définitivement. Vous pouvez exporter vos données avant l'annulation en contactant notre support.</p>
+                        </details>
                     </div>
                 </div>
 
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Puis-je changer de plan après l'inscription ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Oui, vous pouvez changer de plan à tout moment depuis votre Espace Pro → Facturation. Le changement prend effet immédiatement et la différence de prix est calculée au prorata.
-                        </div>
+                <!-- Catégorie : Support -->
+                <div class="faq-category reveal">
+                    <div class="faq-category-title">Support & Contact</div>
+                    <div class="faq-list">
+                        <details class="faq-item reveal">
+                            <summary>Comment contacter le support ?</summary>
+                            <p>Vous pouvez nous contacter par email à <a href="mailto:info@osmodigital.ch">info@osmodigital.ch</a>. Les clients Premium bénéficient d'une assistance prioritaire avec un temps de réponse garanti sous 4h en jours ouvrés.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>Proposez-vous une démo ou un onboarding personnalisé ?</summary>
+                            <p>Oui. Contactez-nous à <a href="mailto:info@osmodigital.ch">info@osmodigital.ch</a> en mentionnant "Onboarding" et nous organisons un appel pour vous accompagner dans la configuration de votre salon.</p>
+                        </details>
+                        <details class="faq-item reveal">
+                            <summary>La plateforme est-elle disponible en dehors de la Suisse ?</summary>
+                            <p>SalonPro est optimisé pour la Suisse (prix en CHF, support francophone), mais fonctionne parfaitement dans tous les pays francophones. N'hésitez pas à nous contacter pour toute question spécifique à votre région.</p>
+                        </details>
                     </div>
                 </div>
+
+                <!-- CTA -->
+                <div class="faq-cta reveal">
+                    <h3>Vous n'avez pas trouvé la réponse ?</h3>
+                    <p>Notre équipe est disponible pour répondre à toutes vos questions.</p>
+                    <div class="btn-group">
+                        <a href="mailto:info@osmodigital.ch" class="btn btn-outline">Nous contacter →</a>
+                        <a href="/#pricing" class="btn btn-primary shine">Démarrer l'essai gratuit →</a>
+                    </div>
+                </div>
+
             </div>
-
-            <!-- Catégorie : Fonctionnalités -->
-            <div class="faq-category reveal">
-                <div class="faq-category-title">Fonctionnalités</div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Mes clients peuvent-ils réserver eux-mêmes en ligne ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Oui, c'est la fonctionnalité principale de SalonPro. Chaque salon dispose d'un <strong>site de réservation personnalisé</strong> (ex: salonpro.ch/s/votre-salon) accessible 24h/24, 7j/7. Vos clients choisissent la prestation, le collaborateur et le créneau disponible, et reçoivent une confirmation par email automatiquement.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Combien d'employés puis-je ajouter ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Cela dépend de votre plan : <strong>Starter</strong> — jusqu'à 2 employés, <strong>Pro</strong> — jusqu'à 5 employés, <strong>Premium</strong> — employés illimités. Chaque employé a ses propres horaires, ses propres prestations et son propre accès à l'application.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Y a-t-il une application mobile pour les employés ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Oui, une <strong>application iOS et Android</strong> est disponible pour vous et vos collaborateurs. Vous pouvez consulter votre planning, gérer les réservations et recevoir des notifications de nouveaux rendez-vous depuis votre téléphone.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Puis-je personnaliser l'apparence de mon site ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Absolument. Depuis l'Espace Pro → Paramètres, vous pouvez modifier les couleurs (principale et accent), uploader votre logo, personnaliser le titre et sous-titre de votre page d'accueil, ajouter vos liens réseaux sociaux (Instagram, Facebook, TikTok, YouTube) et configurer vos statistiques vitrine.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Les rappels SMS sont-ils disponibles ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Les rappels SMS sont inclus dans le plan <strong>Premium</strong> et sont actuellement en cours de déploiement. En attendant, des <strong>confirmations et rappels par email</strong> sont envoyés automatiquement à vos clients pour chaque réservation sur tous les plans.
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Catégorie : Facturation -->
-            <div class="faq-category reveal">
-                <div class="faq-category-title">Facturation & Paiement</div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Comment fonctionne la facturation ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            La facturation est mensuelle et gérée par <strong>Stripe</strong>, la plateforme de paiement la plus sécurisée au monde. Vous recevez une facture par email chaque mois. Le paiement est prélevé automatiquement sur la carte enregistrée.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Y a-t-il des commissions sur mes réservations ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            <strong>Absolument zéro commission.</strong> Vous payez uniquement votre abonnement mensuel fixe. Toutes vos réservations et vos revenus vous appartiennent à 100%, sans frais cachés ni prélèvement sur vos transactions.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Puis-je annuler à tout moment ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Oui, sans engagement et sans frais d'annulation. Vous pouvez annuler depuis votre Espace Pro → Facturation → Gérer l'abonnement. Votre accès reste actif jusqu'à la fin de la période déjà payée.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Mes données sont-elles conservées après l'annulation ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Vos données (clients, réservations, services) sont conservées pendant <strong>30 jours</strong> après l'annulation. Passé ce délai, elles sont supprimées définitivement. Vous pouvez exporter vos données avant l'annulation en contactant notre support.
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Catégorie : Support -->
-            <div class="faq-category reveal">
-                <div class="faq-category-title">Support & Contact</div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Comment contacter le support ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Vous pouvez nous contacter par email à <a href="mailto:info@osmodigital.ch">info@osmodigital.ch</a>. Les clients Premium bénéficient d'une assistance VIP prioritaire avec un temps de réponse garanti sous 4h en jours ouvrés.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        Proposez-vous une démo ou un onboarding personnalisé ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            Oui, nous proposons des sessions d'onboarding personnalisées sur demande. Contactez-nous à <a href="mailto:info@osmodigital.ch">info@osmodigital.ch</a> en mentionnant "Onboarding" et nous organisons un appel pour vous accompagner dans la configuration de votre salon.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="faq-item">
-                    <button class="faq-question" onclick="toggle(this)">
-                        La plateforme est-elle disponible en dehors de la Suisse ?
-                        <span class="faq-chevron">▾</span>
-                    </button>
-                    <div class="faq-answer">
-                        <div class="faq-answer-inner">
-                            SalonPro est optimisé pour la Suisse (prix en CHF, support francophone), mais la plateforme fonctionne parfaitement dans tous les pays francophones. N'hésitez pas à nous contacter pour toute question spécifique à votre région.
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CTA -->
-            <div class="faq-cta reveal">
-                <h3>Vous n'avez pas trouvé la réponse ?</h3>
-                <p>Notre équipe est disponible pour répondre à toutes vos questions.</p>
-                <div class="btn-group">
-                    <a href="mailto:info@osmodigital.ch" class="btn btn-outline">Nous contacter →</a>
-                    <a href="/#pricing" class="btn btn-primary shine">Démarrer l'essai gratuit →</a>
-                </div>
-            </div>
-
         </div>
     </section>
 
@@ -474,14 +217,14 @@
     </footer>
 
     <script>
-        function toggle(btn) {
-            const item = btn.closest('.faq-item');
-            const isOpen = item.classList.contains('open');
-            // Close all
-            document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
-            // Open clicked if it was closed
-            if (!isOpen) item.classList.add('open');
-        }
+        // Close other details when one opens
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.faq-item').forEach(item => {
+                item.addEventListener('toggle', () => {
+                    if (item.open) document.querySelectorAll('.faq-item[open]').forEach(o => { if (o !== item) o.removeAttribute('open'); });
+                });
+            });
+        });
 
         // Scroll reveal
         document.addEventListener('DOMContentLoaded', () => {
