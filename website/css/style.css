@@ -2156,27 +2156,42 @@ h3 {
 }
 
 /* ============================================
-   IMPROVED MOBILE BOOKING MODAL
+   IMPROVED MOBILE BOOKING MODAL — bottom sheet
    ============================================ */
 @media (max-width: 600px) {
+  /* Overlay anchors content at the bottom */
+  .booking-modal-overlay {
+    align-items: flex-end;
+  }
+
   .booking-modal {
     width: 100%;
     max-width: 100%;
     max-height: 92dvh;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    transform: translateY(40px) scale(1) !important;
+    /* Slide in from bottom instead of scale */
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .booking-modal-overlay.active .booking-modal {
-    transform: translateY(0) scale(1) !important;
+    transform: translateY(0);
   }
 
   .bm-timeslots-grid {
     grid-template-columns: repeat(3, 1fr);
+  }
+
+  /* Ensure service/employee cards are large enough to tap comfortably */
+  .bm-service-card {
+    min-height: 80px;
+    padding: 14px 10px;
+  }
+
+  /* Bigger next/prev buttons on mobile */
+  .booking-modal-footer .btn {
+    min-height: 48px;
+    font-size: 1rem;
   }
 }
 
