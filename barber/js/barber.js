@@ -1549,15 +1549,13 @@ async function loadSettings() {
                 <div class="card-header"><h3>🏖 Congés & Fermetures</h3></div>
                 <div class="card-body">
                     <p style="font-size:.85rem;color:var(--text-sec);margin-bottom:12px">Ajoutez les jours de fermeture exceptionnelle (vacances, jours fériés...). Ces jours seront grisés dans le calendrier de réservation.</p>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-                        <div class="form-group" style="margin-bottom:0;min-width:0">
-                            <label class="form-label">Date de début</label>
-                            <input type="date" class="form-input form-input-full" id="closedDateStart" style="min-width:0">
-                        </div>
-                        <div class="form-group" style="margin-bottom:0;min-width:0">
-                            <label class="form-label">Date de fin</label>
-                            <input type="date" class="form-input form-input-full" id="closedDateEnd" style="min-width:0">
-                        </div>
+                    <div class="form-group">
+                        <label class="form-label">Date de début</label>
+                        <input type="date" class="form-input form-input-full" id="closedDateStart">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date de fin</label>
+                        <input type="date" class="form-input form-input-full" id="closedDateEnd">
                     </div>
                     <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px">
                         <div class="form-group" style="flex:1;margin-bottom:0">
