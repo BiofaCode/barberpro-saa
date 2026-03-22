@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#09090c"/>
+      <stop offset="100%" stop-color="#12121e"/>
+    </linearGradient>
+    <linearGradient id="orb1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="orb2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="btn" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <filter id="blur1">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+    <filter id="blur2">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Ambient orbs -->
+  <circle cx="200" cy="180" r="300" fill="url(#orb1)" filter="url(#blur1)"/>
+  <circle cx="980" cy="480" r="220" fill="url(#orb2)" filter="url(#blur2)"/>
+
+  <!-- Grid dots (subtle) -->
+  <g fill="rgba(255,255,255,0.04)">
+    <circle cx="80" cy="80" r="2"/><circle cx="160" cy="80" r="2"/><circle cx="240" cy="80" r="2"/>
+    <circle cx="80" cy="160" r="2"/><circle cx="160" cy="160" r="2"/><circle cx="240" cy="160" r="2"/>
+    <circle cx="80" cy="240" r="2"/><circle cx="160" cy="240" r="2"/>
+    <circle cx="920" cy="80" r="2"/><circle cx="1000" cy="80" r="2"/><circle cx="1080" cy="80" r="2"/><circle cx="1160" cy="80" r="2"/>
+    <circle cx="920" cy="160" r="2"/><circle cx="1000" cy="160" r="2"/><circle cx="1080" cy="160" r="2"/><circle cx="1160" cy="160" r="2"/>
+  </g>
+
+  <!-- Logo mark -->
+  <rect x="80" y="72" width="52" height="52" rx="14" fill="#6366f1"/>
+  <text x="106" y="106" font-family="system-ui, sans-serif" font-size="26" font-weight="800" fill="white" text-anchor="middle">S</text>
+
+  <!-- Brand name -->
+  <text x="146" y="107" font-family="system-ui, sans-serif" font-size="22" font-weight="400" fill="rgba(255,255,255,0.9)" letter-spacing="0">Salon</text>
+  <text x="214" y="107" font-family="system-ui, sans-serif" font-size="22" font-weight="700" fill="white" letter-spacing="0">Pro</text>
+
+  <!-- Tag pill -->
+  <rect x="80" y="185" width="220" height="36" rx="18" fill="rgba(99,102,241,0.2)" stroke="rgba(99,102,241,0.4)" stroke-width="1"/>
+  <text x="190" y="208" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#a5b4fc" text-anchor="middle" letter-spacing="0.5">✂️  Logiciel de salon n°1</text>
+
+  <!-- Main headline -->
+  <text x="80" y="296" font-family="system-ui, sans-serif" font-size="62" font-weight="800" fill="white" letter-spacing="-1">Gérez votre salon.</text>
+  <text x="80" y="368" font-family="system-ui, sans-serif" font-size="62" font-weight="800" letter-spacing="-1">
+    <tspan fill="white">Développez votre </tspan><tspan fill="#6366f1">activité.</tspan>
+  </text>
+
+  <!-- Subtitle -->
+  <text x="80" y="430" font-family="system-ui, sans-serif" font-size="22" font-weight="400" fill="rgba(255,255,255,0.55)">Réservation en ligne · Gestion d'équipe · Paiements · SMS</text>
+
+  <!-- CTA button -->
+  <rect x="80" y="468" width="240" height="52" rx="14" fill="url(#btn)"/>
+  <text x="200" y="500" font-family="system-ui, sans-serif" font-size="17" font-weight="600" fill="white" text-anchor="middle">Essai gratuit 14 jours →</text>
+
+  <!-- Dashboard mockup card -->
+  <rect x="660" y="90" width="460" height="450" rx="20" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+
+  <!-- Card header -->
+  <rect x="660" y="90" width="460" height="48" rx="20" fill="rgba(255,255,255,0.06)"/>
+  <rect x="660" y="118" width="460" height="20" fill="rgba(255,255,255,0.06)"/>
+  <circle cx="686" cy="114" r="6" fill="#ef4444"/>
+  <circle cx="706" cy="114" r="6" fill="#f59e0b"/>
+  <circle cx="726" cy="114" r="6" fill="#22c55e"/>
+  <rect x="790" y="106" width="190" height="16" rx="8" fill="rgba(255,255,255,0.06)"/>
+
+  <!-- Sidebar -->
+  <rect x="660" y="138" width="58" height="402" rx="0" fill="rgba(0,0,0,0.2)"/>
+  <rect x="672" y="158" width="34" height="34" rx="9" fill="#6366f1"/>
+  <text x="689" y="181" font-family="system-ui" font-size="14" font-weight="800" fill="white" text-anchor="middle">S</text>
+  <rect x="672" y="206" width="34" height="34" rx="8" fill="rgba(99,102,241,0.25)"/>
+  <text x="689" y="228" font-family="system-ui" font-size="16" text-anchor="middle">📊</text>
+  <rect x="672" y="248" width="34" height="34" rx="8" fill="transparent"/>
+  <text x="689" y="270" font-family="system-ui" font-size="16" text-anchor="middle">📅</text>
+  <rect x="672" y="290" width="34" height="34" rx="8" fill="transparent"/>
+  <text x="689" y="312" font-family="system-ui" font-size="16" text-anchor="middle">👥</text>
+
+  <!-- Main content area -->
+  <!-- Title -->
+  <text x="735" y="168" font-family="system-ui" font-size="13" font-weight="600" fill="rgba(255,255,255,0.9)">Bonjour, Alex 👋</text>
+
+  <!-- Stat cards -->
+  <rect x="728" y="180" width="116" height="62" rx="10" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="786" y="206" font-family="system-ui" font-size="20" font-weight="700" fill="white" text-anchor="middle">12</text>
+  <text x="786" y="224" font-family="system-ui" font-size="10" fill="rgba(255,255,255,0.4)" text-anchor="middle">RDV aujourd'hui</text>
+
+  <rect x="852" y="180" width="116" height="62" rx="10" fill="rgba(99,102,241,0.12)" stroke="rgba(99,102,241,0.3)" stroke-width="1"/>
+  <text x="910" y="206" font-family="system-ui" font-size="17" font-weight="700" fill="#a5b4fc" text-anchor="middle">CHF 840</text>
+  <text x="910" y="224" font-family="system-ui" font-size="10" fill="rgba(165,180,252,0.6)" text-anchor="middle">CA ce mois</text>
+
+  <rect x="976" y="180" width="116" height="62" rx="10" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="1034" y="206" font-family="system-ui" font-size="20" font-weight="700" fill="white" text-anchor="middle">96%</text>
+  <text x="1034" y="224" font-family="system-ui" font-size="10" fill="rgba(255,255,255,0.4)" text-anchor="middle">Occupation</text>
+
+  <!-- Chart area -->
+  <rect x="728" y="256" width="364" height="110" rx="10" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+  <text x="742" y="274" font-family="system-ui" font-size="10" font-weight="600" fill="rgba(255,255,255,0.3)" letter-spacing="0.5">REVENUS — 7 DERNIERS JOURS</text>
+
+  <!-- Bar chart -->
+  <rect x="748" y="313" width="32" height="40" rx="4" fill="rgba(99,102,241,0.3)"/>
+  <rect x="790" y="298" width="32" height="55" rx="4" fill="rgba(99,102,241,0.3)"/>
+  <rect x="832" y="308" width="32" height="45" rx="4" fill="rgba(99,102,241,0.3)"/>
+  <rect x="874" y="291" width="32" height="62" rx="4" fill="rgba(99,102,241,0.3)"/>
+  <rect x="916" y="318" width="32" height="35" rx="4" fill="rgba(99,102,241,0.3)"/>
+  <rect x="958" y="284" width="32" height="69" rx="4" fill="#6366f1"/>
+  <rect x="1000" y="325" width="32" height="28" rx="4" fill="rgba(99,102,241,0.3)"/>
+
+  <!-- Day labels -->
+  <text x="764" y="362" font-family="system-ui" font-size="9" fill="rgba(255,255,255,0.3)" text-anchor="middle">Lun</text>
+  <text x="806" y="362" font-family="system-ui" font-size="9" fill="rgba(255,255,255,0.3)" text-anchor="middle">Mar</text>
+  <text x="848" y="362" font-family="system-ui" font-size="9" fill="rgba(255,255,255,0.3)" text-anchor="middle">Mer</text>
+  <text x="890" y="362" font-family="system-ui" font-size="9" fill="rgba(255,255,255,0.3)" text-anchor="middle">Jeu</text>
+  <text x="932" y="362" font-family="system-ui" font-size="9" fill="rgba(255,255,255,0.3)" text-anchor="middle">Ven</text>
+  <text x="974" y="362" font-family="system-ui" font-size="9" fill="#a5b4fc" text-anchor="middle">Sam</text>
+  <text x="1016" y="362" font-family="system-ui" font-size="9" fill="rgba(255,255,255,0.3)" text-anchor="middle">Dim</text>
+
+  <!-- Booking rows -->
+  <rect x="728" y="378" width="364" height="36" rx="8" fill="rgba(255,255,255,0.04)"/>
+  <text x="742" y="401" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.4)">09:00</text>
+  <text x="790" y="401" font-family="system-ui" font-size="11" font-weight="600" fill="rgba(255,255,255,0.85)">Marc D.</text>
+  <text x="870" y="401" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.4)">Coupe + Barbe</text>
+  <rect x="1022" y="385" width="60" height="20" rx="10" fill="rgba(34,197,94,0.15)"/>
+  <text x="1052" y="399" font-family="system-ui" font-size="10" font-weight="600" fill="#22c55e" text-anchor="middle">Confirmé</text>
+
+  <rect x="728" y="420" width="364" height="36" rx="8" fill="rgba(255,255,255,0.03)"/>
+  <text x="742" y="443" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.4)">10:30</text>
+  <text x="790" y="443" font-family="system-ui" font-size="11" font-weight="600" fill="rgba(255,255,255,0.85)">Julien R.</text>
+  <text x="870" y="443" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.4)">Coupe homme</text>
+  <rect x="1022" y="427" width="60" height="20" rx="10" fill="rgba(34,197,94,0.15)"/>
+  <text x="1052" y="441" font-family="system-ui" font-size="10" font-weight="600" fill="#22c55e" text-anchor="middle">Confirmé</text>
+
+  <rect x="728" y="462" width="364" height="36" rx="8" fill="rgba(255,255,255,0.03)"/>
+  <text x="742" y="485" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.4)">14:00</text>
+  <text x="790" y="485" font-family="system-ui" font-size="11" font-weight="600" fill="rgba(255,255,255,0.85)">Antoine B.</text>
+  <text x="870" y="485" font-family="system-ui" font-size="11" fill="rgba(255,255,255,0.4)">Brushing</text>
+  <rect x="1010" y="469" width="72" height="20" rx="10" fill="rgba(245,158,11,0.15)"/>
+  <text x="1046" y="483" font-family="system-ui" font-size="10" font-weight="600" fill="#f59e0b" text-anchor="middle">En attente</text>
+
+  <!-- Bottom tagline -->
+  <text x="600" y="592" font-family="system-ui, sans-serif" font-size="16" fill="rgba(255,255,255,0.25)" text-anchor="middle">barberpro-saa.onrender.com · Essai gratuit 14 jours · 0% commission</text>
+</svg>

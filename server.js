@@ -258,7 +258,16 @@ route('GET', '/api/health', async (req, res) => {
     json(res, 200, { status: 'ok', ts: Date.now() });
 });
 
-// Dynamic sitemap.xml
+route('GET', '/robots.txt', async (req, res) => {
+    const file = path.join(__dirname, 'robots.txt');
+    fs.readFile(file, (err, data) => {
+        if (err) { res.writeHead(404); res.end(); return; }
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end(data);
+    });
+});
+
+// Dynamic sitemap.xml — generated from active salons in DB
 route('GET', '/sitemap.xml', async (req, res) => {
     try {
         const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
