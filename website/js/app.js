@@ -62,6 +62,41 @@ function showPaymentCancelled() {
 }
 
 /* ============================================
+   SEO / OG META TAGS
+   ============================================ */
+function updateMetaTags(salon) {
+  const setMeta = (prop, content, attr = 'name') => {
+    let el = document.querySelector(`meta[${attr}="${prop}"]`);
+    if (!el) { el = document.createElement('meta'); el.setAttribute(attr, prop); document.head.appendChild(el); }
+    el.setAttribute('content', content);
+  };
+  const desc = salon.description || `Prenez rendez-vous en ligne chez ${salon.name}. Réservation rapide, disponible 24h/24.`;
+  const img = salon.branding?.heroImage || salon.logo || '';
+  const url = window.location.href;
+
+  // Standard meta
+  setMeta('description', desc);
+
+  // Open Graph
+  setMeta('og:type', 'website', 'property');
+  setMeta('og:title', `${salon.name} | Réservation en ligne`, 'property');
+  setMeta('og:description', desc, 'property');
+  setMeta('og:url', url, 'property');
+  if (img) setMeta('og:image', img, 'property');
+
+  // Twitter Card
+  setMeta('twitter:card', img ? 'summary_large_image' : 'summary');
+  setMeta('twitter:title', `${salon.name} | Réservation en ligne`);
+  setMeta('twitter:description', desc);
+  if (img) setMeta('twitter:image', img);
+
+  // Canonical
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.appendChild(canonical); }
+  canonical.href = url;
+}
+
+/* ============================================
    SALON BRANDING
    ============================================ */
 function applySalonBranding(salon) {
@@ -141,6 +176,7 @@ function applySalonBranding(salon) {
   }
 
   document.title = `${salon.name} | Réservation en ligne`;
+  updateMetaTags(salon);
 
   if (salon.services?.length > 0) {
     const servicesGrid = document.querySelector('.services-grid');
@@ -559,10 +595,32 @@ function bmNextStep() {
     const ln = document.getElementById('bmLastName').value.trim();
     const em = document.getElementById('bmEmail').value.trim();
     const ph = document.getElementById('bmPhone').value.trim();
-    if (!fn || !ln || !em || !ph) { showToast('Remplissez tous les champs obligatoires'); return; }
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
+    const phoneOk = /^[\d\s\+\-\(\)]{7,}$/.test(ph);
+    // Clear previous errors
+    ['bmFirstName','bmLastName','bmEmail','bmPhone'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.style.borderColor = ''; el.removeAttribute('data-error'); }
+    });
+    let hasError = false;
+    if (!fn) { markFieldError('bmFirstName'); hasError = true; }
+    if (!ln) { markFieldError('bmLastName'); hasError = true; }
+    if (!em || !emailOk) { markFieldError('bmEmail', em ? 'Email invalide' : ''); hasError = true; }
+    if (!ph || !phoneOk) { markFieldError('bmPhone', ph ? 'Téléphone invalide' : ''); hasError = true; }
+    if (hasError) { showToast('Vérifiez les champs en rouge'); return; }
   }
   if (stepId === 'confirm') { submitBooking(); return; }
   goToStep(bmState.stepIdx + 1);
+}
+
+function markFieldError(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.borderColor = 'var(--color-error)';
+  el.style.boxShadow = '0 0 0 2px rgba(248,113,113,0.2)';
+  // Live-clear on input
+  const clear = () => { el.style.borderColor = ''; el.style.boxShadow = ''; el.removeEventListener('input', clear); };
+  el.addEventListener('input', clear);
 }
 
 function bmPrevStep() { if (bmState.stepIdx > 0) goToStep(bmState.stepIdx - 1); }
@@ -634,7 +692,13 @@ function renderBmCalendar() {
 function renderBmTimeSlots() {
   const container = document.getElementById('bmTimeSlots');
   const grid = document.getElementById('bmTimeSlotsGrid');
-  container.style.display = 'block'; grid.innerHTML = '';
+  container.style.display = 'block';
+  // Skeleton shimmer while slots render
+  grid.innerHTML = Array(8).fill(0).map(() =>
+    '<div class="bm-timeslot bm-timeslot-skeleton"></div>'
+  ).join('');
+  requestAnimationFrame(() => {
+  grid.innerHTML = '';
 
   const hours = getOpenHours(bmState.date);
   const [oH, oM] = hours.open.split(':').map(Number);
@@ -664,6 +728,7 @@ function renderBmTimeSlots() {
   if (grid.children.length === 0) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--color-text-muted);padding:1rem;font-size:0.85rem">Aucun créneau disponible pour cette date</div>';
   }
+  }); // end requestAnimationFrame
 }
 
 function populateConfirmation() {

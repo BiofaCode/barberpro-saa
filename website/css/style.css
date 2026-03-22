@@ -73,6 +73,18 @@
   box-sizing: border-box;
 }
 
+/* ---- Keyboard focus ring (only shows on keyboard navigation) ---- */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.bm-cal-day:focus-visible,
+.bm-timeslot:focus-visible {
+  outline-offset: 2px;
+}
+
 html {
   scroll-behavior: smooth;
   font-size: 16px;
@@ -1023,6 +1035,20 @@ h3 {
   color: var(--color-bg-dark);
   border-color: var(--color-primary);
   font-weight: 600;
+}
+
+.bm-timeslot-skeleton {
+  background: linear-gradient(90deg, var(--color-bg-card) 25%, rgba(255,255,255,0.06) 50%, var(--color-bg-card) 75%);
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.2s ease-in-out infinite;
+  pointer-events: none;
+  border-color: transparent !important;
+  cursor: default;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .bm-form-row {
