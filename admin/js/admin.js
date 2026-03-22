@@ -244,8 +244,46 @@ async function loadDashboard() {
 const PLAN_PRICES = { starter: 29.9, pro: 49.9, premium: 89.9 };
 const PLAN_LABELS = { starter: '🥉 Starter', pro: '🥈 Pro', premium: '🥇 Premium' };
 
+let _activePlanFilter = '';
+
+function filterByPlan(plan) {
+  _activePlanFilter = plan;
+  document.querySelectorAll('.plan-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.plan === plan);
+  });
+  applyFilters();
+}
+
+function filterSalons(q) {
+  document.getElementById('salonSearch')._query = q;
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = (document.getElementById('salonSearch')._query || document.getElementById('salonSearch').value || '').toLowerCase().trim();
+  let filtered = state.salons;
+  if (_activePlanFilter) {
+    filtered = filtered.filter(s => (s.subscription?.plan || 'pro') === _activePlanFilter);
+  }
+  if (q) {
+    filtered = filtered.filter(s =>
+      (s.name || '').toLowerCase().includes(q) ||
+      (s.slug || '').toLowerCase().includes(q) ||
+      (s.owner?.email || '').toLowerCase().includes(q) ||
+      (s.owner?.name || '').toLowerCase().includes(q) ||
+      (s.address || '').toLowerCase().includes(q)
+    );
+  }
+  renderSalonCards(filtered);
+}
+
 function renderSalonCards(salons) {
   const container = document.getElementById('salonsList');
+  const countEl = document.getElementById('salonCount');
+  if (countEl) {
+    const total = state.salons?.length || 0;
+    countEl.textContent = salons.length < total ? `${salons.length} / ${total} salons` : `${total} salon${total > 1 ? 's' : ''}`;
+  }
   if (!salons.length) {
     container.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">🏪</div><div class="empty-state-text">Aucun salon trouvé</div></div>`;
     return;
@@ -313,20 +351,7 @@ async function loadSalons() {
   const res = await api('/api/admin/salons');
   if (!res.success) return;
   state.salons = res.data;
-  renderSalonCards(res.data);
-}
-
-function filterSalons(q) {
-  const query = q.toLowerCase().trim();
-  if (!query) { renderSalonCards(state.salons); return; }
-  const filtered = state.salons.filter(s =>
-    (s.name || '').toLowerCase().includes(query) ||
-    (s.slug || '').toLowerCase().includes(query) ||
-    (s.owner?.email || '').toLowerCase().includes(query) ||
-    (s.owner?.name || '').toLowerCase().includes(query) ||
-    (s.address || '').toLowerCase().includes(query)
-  );
-  renderSalonCards(filtered);
+  applyFilters();
 }
 
 function openCreateSalonModal() {
@@ -477,8 +502,19 @@ async function resetOwnerPassword(salonId, ownerId) {
   }
 }
 
-async function deleteSalon(id) {
-  if (!confirm('Supprimer ce salon et toutes ses données ? Cette action est irréversible.')) return;
+function deleteSalon(id) {
+  const salonName = state.salons?.find(s => s._id === id)?.name || 'ce salon';
+  showModal('⚠️ Supprimer le salon', `
+    <p style="color:var(--text-sec);margin-bottom:16px">Vous êtes sur le point de supprimer <strong style="color:#fff">${salonName}</strong> et <span style="color:var(--error, #f87171)">toutes ses données</span>. Cette action est irréversible.</p>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+      <button class="btn btn-primary" style="background:var(--error,#ef4444);border-color:var(--error,#ef4444)" onclick="confirmDeleteSalon('${id}')">🗑 Supprimer</button>
+    </div>
+  `);
+}
+
+async function confirmDeleteSalon(id) {
+  closeModal();
   await api(`/api/admin/salons/${id}`, 'DELETE');
   toast('Salon supprimé');
   loadSalons();

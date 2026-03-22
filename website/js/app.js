@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initScrollReveal();
   initBookingModal();
   initMobileStickyBtn();
+  initScrollTopBtn();
 
   // Retour depuis Stripe Checkout (paiement booking)
   const urlP = new URLSearchParams(window.location.search);
@@ -182,19 +183,20 @@ function applySalonBranding(salon) {
     const servicesGrid = document.querySelector('.services-grid');
     if (servicesGrid) {
       const MAX_VISIBLE = 6;
-      const makeCard = (s, hidden) => `
+      const makeCard = (s, hidden, svcIdx) => `
         <div class="service-card reveal active${hidden ? ' service-card-hidden' : ''}" style="${hidden ? 'display:none' : ''}">
-          <div class="service-icon">${s.icon}</div>
+          <div class="service-icon">${s.icon || '✂️'}</div>
           <h3>${s.name}</h3>
           <p>${s.description || ''}</p>
           <div class="service-meta">
             <span class="service-price">${s.price} CHF</span>
             <span class="service-duration">⏱ ${s.duration} min</span>
           </div>
+          <button class="btn btn-outline service-book-btn" onclick="openBookingWithService(${svcIdx})">Réserver →</button>
         </div>`;
       const extra = salon.services.length - MAX_VISIBLE;
       servicesGrid.innerHTML =
-        salon.services.map((s, i) => makeCard(s, i >= MAX_VISIBLE)).join('') +
+        salon.services.map((s, i) => makeCard(s, i >= MAX_VISIBLE, i)).join('') +
         (extra > 0 ? `
           <div class="service-card-toggle" style="grid-column:1/-1;text-align:center;margin-top:8px">
             <button id="svcToggleBtn" class="btn btn-outline" onclick="toggleServices(${extra})">
@@ -264,8 +266,6 @@ function applySalonBranding(salon) {
   }
 
   updateFooter(salon);
-  renderTeamSection(salon);
-  renderMapSection(salon);
   updateAvailabilityBadge(salon);
 }
 
@@ -496,22 +496,19 @@ function populateEmployees(serviceName = null) {
     return;
   }
 
-  // If there's only one employee after filtering, and we are showing this step (which only happens if total emps > 1)
-  // We should maybe auto-select them, but for now just showing them is fine.
-
   grid.innerHTML = emps.map(e => `
-    <div class="bm-service-card" data-emp-id="${e._id}" data-emp-name="${e.name}">
+    <div class="bm-service-card" onclick="selectEmployee('${e._id.replace(/'/g,"\\'")}','${(e.name||'').replace(/'/g,"\\'")}',this)">
       <div class="bm-service-icon" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--color-bg-dark);font-weight:700">${(e.name || '?')[0].toUpperCase()}</div>
       <div class="bm-service-name">${e.name}</div>
       <div class="bm-service-dur">${(e.specialties || []).join(', ') || 'Tous services'}</div>
     </div>
   `).join('');
-  grid.addEventListener('click', (ev) => {
-    const card = ev.target.closest('.bm-service-card'); if (!card) return;
-    grid.querySelectorAll('.bm-service-card').forEach(c => c.classList.remove('selected'));
-    card.classList.add('selected');
-    bmState.employee = { id: card.dataset.empId, name: card.dataset.empName };
-  });
+}
+
+function selectEmployee(id, name, el) {
+  document.querySelectorAll('#bmEmployeeGrid .bm-service-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  bmState.employee = { id, name };
 }
 
 function populateServices() {
@@ -524,8 +521,11 @@ function populateServices() {
     { name: 'Soin Capillaire', icon: '🧴', price: 30, duration: 35 },
     { name: 'Épilation', icon: '✨', price: 20, duration: 20 },
   ];
-  grid.innerHTML = services.map(s => {
+  // Store services in a lookup so onclick can reference full object
+  window._bmServices = {};
+  grid.innerHTML = services.map((s, idx) => {
     const pm = s.paymentMode || 'none';
+    window._bmServices[idx] = s;
     let payBadge = '';
     if (pm === 'deposit') {
       const amt = s.depositType === 'percent' ? `${s.depositAmount || 30}%` : `${s.depositAmount || 20} CHF`;
@@ -534,20 +534,29 @@ function populateServices() {
       payBadge = `<div style="font-size:.7rem;color:var(--color-primary);margin-top:3px;font-weight:500">💳 Paiement en ligne</div>`;
     }
     return `
-    <div class="bm-service-card" data-name="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}" data-payment-mode="${pm}">
-      <div class="bm-service-icon">${s.icon}</div>
+    <div class="bm-service-card" onclick="selectService(${idx},this)">
+      <div class="bm-service-icon">${s.icon || '✂️'}</div>
       <div class="bm-service-name">${s.name}</div>
       <div class="bm-service-price">${s.price} CHF</div>
       <div class="bm-service-dur">${s.duration} min</div>
       ${payBadge}
     </div>
   `}).join('');
-  grid.addEventListener('click', (ev) => {
-    const card = ev.target.closest('.bm-service-card'); if (!card) return;
-    grid.querySelectorAll('.bm-service-card').forEach(c => c.classList.remove('selected'));
-    card.classList.add('selected');
-    bmState.service = { name: card.dataset.name, icon: card.dataset.icon, price: parseInt(card.dataset.price), duration: parseInt(card.dataset.duration), paymentMode: card.dataset.paymentMode || 'none' };
-  });
+}
+
+function selectService(idx, el) {
+  document.querySelectorAll('#bmServiceGrid .bm-service-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  bmState.service = window._bmServices[idx];
+}
+
+// Pre-select a service and open booking modal (used by quick-book buttons)
+function openBookingWithService(idx) {
+  openBooking();
+  setTimeout(() => {
+    const card = document.querySelector(`#bmServiceGrid .bm-service-card:nth-child(${idx + 1})`);
+    if (card) selectService(idx, card);
+  }, 50);
 }
 
 function initBookingModal() {
@@ -611,6 +620,14 @@ function bmNextStep() {
   }
   if (stepId === 'confirm') { submitBooking(); return; }
   goToStep(bmState.stepIdx + 1);
+}
+
+function initScrollTopBtn() {
+  const btn = document.getElementById('scrollTopBtn');
+  if (!btn) return;
+  window.addEventListener('scroll', () => {
+    btn.classList.toggle('visible', window.scrollY > 400);
+  }, { passive: true });
 }
 
 function markFieldError(id, msg) {
