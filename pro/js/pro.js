@@ -402,9 +402,13 @@ async function loadDashboard(_retry = 0) {
 let _allBookings = [];
 
 async function loadBookings(_retry = 0) {
+    const listEl = document.getElementById('bookingsList');
+    if (_retry === 0 && listEl) {
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon" style="animation:spin 1s linear infinite">⏳</div><div class="empty-state-text">Chargement des rendez-vous…</div></div>';
+    }
     try {
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 8000);
+        const t = setTimeout(() => ctrl.abort(), 20000); // 20s (cold start Render)
         const res = await apiFetch(`${API}/api/pro/salon/${salonId}/bookings`, { signal: ctrl.signal });
         clearTimeout(t);
         const data = await res.json();
@@ -415,12 +419,12 @@ async function loadBookings(_retry = 0) {
     } catch (e) {
         console.error('Bookings error:', e);
         if (_retry < 2) {
-            const delay = (_retry + 1) * 3000;
-            document.getElementById('bookingsList').innerHTML =
-                `<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Connexion… réessai dans ${delay / 1000}s</div></div>`;
+            const delay = (_retry + 1) * 4000;
+            if (listEl) listEl.innerHTML =
+                `<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Connexion au serveur… réessai dans ${delay / 1000}s</div></div>`;
             setTimeout(() => loadBookings(_retry + 1), delay);
         } else {
-            document.getElementById('bookingsList').innerHTML =
+            if (listEl) listEl.innerHTML =
                 `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadBookings()">Réessayer</button></div></div>`;
         }
     }
@@ -593,7 +597,15 @@ function _weekDates(ref) {
 function _isoDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function _fmtDay(d) { return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`; }
 
+function _isMobile() { return window.innerWidth < 640; }
+
 function renderCalendar(bookings) {
+    if (_isMobile()) renderCalendarDay(bookings);
+    else renderCalendarWeek(bookings);
+}
+
+// --- WEEK VIEW (desktop) ---
+function renderCalendarWeek(bookings) {
     const container = document.getElementById('calendarContainer');
     if (!container) return;
     const weekDays = _weekDates(_calendarDate);
@@ -631,9 +643,64 @@ function renderCalendar(bookings) {
     container.innerHTML = navRow + `<div class="cal-wrap"><div class="cal-grid">${headers}${gridRows}</div></div>`;
 }
 
+// --- DAY VIEW (mobile) ---
+const DAY_NAMES_FULL = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+const MONTH_NAMES = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+function renderCalendarDay(bookings) {
+    const container = document.getElementById('calendarContainer');
+    if (!container) return;
+    const todayISO = todayStr();
+    const dayISO = _isoDate(_calendarDate);
+    const dayBookings = bookings.filter(b => b.date === dayISO).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    const hours = Array.from({length: 13}, (_, i) => i + 8);
+    const d = _calendarDate;
+    const dayLabel = `${DAY_NAMES_FULL[d.getDay()]} ${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
+
+    const slots = hours.map(h => {
+        const hStr = String(h).padStart(2, '0');
+        const slotBkgs = dayBookings.filter(b => b.time && parseInt(b.time) === h);
+        return `
+            <div style="display:flex;gap:0;border-top:1px solid var(--border)">
+                <div style="width:44px;flex-shrink:0;padding:10px 6px 10px 0;text-align:right;color:var(--text-muted);font-size:.7rem;padding-top:12px">${hStr}h</div>
+                <div style="flex:1;padding:4px 0 4px 8px;min-height:48px;cursor:pointer" onclick="showAddBookingOnDate('${dayISO}','${hStr}:00')">
+                    ${slotBkgs.map(b => `
+                        <div class="cal-booking cal-booking-${b.status||'confirmed'}" style="margin-bottom:4px"
+                             onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})">
+                            <div class="cal-booking-name">${b.time} · ${b.clientName}</div>
+                            <div class="cal-booking-svc">${b.serviceName||''} ${b.duration ? '· '+b.duration+'min' : ''} ${b.price ? '· '+b.price+' CHF' : ''}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px">
+            <button class="btn btn-ghost btn-sm" onclick="navDay(-1)" style="font-size:1.2rem;padding:6px 12px">‹</button>
+            <div style="text-align:center">
+                <div style="font-weight:700;font-size:1rem${dayISO === todayISO ? ';color:var(--primary)' : ''}">${dayLabel}</div>
+                ${dayISO !== todayISO ? `<button class="btn btn-ghost btn-sm" style="font-size:.75rem;margin-top:4px;padding:2px 10px" onclick="navDay(0)">Aujourd'hui</button>` : ''}
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="navDay(1)" style="font-size:1.2rem;padding:6px 12px">›</button>
+        </div>
+        <div style="background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--border)">
+            ${dayBookings.length === 0 && slots.replace(/<[^>]+>/g,'').trim() === '' ? '' : ''}
+            ${slots}
+        </div>
+        ${dayBookings.length === 0 ? `<div class="empty-state" style="margin-top:16px"><div class="empty-state-icon">😴</div><div class="empty-state-text">Aucun RDV ce jour<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="showAddBookingOnDate('${dayISO}','10:00')">+ Ajouter</button></div></div>` : ''}
+    `;
+}
+
 function navWeek(dir) {
     if (dir === 0) _calendarDate = new Date();
     else { _calendarDate = new Date(_calendarDate); _calendarDate.setDate(_calendarDate.getDate() + dir * 7); }
+    renderCalendar(_allBookings);
+}
+
+function navDay(dir) {
+    if (dir === 0) _calendarDate = new Date();
+    else { _calendarDate = new Date(_calendarDate); _calendarDate.setDate(_calendarDate.getDate() + dir); }
     renderCalendar(_allBookings);
 }
 
@@ -811,16 +878,18 @@ async function showAddBooking() {
         ${employees.length > 0 ? `<div class="form-group"><label class="form-label">Employé</label>
             <select class="form-input form-input-full" id="mbEmployee">${empOptions}</select>
         </div>` : ''}
+        <div class="form-group" style="position:relative">
+            <label class="form-label">Nom du client *</label>
+            <input class="form-input form-input-full" id="mbClientName" placeholder="Tapez pour rechercher ou créer…" autocomplete="off" oninput="clientSearchDebounce(this.value)">
+            <div id="clientSuggestions" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;z-index:1000;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4)"></div>
+        </div>
         <div class="form-row">
-            <div class="form-group" style="flex:1"><label class="form-label">Nom du client *</label>
-                <input class="form-input form-input-full" id="mbClientName" placeholder="Nom complet">
-            </div>
             <div class="form-group" style="flex:1"><label class="form-label">Téléphone</label>
                 <input class="form-input form-input-full" id="mbClientPhone" placeholder="06 12 34 56 78">
             </div>
-        </div>
-        <div class="form-group"><label class="form-label">Email (optionnel)</label>
-            <input type="email" class="form-input form-input-full" id="mbClientEmail" placeholder="client@email.com">
+            <div class="form-group" style="flex:1"><label class="form-label">Email (optionnel)</label>
+                <input type="email" class="form-input form-input-full" id="mbClientEmail" placeholder="client@email.com">
+            </div>
         </div>
         <div class="form-group"><label class="form-label">Notes</label>
             <input class="form-input form-input-full" id="mbNotes" placeholder="Notes internes...">
@@ -832,6 +901,56 @@ async function showAddBooking() {
     `;
     document.getElementById('modal').classList.add('active');
 }
+
+// ---- Client autocomplete ----
+let _clientSearchTimer = null;
+function clientSearchDebounce(val) {
+    clearTimeout(_clientSearchTimer);
+    const box = document.getElementById('clientSuggestions');
+    if (!box) return;
+    if (val.length < 2) { box.style.display = 'none'; return; }
+    _clientSearchTimer = setTimeout(() => runClientSearch(val), 280);
+}
+
+async function runClientSearch(q) {
+    const box = document.getElementById('clientSuggestions');
+    if (!box) return;
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/clients/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        const clients = data.data || [];
+        if (!clients.length) { box.style.display = 'none'; return; }
+        box.innerHTML = clients.map(c => `
+            <div onclick="selectClientSuggestion(${JSON.stringify(c).replace(/"/g,'&quot;')})"
+                 style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.88rem;transition:background .1s"
+                 onmouseover="this.style.background='rgba(255,255,255,.05)'"
+                 onmouseout="this.style.background=''">
+                <div style="font-weight:600">${c.name}</div>
+                <div style="color:var(--text-muted);font-size:.78rem">${[c.phone, c.email].filter(Boolean).join(' · ') || 'Pas de contact'}</div>
+            </div>
+        `).join('');
+        box.style.display = 'block';
+    } catch(e) { box.style.display = 'none'; }
+}
+
+function selectClientSuggestion(c) {
+    const nameEl  = document.getElementById('mbClientName');
+    const phoneEl = document.getElementById('mbClientPhone');
+    const emailEl = document.getElementById('mbClientEmail');
+    if (nameEl)  nameEl.value  = c.name  || '';
+    if (phoneEl) phoneEl.value = c.phone || '';
+    if (emailEl) emailEl.value = c.email || '';
+    const box = document.getElementById('clientSuggestions');
+    if (box) box.style.display = 'none';
+}
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#clientSuggestions') && e.target.id !== 'mbClientName') {
+        const box = document.getElementById('clientSuggestions');
+        if (box) box.style.display = 'none';
+    }
+});
 
 async function addManualBooking() {
     const clientName = document.getElementById('mbClientName').value.trim();
