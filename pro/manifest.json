@@ -1,0 +1,14 @@
+{
+  "name": "SalonPro — Espace Pro",
+  "short_name": "SalonPro",
+  "description": "Gérez votre salon depuis votre téléphone",
+  "start_url": "/pro",
+  "display": "standalone",
+  "background_color": "#0a0a14",
+  "theme_color": "#0a0a14",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/saas/img/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/saas/img/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

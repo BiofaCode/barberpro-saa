@@ -1,7 +1,7 @@
 {
-  "name": "barberpro-saas",
+  "name": "salonpro-saas",
   "version": "2.0.0",
-  "description": "BarberPro - Plateforme SaaS pour salons de coiffure",
+  "description": "SalonPro - Plateforme SaaS pour salons de beauté",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
