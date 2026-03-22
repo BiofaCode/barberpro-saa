@@ -140,32 +140,36 @@
 </head>
 
 <body>
-    <nav class="saas-nav">
-        <div class="container nav-content">
-            <a href="/" class="logo">
-                <span class="logo-icon">✨</span>
-                Salon<span class="highlight">Pro</span>
+    <nav class="nav" id="mainNav">
+        <div class="nav-inner">
+            <a href="/" class="nav-logo">
+                <span class="nav-logo-mark">S</span>
+                Salon<strong>Pro</strong>
             </a>
-            <div class="nav-links">
+            <div class="nav-links" id="navLinks">
                 <a href="/#features">Fonctionnalités</a>
                 <a href="/#pricing">Tarifs</a>
-                <a href="/pro">Espace Pro</a>
-                <a href="/#pricing" class="btn btn-primary">Essai gratuit →</a>
+                <a href="/saas/faq.html">FAQ</a>
+                <a href="/pro" class="nav-login">Connexion</a>
+                <a href="/#pricing" class="btn btn-primary btn-sm">Essai gratuit</a>
             </div>
-            <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">☰</button>
+            <button class="nav-burger" id="navBurger" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
         </div>
-        <div class="nav-mobile-dropdown" id="mobileMenu">
+        <div class="nav-mobile" id="navMobile">
             <a href="/#features">Fonctionnalités</a>
             <a href="/#pricing">Tarifs</a>
-            <a href="/pro">Espace Pro</a>
-            <a href="/#pricing" class="btn btn-primary">Essai gratuit →</a>
+            <a href="/saas/faq.html">FAQ</a>
+            <a href="/pro">Connexion</a>
+            <a href="/#pricing" class="btn btn-primary">Essai gratuit 14 jours →</a>
         </div>
     </nav>
 
     <main class="legal-page">
-        <div class="container">
+        <div class="wrap">
             <div class="legal-header reveal">
-                <span class="section-tag">Légal</span>
+                <span class="tag">Légal</span>
                 <h1>Conditions & Confidentialité</h1>
                 <p>Dernière mise à jour : 15 mars 2026</p>
             </div>
@@ -344,26 +348,26 @@
         </div>
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <div class="logo-small">✨ SalonPro</div>
+    <footer class="footer">
+        <div class="wrap">
+            <div class="footer-inner">
+                <div class="footer-logo">
+                    <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">✨ SalonPro</div>
                     <p>Le logiciel n°1 pour les professionnels de la beauté en Suisse.</p>
                 </div>
-                <div class="footer-links">
+                <div class="footer-col">
                     <h4>Produit</h4>
                     <a href="/#features">Fonctionnalités</a>
                     <a href="/#pricing">Tarifs</a>
                     <a href="/pro">Espace Pro</a>
                 </div>
-                <div class="footer-links">
+                <div class="footer-col">
                     <h4>Contact</h4>
                     <a href="mailto:info@osmodigital.ch">info@osmodigital.ch</a>
                     <a href="/saas/faq.html">FAQ</a>
                 </div>
             </div>
-            <div class="footer-bottom">
+            <div class="footer-legal" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:40px;padding-top:20px;border-top:1px solid var(--border)">
                 <span>&copy; 2026 SalonPro — Un produit Osmo Digital. Tous droits réservés.</span>
                 <a href="/saas/cgu.html">Conditions & Confidentialité</a>
             </div>
@@ -378,16 +382,12 @@
             event.target.classList.add('active');
         }
 
-        // Mobile menu
-        const btn = document.getElementById('mobileMenuBtn');
-        const menu = document.getElementById('mobileMenu');
-        btn.addEventListener('click', () => {
-            const open = menu.classList.toggle('open');
-            btn.textContent = open ? '✕' : '☰';
-        });
-        document.addEventListener('click', e => {
-            if (!e.target.closest('.saas-nav')) { menu.classList.remove('open'); btn.textContent = '☰'; }
-        });
+        // Navbar
+        const _nav = document.getElementById('mainNav');
+        window.addEventListener('scroll', () => _nav.classList.toggle('nav-scrolled', window.scrollY > 50));
+        const _burger = document.getElementById('navBurger');
+        const _mobile = document.getElementById('navMobile');
+        _burger.addEventListener('click', () => { _mobile.classList.toggle('open'); _burger.classList.toggle('open'); });
 
         // Scroll reveal
         document.addEventListener('DOMContentLoaded', () => {

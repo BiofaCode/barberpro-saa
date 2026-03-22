@@ -120,8 +120,9 @@ function applySalonBranding(salon) {
   if (salon.services?.length > 0) {
     const servicesGrid = document.querySelector('.services-grid');
     if (servicesGrid) {
-      servicesGrid.innerHTML = salon.services.map(s => `
-        <div class="service-card reveal active">
+      const MAX_VISIBLE = 6;
+      const makeCard = (s, hidden) => `
+        <div class="service-card reveal active${hidden ? ' service-card-hidden' : ''}" style="${hidden ? 'display:none' : ''}">
           <div class="service-icon">${s.icon}</div>
           <h3>${s.name}</h3>
           <p>${s.description || ''}</p>
@@ -129,8 +130,16 @@ function applySalonBranding(salon) {
             <span class="service-price">${s.price} CHF</span>
             <span class="service-duration">⏱ ${s.duration} min</span>
           </div>
-        </div>
-      `).join('');
+        </div>`;
+      const extra = salon.services.length - MAX_VISIBLE;
+      servicesGrid.innerHTML =
+        salon.services.map((s, i) => makeCard(s, i >= MAX_VISIBLE)).join('') +
+        (extra > 0 ? `
+          <div class="service-card-toggle" style="grid-column:1/-1;text-align:center;margin-top:8px">
+            <button id="svcToggleBtn" class="btn btn-outline" onclick="toggleServices(${extra})">
+              Voir les ${extra} autres prestations ▾
+            </button>
+          </div>` : '');
     }
   }
 
@@ -164,27 +173,43 @@ function applySalonBranding(salon) {
     } else if (salon.testimonials?.length > 0) {
       const testimonialsGrid = testimonialsSection.querySelector('.testimonials-grid');
       if (testimonialsGrid) {
+        const stars = n => '★'.repeat(Math.max(0, Math.min(5, n || 5))) + '☆'.repeat(5 - Math.max(0, Math.min(5, n || 5)));
         testimonialsGrid.innerHTML = salon.testimonials.map(t => `
           <div class="testimonial-card reveal active">
-            <div class="testimonial-stars">${'★'.repeat(t.stars)}${'☆'.repeat(5 - t.stars)}</div>
+            <div class="testimonial-stars">${stars(t.stars)}</div>
             <p class="testimonial-text">"${t.text}"</p>
             <div class="testimonial-author">
               <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">
                 ${t.name ? t.name[0].toUpperCase() : '?'}
               </div>
               <div>
-                <div class="testimonial-name">${t.name}</div>
+                <div class="testimonial-name">${t.name || 'Client'}</div>
                 <div class="testimonial-role">${t.role || 'Client'}</div>
               </div>
             </div>
           </div>
         `).join('');
-        initTestimonialCarousel(testimonialsGrid);
+        // Use grid (no scroll) for ≤3 cards, carousel for more
+        if (salon.testimonials.length <= 3) {
+          testimonialsGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));overflow:visible;scroll-snap-type:none';
+        } else {
+          initTestimonialCarousel(testimonialsGrid);
+        }
       }
     }
   }
 
   updateFooter(salon);
+}
+
+function toggleServices(extra) {
+  const hidden = document.querySelectorAll('.service-card-hidden');
+  const btn = document.getElementById('svcToggleBtn');
+  const isOpen = hidden[0]?.style.display !== 'none';
+  hidden.forEach(el => el.style.display = isOpen ? 'none' : '');
+  if (btn) btn.innerHTML = isOpen
+    ? `Voir les ${extra} autres prestations ▾`
+    : `Réduire ▴`;
 }
 
 function initTestimonialCarousel(grid) {

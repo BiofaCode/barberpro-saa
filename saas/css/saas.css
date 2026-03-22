@@ -57,14 +57,14 @@ button, input, select { font-family: var(--fb); }
 ul { list-style: none; }
 
 /* ── Layout ─────────────────────────────────────────────── */
-.wrap {
+.wrap, .container {
   width: 100%;
   max-width: 1140px;
   margin: 0 auto;
   padding: 0 20px;
 }
-@media (min-width: 640px)  { .wrap { padding: 0 32px; } }
-@media (min-width: 1200px) { .wrap { padding: 0 48px; } }
+@media (min-width: 640px)  { .wrap, .container { padding: 0 32px; } }
+@media (min-width: 1200px) { .wrap, .container { padding: 0 48px; } }
 
 /* ── Buttons ────────────────────────────────────────────── */
 .btn {
