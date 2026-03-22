@@ -184,31 +184,33 @@ function applySalonBranding(salon) {
     if (isStarter) {
       testimonialsSection.style.display = 'none';
       document.querySelectorAll('a[href="#testimonials"]').forEach(el => el.style.display = 'none');
-    } else if (salon.testimonials?.length > 0) {
+    } else {
       const testimonialsGrid = testimonialsSection.querySelector('.testimonials-grid');
       if (testimonialsGrid) {
-        const stars = n => '★'.repeat(Math.max(0, Math.min(5, n || 5))) + '☆'.repeat(5 - Math.max(0, Math.min(5, n || 5)));
-        testimonialsGrid.innerHTML = salon.testimonials.map(t => `
-          <div class="testimonial-card reveal active">
-            <div class="testimonial-stars">${stars(t.stars)}</div>
-            <p class="testimonial-text">"${t.text}"</p>
-            <div class="testimonial-author">
-              <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">
-                ${t.name ? t.name[0].toUpperCase() : '?'}
-              </div>
-              <div>
-                <div class="testimonial-name">${t.name || 'Client'}</div>
-                <div class="testimonial-role">${t.role || 'Client'}</div>
+        if (salon.testimonials?.length > 0) {
+          const stars = n => '★'.repeat(Math.max(0, Math.min(5, n || 5))) + '☆'.repeat(5 - Math.max(0, Math.min(5, n || 5)));
+          testimonialsGrid.innerHTML = salon.testimonials.map(t => `
+            <div class="testimonial-card reveal active">
+              <div class="testimonial-stars">${stars(t.stars)}</div>
+              <p class="testimonial-text">"${t.text}"</p>
+              <div class="testimonial-author">
+                <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">
+                  ${t.name ? t.name[0].toUpperCase() : '?'}
+                </div>
+                <div>
+                  <div class="testimonial-name">${t.name || 'Client'}</div>
+                  <div class="testimonial-role">${t.role || 'Client'}</div>
+                </div>
               </div>
             </div>
-          </div>
-        `).join('');
-        // Use grid (no scroll) for ≤3 cards, carousel for more
-        if (salon.testimonials.length <= 3) {
-          testimonialsGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));overflow:visible;scroll-snap-type:none';
-        } else {
-          initTestimonialCarousel(testimonialsGrid);
+          `).join('');
+          if (salon.testimonials.length > 3) {
+            initTestimonialCarousel(testimonialsGrid);
+            return; // keep flex carousel layout
+          }
         }
+        // ≤3 dynamic OR static hardcoded cards → grid layout (no scroll)
+        testimonialsGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--space-xl);overflow:visible;scroll-snap-type:none';
       }
     }
   }

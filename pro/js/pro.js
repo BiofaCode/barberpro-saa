@@ -294,15 +294,16 @@ function renderTopServices(services) {
 
 // ---- Dashboard ----
 async function loadDashboard(_retry = 0) {
+    if (_retry === 0) {
+        const tb = document.getElementById('todayBookings');
+        if (tb) tb.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement…</div></div>';
+    }
     try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 8000); // 8s timeout (Render cold start)
         const [statsRes, bookingsRes, analyticsRes] = await Promise.all([
-            apiFetch(`${API}/api/pro/salon/${salonId}/stats`, { signal: ctrl.signal }),
-            apiFetch(`${API}/api/pro/salon/${salonId}/bookings?date=${todayStr()}`, { signal: ctrl.signal }),
-            apiFetch(`${API}/api/pro/salon/${salonId}/analytics`, { signal: ctrl.signal })
+            apiFetch(`${API}/api/pro/salon/${salonId}/stats`),
+            apiFetch(`${API}/api/pro/salon/${salonId}/bookings?date=${todayStr()}`),
+            apiFetch(`${API}/api/pro/salon/${salonId}/analytics`)
         ]);
-        clearTimeout(t);
         const stats = (await statsRes.json()).data || {};
         const bookings = (await bookingsRes.json()).data || [];
         const analyticsData = (await analyticsRes.json()).data || { months: [], topServices: [] };
@@ -385,12 +386,8 @@ async function loadDashboard(_retry = 0) {
         }
     } catch (e) {
         console.error('Dashboard error:', e);
-        if (_retry < 2) {
-            // Auto-retry (handles Render cold start ~15s spin-up)
-            const delay = (_retry + 1) * 3000;
-            document.getElementById('todayBookings').innerHTML =
-                `<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Connexion au serveur… réessai dans ${delay / 1000}s</div></div>`;
-            setTimeout(() => loadDashboard(_retry + 1), delay);
+        if (_retry < 3) {
+            setTimeout(() => loadDashboard(_retry + 1), (_retry + 1) * 4000);
         } else {
             document.getElementById('todayBookings').innerHTML =
                 `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger les données<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadDashboard()">Réessayer</button></div></div>`;
