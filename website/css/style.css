@@ -775,8 +775,9 @@ h3 {
 }
 
 .bm-step-num {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
   border-radius: 50%;
   border: 2px solid currentColor;
   display: flex;
@@ -818,6 +819,7 @@ h3 {
 .booking-modal-body {
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 1.2rem 1.5rem;
   min-height: 280px;
 }
@@ -996,7 +998,8 @@ h3 {
 }
 
 .bm-timeslot {
-  padding: 0.55rem 0.3rem;
+  padding: 0.65rem 0.3rem;
+  min-height: 44px;
   background: var(--color-bg-card);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
@@ -1006,6 +1009,9 @@ h3 {
   transition: all var(--transition-fast);
   color: var(--color-text-primary);
   font-family: var(--font-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .bm-timeslot:hover {
@@ -1121,8 +1127,11 @@ h3 {
   .booking-modal {
     width: 100%;
     max-width: 100%;
-    max-height: 100vh;
-    height: 100vh;
+    /* Use dvh (dynamic viewport height) so keyboard doesn't cover modal on mobile */
+    max-height: 100dvh;
+    max-height: 100vh; /* fallback */
+    height: 100dvh;
+    height: 100vh; /* fallback */
     border-radius: 0;
   }
 

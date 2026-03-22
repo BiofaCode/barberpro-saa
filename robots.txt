@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /saas/
+Allow: /salon/
+
+# Block admin and API routes
+Disallow: /api/
+Disallow: /pro/
+Disallow: /admin/
+Disallow: /uploads/
+
+Sitemap: https://barberpro-saa.onrender.com/sitemap.xml

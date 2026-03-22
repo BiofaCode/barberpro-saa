@@ -258,6 +258,24 @@ route('GET', '/api/health', async (req, res) => {
     json(res, 200, { status: 'ok', ts: Date.now() });
 });
 
+route('GET', '/robots.txt', async (req, res) => {
+    const file = path.join(__dirname, 'robots.txt');
+    fs.readFile(file, (err, data) => {
+        if (err) { res.writeHead(404); res.end(); return; }
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end(data);
+    });
+});
+
+route('GET', '/sitemap.xml', async (req, res) => {
+    const file = path.join(__dirname, 'sitemap.xml');
+    fs.readFile(file, (err, data) => {
+        if (err) { res.writeHead(404); res.end(); return; }
+        res.writeHead(200, { 'Content-Type': 'application/xml; charset=utf-8' });
+        res.end(data);
+    });
+});
+
 route('GET', '/api/admin/stats', async (req, res) => {
     const totalSalons = await db.countSalons();
     const totalOwners = await db.countOwners();
