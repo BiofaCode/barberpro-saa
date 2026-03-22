@@ -1863,6 +1863,18 @@ async function loadSettings() {
                         <span id="previewBgDot" style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${salon.branding?.backgroundColor || '#0a0a0f'};border:2px solid rgba(255,255,255,.3);margin-right:6px;vertical-align:middle"></span>
                         Aperçu de vos couleurs
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Icône du salon (emoji)</label>
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                            <input class="form-input" id="set-icon" value="${salon.branding?.icon || '✂️'}" placeholder="✂️" style="width:80px;font-size:1.4rem;text-align:center" maxlength="4">
+                            <span style="font-size:.82rem;color:var(--text-sec)">Affiché dans la nav, le footer et le bouton "Réserver"</span>
+                        </div>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+                            ${['✂️','💈','💅','💆','🪒','✨','🌸','🌿','⭐','🎨','💎','👑'].map(e =>
+                                `<button type="button" onclick="document.getElementById('set-icon').value='${e}'" style="font-size:1.3rem;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 8px;cursor:pointer;transition:border-color .2s" title="${e}">${e}</button>`
+                            ).join('')}
+                        </div>
+                    </div>
                     <div class="form-group"><label class="form-label">Titre principal du site (hero)</label><input class="form-input form-input-full" id="set-heroTitle" value="${salon.branding?.heroTitle || ''}" placeholder="L'Art de la Coiffure Masculine"></div>
                     <div class="form-group"><label class="form-label">Sous-titre du site</label><input class="form-input form-input-full" id="set-heroSubtitle" value="${salon.branding?.heroSubtitle || ''}" placeholder="Excellence, style et précision"></div>
                     
@@ -2099,6 +2111,7 @@ async function saveInfo() {
 // ---- Save Branding ----
 async function saveBranding() {
     const branding = {
+        icon: document.getElementById('set-icon')?.value.trim() || '✂️',
         primaryColor: document.getElementById('set-color1').value,
         accentColor: document.getElementById('set-color2').value,
         heroTitle: document.getElementById('set-heroTitle').value.trim(),
