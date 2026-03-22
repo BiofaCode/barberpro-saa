@@ -1,0 +1,131 @@
+{
+  "project": "BarberPro SaaS",
+  "branchName": "ralph/continuous-improvements",
+  "description": "Continuous UX & feature improvements across admin dashboard, pro space, and public salon pages",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Admin: Plan filter chips above salons list",
+      "description": "As a super-admin, I want to filter salons by plan so I can quickly see which clients are on each tier.",
+      "acceptanceCriteria": [
+        "Add 4 filter chips above #salonsList in admin/index.html: Tous / Starter / Pro / Premium",
+        "Clicking a chip calls a filterByPlan(plan) function in admin/js/admin.js",
+        "filterByPlan filters state.salons and calls renderSalonCards with filtered array",
+        "Active chip has a highlighted style (use --primary border/background)",
+        "Selecting 'Tous' clears the plan filter and shows all salons",
+        "Plan filter combines with existing text search (filterSalons still works independently)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Admin: Show salon count badge in salons page header",
+      "description": "As a super-admin, I want to see how many salons are shown vs total so I know if filters are active.",
+      "acceptanceCriteria": [
+        "Add a <span id='salonCount'> element in the salons page header next to the '🏪 Mes Clients' title",
+        "renderSalonCards() updates salonCount text to 'N salon(s)' where N is the filtered count",
+        "If filtered count differs from state.salons.length, show 'N / Total' format",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Pro: Earnings estimate stat card on dashboard",
+      "description": "As a salon owner, I want to see my estimated earnings for the current month directly on the dashboard.",
+      "acceptanceCriteria": [
+        "Add a new stat card in #dashStats in pro/js/pro.js after the existing stat cards",
+        "The card shows the sum of prices for all bookings in the current month (from bookings API data already fetched in loadDashboard)",
+        "Label: 'Revenus du mois (est.)', value formatted as 'X CHF'",
+        "Use the same stat-card markup as the other cards (class='stat-card purple' or similar)",
+        "If no bookings data is available, show '— CHF'",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Pro: Upcoming bookings mini-list on dashboard",
+      "description": "As a salon owner, I want to see my next 3 upcoming bookings on the dashboard at a glance.",
+      "acceptanceCriteria": [
+        "Add a section 'Prochains rendez-vous' below #todayBookings in pro/index.html with id='upcomingBookings'",
+        "In loadDashboard() in pro/js/pro.js, fetch bookings for the next 7 days and show the first 3 upcoming ones",
+        "Each item shows: time, client name, service name, employee name (if available)",
+        "If no upcoming bookings, show a friendly empty state message",
+        "Section is hidden if all upcoming bookings are within today (avoid duplication)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Website: Quick-book button on service cards",
+      "description": "As a visitor, I want to click 'Réserver' directly on a service card to open the booking modal pre-selecting that service.",
+      "acceptanceCriteria": [
+        "In applySalonBranding (website/js/app.js), add a small 'Réserver →' button inside each service card markup (makeCard function)",
+        "Clicking the button calls openBooking() and then pre-selects the service by setting bmState.service and calling goToStep for the datetime step",
+        "Button style: small, outline variant, sits at bottom of the card below service-meta",
+        "Does not appear on services with no price data",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Website: Scroll-to-top floating button",
+      "description": "As a visitor on a long salon page, I want a scroll-to-top button that appears after scrolling down so I can quickly go back to the top.",
+      "acceptanceCriteria": [
+        "Add a <button id='scrollTopBtn'> in website/index.html fixed at bottom-left (not conflicting with the FAB at bottom-right)",
+        "Button is hidden by default; appears when scrollY > 400px via scroll event listener in website/js/app.js",
+        "Clicking scrolls smoothly to top (window.scrollTo({ top: 0, behavior: 'smooth' }))",
+        "Button styled as a small circle with '↑' icon, semi-transparent dark background, positioned bottom-left",
+        "Add CSS in website/css/style.css for #scrollTopBtn with transition for opacity/visibility",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Admin: Confirm dialog before deleting a salon",
+      "description": "As a super-admin, I want a proper modal confirmation (not browser alert) before deleting a salon to prevent accidents.",
+      "acceptanceCriteria": [
+        "Replace the window.confirm() call in deleteSalon() in admin/js/admin.js with a modal confirmation",
+        "Show a modal (reuse existing showModal/closeModal pattern) with the salon name, a warning message, and Cancel / Supprimer buttons",
+        "The delete only proceeds when the user clicks Supprimer in the modal",
+        "Cancel closes the modal without deleting",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Pro: Toast notification on successful settings save",
+      "description": "As a salon owner, I want clear feedback when my settings are saved so I know the action was successful.",
+      "acceptanceCriteria": [
+        "After every successful PUT to /api/pro/salon/:salonId in pro/js/pro.js, call showToast() with a success message",
+        "Check all save handlers: saveBranding, saveHours, saveAddress, saveServices — each should call showToast on success",
+        "Toast message should be specific, e.g. 'Horaires enregistrés ✅', 'Adresse mise à jour ✅'",
+        "On API error, show showToast with an error message in red",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

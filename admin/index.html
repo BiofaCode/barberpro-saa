@@ -81,8 +81,15 @@
                             <button class="btn btn-primary btn-sm" onclick="openCreateSalonModal()">+ Créer</button>
                         </div>
                     </div>
-                    <div style="margin-bottom:16px">
-                        <input type="text" id="salonSearch" class="form-input" placeholder="🔍 Rechercher par nom, slug, email..." style="width:100%;max-width:420px" oninput="filterSalons(this.value)">
+                    <div style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                        <input type="text" id="salonSearch" class="form-input" placeholder="🔍 Rechercher…" style="flex:1;min-width:200px;max-width:380px" oninput="filterSalons(this.value)">
+                        <div style="display:flex;gap:6px;flex-wrap:wrap" id="planFilterBtns">
+                          <button class="plan-filter-btn active" data-plan="" onclick="filterByPlan('')">Tous</button>
+                          <button class="plan-filter-btn" data-plan="starter" onclick="filterByPlan('starter')">🥉 Starter</button>
+                          <button class="plan-filter-btn" data-plan="pro" onclick="filterByPlan('pro')">🥈 Pro</button>
+                          <button class="plan-filter-btn" data-plan="premium" onclick="filterByPlan('premium')">🥇 Premium</button>
+                        </div>
+                        <span id="salonCount" style="font-size:.8rem;color:var(--text-muted);white-space:nowrap"></span>
                     </div>
                     <div class="salons-grid" id="salonsList"></div>
                 </section>
