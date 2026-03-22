@@ -404,13 +404,10 @@ let _allBookings = [];
 async function loadBookings(_retry = 0) {
     const listEl = document.getElementById('bookingsList');
     if (_retry === 0 && listEl) {
-        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon" style="animation:spin 1s linear infinite">⏳</div><div class="empty-state-text">Chargement des rendez-vous…</div></div>';
+        listEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement des rendez-vous…</div></div>';
     }
     try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 20000); // 20s (cold start Render)
-        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/bookings`, { signal: ctrl.signal });
-        clearTimeout(t);
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/bookings`);
         const data = await res.json();
         _allBookings = data.data || [];
         populateEmployeeFilter(_allBookings);
@@ -418,14 +415,13 @@ async function loadBookings(_retry = 0) {
         renderAdvancedStats(_allBookings);
     } catch (e) {
         console.error('Bookings error:', e);
-        if (_retry < 2) {
-            const delay = (_retry + 1) * 4000;
-            if (listEl) listEl.innerHTML =
-                `<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Connexion au serveur… réessai dans ${delay / 1000}s</div></div>`;
+        if (_retry < 3) {
+            const delay = Math.min((_retry + 1) * 3000, 10000);
             setTimeout(() => loadBookings(_retry + 1), delay);
+            // Keep spinner visible — no scary counter message
         } else {
             if (listEl) listEl.innerHTML =
-                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadBookings()">Réessayer</button></div></div>`;
+                `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Impossible de charger les rendez-vous<br><button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="loadBookings()">Réessayer</button></div></div>`;
         }
     }
 }
