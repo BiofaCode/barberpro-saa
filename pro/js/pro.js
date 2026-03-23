@@ -871,7 +871,8 @@ function renderAdvancedStats(bookings) {
     const weekDays = _weekDates(new Date());
     const weekISOs = weekDays.map(_isoDate);
     const weekBookings = bookings.filter(b => weekISOs.includes(b.date) && b.status !== 'cancelled');
-    const workDays = (currentSalon?.hours || []).filter(h => h.open).length || 5;
+    const hoursArr = Array.isArray(currentSalon?.hours) ? currentSalon.hours : Object.values(currentSalon?.hours || {});
+    const workDays = hoursArr.filter(h => h && (h.open === true || h.open)).length || 5;
     const slotsPerDay = 8; // avg 8h × 30min slots / 30min avg = ~16 slots, approximate
     const totalSlots = workDays * slotsPerDay;
     const occ = totalSlots > 0 ? Math.min(100, Math.round((weekBookings.length / totalSlots) * 100)) : 0;
@@ -1297,13 +1298,12 @@ async function loadEmployees() {
         } else {
             container.innerHTML = '<div class="data-grid">' + emps.map(e => `
                 <div class="data-card">
-                    <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),#A07D4A);color:var(--bg);font-weight:700;font-size:16px">${(e.name || '?')[0].toUpperCase()}</div>
-                    <div class="data-card-info">
+                    <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),#A07D4A);color:var(--bg);font-weight:700;font-size:16px;flex-shrink:0">${(e.name || '?')[0].toUpperCase()}</div>
+                    <div class="data-card-info" style="min-width:0;flex:1">
                         <div class="data-card-name">${e.name}</div>
-                        <div class="data-card-sub">${(e.specialties || []).join(', ')}</div>
+                        <div class="data-card-sub">${e.role === 'owner' ? 'Propriétaire' : 'Employé'}${(e.specialties || []).length ? ' · ' + e.specialties.join(', ') : ''}</div>
                     </div>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex-shrink:0;">
-                        <span class="badge badge-active">${e.role === 'owner' ? 'Propriétaire' : 'Employé'}</span>
+                    <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
                         <button class="btn btn-outline btn-sm" onclick='showEditSchedule(${JSON.stringify(e).replace(/'/g, "&#39;")})' title="Modifier les horaires">🕐</button>
                         ${isOwner ? `<button class="btn btn-outline btn-sm" onclick="showChangePassword('${e._id}','${e.role || 'employee'}')" title="Changer mot de passe">🔑</button>` : ''}
                         ${isOwner ? `<button class="btn btn-danger btn-sm" onclick="deleteEmployee('${e._id}', '${e.role || 'employee'}')" title="Supprimer">🗑</button>` : ''}
