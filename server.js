@@ -42,6 +42,10 @@ if (process.env.CLOUDINARY_URL) {
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'barberpro_dev_secret';
+if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'barberpro_dev_secret') {
+    console.error('🚨 CRITICAL: JWT_SECRET is using the default dev value in production! Set JWT_SECRET env variable.');
+    process.exit(1);
+}
 const UPLOAD_DIR = path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -68,19 +72,32 @@ function json(res, status, data) {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
     });
     res.end(JSON.stringify(data));
 }
 
+const MAX_BODY_SIZE = 512 * 1024; // 512 KB
 function parseBody(req) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         let body = '';
-        req.on('data', c => body += c);
+        let size = 0;
+        req.on('data', c => {
+            size += c.length;
+            if (size > MAX_BODY_SIZE) {
+                req.destroy();
+                return reject(new Error('Request body too large'));
+            }
+            body += c;
+        });
         req.on('end', () => {
             try { resolve(JSON.parse(body)); }
             catch { resolve({}); }
         });
+        req.on('error', () => resolve({}));
     });
 }
 
@@ -165,6 +182,17 @@ function createToken(payload) {
     return `${header}.${body}.${sig}`;
 }
 
+// Check that the authenticated user owns (or has access to) the given salon
+function verifySalonAccess(req, salonId) {
+    const user = verifyToken(req);
+    if (!user) return null;
+    // Superadmin has access to all salons
+    if (user.role === 'superadmin') return user;
+    // Owners and employees must belong to the same salon
+    if (String(user.salonId) === String(salonId)) return user;
+    return null;
+}
+
 function verifyToken(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -244,8 +272,15 @@ function route(method, pattern, handler) {
 // ==========================
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'adminPro2026';
+if (process.env.NODE_ENV === 'production' && ADMIN_PASSWORD === 'adminPro2026') {
+    console.warn('⚠️  WARNING: ADMIN_PASSWORD is using the default value in production! Set ADMIN_PASSWORD env variable.');
+}
 
 route('POST', '/api/admin/login', async (req, res) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    if (rateLimit(ip, 'admin_login', 10, 15 * 60 * 1000)) { // 10 attempts per 15 min per IP
+        return json(res, 429, { success: false, error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' });
+    }
     const body = await parseBody(req);
     if (!body.password || body.password !== ADMIN_PASSWORD) {
         return json(res, 401, { success: false, error: 'Mot de passe incorrect' });
@@ -653,6 +688,8 @@ route('GET', '/api/pro/salon/:salonId', async (req, res, params) => {
 });
 
 route('PUT', '/api/pro/salon/:salonId', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const body = await parseBody(req);
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
@@ -673,6 +710,8 @@ route('PUT', '/api/pro/salon/:salonId', async (req, res, params) => {
 
 // Upload logo
 route('POST', '/api/pro/salon/:salonId/logo', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
@@ -701,6 +740,8 @@ route('POST', '/api/pro/salon/:salonId/logo', async (req, res, params) => {
 });
 
 route('DELETE', '/api/pro/salon/:salonId/logo', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
@@ -714,6 +755,8 @@ route('DELETE', '/api/pro/salon/:salonId/logo', async (req, res, params) => {
 
 // Upload hero background image
 route('POST', '/api/pro/salon/:salonId/hero-image', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
@@ -740,6 +783,8 @@ route('POST', '/api/pro/salon/:salonId/hero-image', async (req, res, params) => 
 });
 
 route('DELETE', '/api/pro/salon/:salonId/hero-image', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
@@ -832,6 +877,8 @@ route('GET', '/api/pro/salon/:salonId/services', async (req, res, params) => {
 });
 
 route('POST', '/api/pro/salon/:salonId/services', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
@@ -851,6 +898,8 @@ route('POST', '/api/pro/salon/:salonId/services', async (req, res, params) => {
 });
 
 route('PUT', '/api/pro/salon/:salonId/services/:svcId', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     const body = await parseBody(req);
@@ -860,6 +909,8 @@ route('PUT', '/api/pro/salon/:salonId/services/:svcId', async (req, res, params)
 });
 
 route('DELETE', '/api/pro/salon/:salonId/services/:svcId', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     const services = (salon.services || []).filter(s => s._id !== params.svcId);
@@ -869,6 +920,8 @@ route('DELETE', '/api/pro/salon/:salonId/services/:svcId', async (req, res, para
 
 // Branding & Hours
 route('PUT', '/api/pro/salon/:salonId/branding', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
@@ -894,6 +947,8 @@ route('PUT', '/api/pro/salon/:salonId/branding', async (req, res, params) => {
 
 // ---- Gallery ----
 route('POST', '/api/pro/salon/:salonId/gallery', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
@@ -921,6 +976,8 @@ route('POST', '/api/pro/salon/:salonId/gallery', async (req, res, params) => {
 });
 
 route('DELETE', '/api/pro/salon/:salonId/gallery/:photoId', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
@@ -947,6 +1004,8 @@ route('GET', '/api/pro/salon/:salonId/testimonials', async (req, res, params) =>
 });
 
 route('POST', '/api/pro/salon/:salonId/testimonials', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
@@ -966,6 +1025,8 @@ route('POST', '/api/pro/salon/:salonId/testimonials', async (req, res, params) =
 });
 
 route('PUT', '/api/pro/salon/:salonId/testimonials/:tid', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
@@ -979,6 +1040,8 @@ route('PUT', '/api/pro/salon/:salonId/testimonials/:tid', async (req, res, param
 });
 
 route('DELETE', '/api/pro/salon/:salonId/testimonials/:tid', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     if (salon.subscription?.plan === 'starter' || salon.plan === 'starter') return json(res, 403, { success: false, error: 'Fonctionnalité non disponible avec le plan Starter' });
@@ -1735,6 +1798,10 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
 });
 
 route('POST', '/api/salon/:slug/book', async (req, res, params) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    if (rateLimit(ip, 'book', 10, 60 * 60 * 1000)) { // 10 bookings/hour per IP
+        return json(res, 429, { success: false, error: 'Trop de requêtes, veuillez réessayer plus tard.' });
+    }
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
@@ -1865,6 +1932,10 @@ const otpStore = new Map();
 
 // Client: generate OTP for my bookings
 route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    if (rateLimit(ip, 'otp', 5, 15 * 60 * 1000)) { // 5 OTP requests per 15 min per IP
+        return json(res, 429, { success: false, error: 'Trop de requêtes, veuillez réessayer dans quelques minutes.' });
+    }
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
@@ -2097,11 +2168,27 @@ const server = http.createServer(async (req, res) => {
             }
         }
 
+        // Protect all /api/pro/salon/* routes — requires valid JWT
+        // Public pro routes (login, register, forgot/reset password, vapid-key) are excluded
+        const proPublicRoutes = ['/api/pro/login', '/api/pro/register', '/api/pro/forgot-password', '/api/pro/reset-password', '/api/pro/push/vapid-key'];
+        if (pathname.startsWith('/api/pro/') && !proPublicRoutes.some(r => pathname.startsWith(r))) {
+            const tokenPayload = verifyToken(req);
+            if (!tokenPayload) {
+                return json(res, 401, { success: false, error: 'Authentification requise' });
+            }
+        }
+
         const match = routes.find(r => r.method === req.method && r.regex.test(pathname));
         if (match) {
             const params = pathname.match(match.regex)?.groups || {};
             try { await match.handler(req, res, params); }
-            catch (err) { console.error('API Error:', err); json(res, 500, { success: false, error: 'Erreur serveur' }); }
+            catch (err) {
+                if (err.message === 'Request body too large') {
+                    return json(res, 413, { success: false, error: 'Corps de requête trop volumineux' });
+                }
+                console.error('API Error:', err);
+                json(res, 500, { success: false, error: 'Erreur serveur' });
+            }
         } else {
             json(res, 404, { success: false, error: 'Endpoint non trouvé' });
         }

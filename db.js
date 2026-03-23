@@ -7,6 +7,13 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
 // ---- Connection ----
+if (!process.env.MONGODB_URI) {
+    if (process.env.NODE_ENV === 'production') {
+        console.error('🚨 CRITICAL: MONGODB_URI environment variable is not set! Refusing to start.');
+        process.exit(1);
+    }
+    console.warn('⚠️  MONGODB_URI not set — using embedded fallback URI (dev/demo only). Set MONGODB_URI in production.');
+}
 const MONGO_URI = process.env.MONGODB_URI || 'mongodb+srv://info_db_user:mrQ0tFyyilw4hpUu@salonpro.kpketkg.mongodb.net/';
 const DB_NAME = 'salonpro';
 
