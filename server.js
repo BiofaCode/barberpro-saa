@@ -42,6 +42,10 @@ if (process.env.CLOUDINARY_URL) {
 
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'barberpro_dev_secret';
+if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'barberpro_dev_secret') {
+    console.error('🚨 CRITICAL: JWT_SECRET is using the default dev value in production! Set JWT_SECRET env variable.');
+    process.exit(1);
+}
 const UPLOAD_DIR = path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
 
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -68,19 +72,32 @@ function json(res, status, data) {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
     });
     res.end(JSON.stringify(data));
 }
 
+const MAX_BODY_SIZE = 512 * 1024; // 512 KB
 function parseBody(req) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         let body = '';
-        req.on('data', c => body += c);
+        let size = 0;
+        req.on('data', c => {
+            size += c.length;
+            if (size > MAX_BODY_SIZE) {
+                req.destroy();
+                return reject(new Error('Request body too large'));
+            }
+            body += c;
+        });
         req.on('end', () => {
             try { resolve(JSON.parse(body)); }
             catch { resolve({}); }
         });
+        req.on('error', () => resolve({}));
     });
 }
 
@@ -244,6 +261,9 @@ function route(method, pattern, handler) {
 // ==========================
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'adminPro2026';
+if (process.env.NODE_ENV === 'production' && ADMIN_PASSWORD === 'adminPro2026') {
+    console.warn('⚠️  WARNING: ADMIN_PASSWORD is using the default value in production! Set ADMIN_PASSWORD env variable.');
+}
 
 route('POST', '/api/admin/login', async (req, res) => {
     const body = await parseBody(req);
@@ -1735,6 +1755,10 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
 });
 
 route('POST', '/api/salon/:slug/book', async (req, res, params) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    if (rateLimit(ip, 'book', 10, 60 * 60 * 1000)) { // 10 bookings/hour per IP
+        return json(res, 429, { success: false, error: 'Trop de requêtes, veuillez réessayer plus tard.' });
+    }
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
@@ -1865,6 +1889,10 @@ const otpStore = new Map();
 
 // Client: generate OTP for my bookings
 route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    if (rateLimit(ip, 'otp', 5, 15 * 60 * 1000)) { // 5 OTP requests per 15 min per IP
+        return json(res, 429, { success: false, error: 'Trop de requêtes, veuillez réessayer dans quelques minutes.' });
+    }
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
@@ -2101,7 +2129,13 @@ const server = http.createServer(async (req, res) => {
         if (match) {
             const params = pathname.match(match.regex)?.groups || {};
             try { await match.handler(req, res, params); }
-            catch (err) { console.error('API Error:', err); json(res, 500, { success: false, error: 'Erreur serveur' }); }
+            catch (err) {
+                if (err.message === 'Request body too large') {
+                    return json(res, 413, { success: false, error: 'Corps de requête trop volumineux' });
+                }
+                console.error('API Error:', err);
+                json(res, 500, { success: false, error: 'Erreur serveur' });
+            }
         } else {
             json(res, 404, { success: false, error: 'Endpoint non trouvé' });
         }

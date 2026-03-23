@@ -426,6 +426,17 @@ async function loadDashboard(_retry = 0) {
             `;
         }
 
+        // US-003: Compute monthly earnings from current month's bookings
+        const now = new Date();
+        const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        let monthlyEarnings = null;
+        if (analyticsResult.status === 'fulfilled') {
+            const months = analyticsResult.value?.data?.months || [];
+            const monthEntry = months.find(m => m.month === currentMonthStr);
+            monthlyEarnings = monthEntry ? monthEntry.revenue : 0;
+        }
+        const earningsDisplay = monthlyEarnings !== null ? `${monthlyEarnings} CHF` : '— CHF';
+
         document.getElementById('dashStats').innerHTML = subBanner + `
             <div class="stat-card gold">
                 <div class="stat-icon">📅</div>
@@ -446,6 +457,11 @@ async function loadDashboard(_retry = 0) {
                 <div class="stat-icon">📈</div>
                 <div class="stat-value">${stats.totalRevenue ?? 0} CHF</div>
                 <div class="stat-label">CA total</div>
+            </div>
+            <div class="stat-card purple">
+                <div class="stat-icon">🗓️</div>
+                <div class="stat-value">${earningsDisplay}</div>
+                <div class="stat-label">Revenus du mois (est.)</div>
             </div>
         `;
 
@@ -470,6 +486,52 @@ async function loadDashboard(_retry = 0) {
                     <div style="font-family:'Playfair Display',serif;font-weight:700;color:var(--primary)">${b.price || 0} CHF</div>
                 </div>
             `).join('');
+        }
+
+        // US-004: Upcoming bookings (next 7 days, excl. today)
+        const upcomingEl = document.getElementById('upcomingBookings');
+        if (upcomingEl) {
+            try {
+                const dates = [];
+                for (let i = 1; i <= 7; i++) {
+                    const d = new Date(now);
+                    d.setDate(d.getDate() + i);
+                    dates.push(d.toISOString().split('T')[0]);
+                }
+                const upcomingResults = await Promise.allSettled(
+                    dates.map(date => apiFetch(`${API}/api/pro/salon/${salonId}/bookings?date=${date}`).then(r => r.json()))
+                );
+                const upcoming = upcomingResults
+                    .filter(r => r.status === 'fulfilled')
+                    .flatMap(r => r.value?.data || [])
+                    .filter(b => b.status !== 'cancelled')
+                    .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
+                    .slice(0, 3);
+
+                if (upcoming.length === 0) {
+                    upcomingEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🗓️</div><div class="empty-state-text">Aucun rendez-vous dans les 7 prochains jours</div></div>';
+                } else {
+                    const fmt = dateStr => {
+                        const d = new Date(dateStr + 'T00:00:00');
+                        return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+                    };
+                    upcomingEl.innerHTML = upcoming.map(b => `
+                        <div class="booking-row">
+                            <div class="booking-icon">${b.serviceIcon || '✂️'}</div>
+                            <div class="booking-info">
+                                <div class="booking-name">${b.clientName}</div>
+                                <div class="booking-detail">${b.serviceName} · ${fmt(b.date)} ${b.time}${b.employeeName ? ' · ' + b.employeeName : ''}</div>
+                            </div>
+                            <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
+                            <div style="font-family:'Playfair Display',serif;font-weight:700;color:var(--primary)">${b.price || 0} CHF</div>
+                        </div>
+                    `).join('');
+                }
+                // Show the section only if there are upcoming bookings
+                upcomingEl.closest('.upcoming-section')?.style.setProperty('display', upcoming.length ? 'block' : 'none');
+            } catch (e) {
+                console.warn('Upcoming bookings load error:', e.message);
+            }
         }
     } catch (e) {
         console.error('Dashboard error:', e);

@@ -17,8 +17,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented: filterByPlan(), applyFilters(), plan-filter-btn chips in admin/index.html"
     },
     {
       "id": "US-002",
@@ -31,8 +31,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented: salonCount span in admin/index.html, updated renderSalonCards"
     },
     {
       "id": "US-003",
@@ -47,8 +47,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented: purple stat-card using analytics months data, shows '— CHF' if analytics unavailable"
     },
     {
       "id": "US-004",
@@ -63,8 +63,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented: upcoming-section div in pro/index.html, loadDashboard fetches next 7 days, shows top 3"
     },
     {
       "id": "US-005",
@@ -78,8 +78,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented: openBookingWithService(), service-book-btn in makeCard()"
     },
     {
       "id": "US-006",
@@ -94,8 +94,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented: #scrollTopBtn in website/index.html, initScrollTopBtn() in app.js, CSS in style.css"
     },
     {
       "id": "US-007",
@@ -109,8 +109,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented: confirmDeleteSalon() modal in admin/js/admin.js"
     },
     {
       "id": "US-008",
@@ -124,8 +124,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "All save handlers (saveInfo, saveBranding, saveHours) already call showToast on success and error"
     }
   ]
 }
