@@ -109,6 +109,9 @@
             <a class="nav-item" onclick="showPage('services');closeSidebar()">
                 <span class="nav-icon">✨</span>Prestations
             </a>
+            <a class="nav-item" onclick="showPage('reviews');closeSidebar()">
+                <span class="nav-icon">⭐</span>Avis clients
+            </a>
             <a class="nav-item" onclick="showPage('settings');closeSidebar()">
                 <span class="nav-icon">⚙️</span>Mon Salon
             </a>
@@ -285,6 +288,24 @@
                     <button class="btn btn-primary btn-sm" onclick="showAddService()">+ Ajouter</button>
                 </div>
                 <div id="servicesList"></div>
+            </div>
+
+            <!-- ── Reviews ── -->
+            <div class="page" id="page-reviews">
+                <div class="page-header">
+                    <h2>⭐ Avis clients</h2>
+                    <button class="btn btn-ghost btn-sm" onclick="loadReviews()">🔄</button>
+                </div>
+                <div style="font-size:.83rem;color:var(--text-muted);margin-bottom:14px">
+                    Les avis soumis par vos clients après leur rendez-vous. Approuvez ceux que vous souhaitez afficher sur votre site.
+                </div>
+                <div id="reviewsTabs" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+                    <button class="btn btn-primary btn-sm" id="rtab-pending" onclick="filterReviews('pending')">⏳ En attente</button>
+                    <button class="btn btn-ghost btn-sm" id="rtab-approved" onclick="filterReviews('approved')">✅ Approuvés</button>
+                    <button class="btn btn-ghost btn-sm" id="rtab-rejected" onclick="filterReviews('rejected')">❌ Rejetés</button>
+                    <button class="btn btn-ghost btn-sm" id="rtab-all" onclick="filterReviews('all')">Tous</button>
+                </div>
+                <div id="reviewsList"></div>
             </div>
 
             <!-- ── Settings ── -->

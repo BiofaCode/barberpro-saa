@@ -1050,6 +1050,35 @@ route('DELETE', '/api/pro/salon/:salonId/logo_old', async (req, res, params) => 
 });
 
 // ---- Testimonials ----
+// ---- Reviews (client-submitted, with moderation) ----
+route('GET', '/api/pro/salon/:salonId/reviews', async (req, res, params) => {
+    const all = await db.findBookings({ salon: params.salonId, reviewed: true });
+    const reviews = all.map(b => ({
+        _id: b._id, clientName: b.clientName, serviceName: b.serviceName,
+        date: b.date, reviewRating: b.reviewRating, reviewComment: b.reviewComment,
+        reviewDate: b.reviewDate, reviewApproved: b.reviewApproved ?? null,
+    })).sort((a, b) => (b.reviewDate || '').localeCompare(a.reviewDate || ''));
+    json(res, 200, { success: true, data: reviews });
+});
+
+route('PUT', '/api/pro/salon/:salonId/reviews/:bookingId/moderate', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
+    const body = await parseBody(req);
+    const approved = body.approved === true || body.approved === 'true';
+    await db.updateBooking(params.bookingId, { reviewApproved: approved });
+    // Recalculate salon rating from approved reviews only
+    const all = await db.findBookings({ salon: params.salonId, reviewed: true });
+    const approvedRatings = all.filter(b => b.reviewApproved === true).map(b => b.reviewRating).filter(Boolean);
+    if (approvedRatings.length) {
+        const avg = parseFloat((approvedRatings.reduce((a, b) => a + b, 0) / approvedRatings.length).toFixed(1));
+        await db.updateSalon(params.salonId, { rating: avg, reviewCount: approvedRatings.length });
+    } else {
+        await db.updateSalon(params.salonId, { rating: 0, reviewCount: 0 });
+    }
+    json(res, 200, { success: true });
+});
+
 route('GET', '/api/pro/salon/:salonId/testimonials', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
@@ -1892,6 +1921,13 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon || !salon.active) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const employees = await db.findEmployees({ salon: salon._id });
+    // Fetch approved client reviews (most recent 10)
+    const allBookings = await db.findBookings({ salon: salon._id, reviewed: true });
+    const approvedReviews = allBookings
+        .filter(b => b.reviewApproved === true && b.reviewRating && b.reviewComment)
+        .map(b => ({ rating: b.reviewRating, comment: b.reviewComment, clientName: b.clientName, date: b.reviewDate, service: b.serviceName }))
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+        .slice(0, 10);
     json(res, 200, {
         success: true,
         data: {
@@ -1902,8 +1938,10 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
             services: (salon.services || []).filter(s => s.active),
             hours: salon.hours,
             closedDates: salon.closedDates || [],
-            employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties })),
+            testimonials: salon.testimonials || [],
+            employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties, hours: e.hours })),
             rating: salon.rating, reviewCount: salon.reviewCount,
+            approvedReviews,
         }
     });
 });
@@ -2267,14 +2305,8 @@ route('POST', '/api/review/:bookingId', async (req, res, params) => {
     if (booking.reviewed) return json(res, 409, { success: false, error: 'Avis déjà soumis' });
     const rating = Math.min(5, Math.max(1, parseInt(body.rating) || 5));
     const comment = (body.comment || '').trim().slice(0, 500);
-    await db.updateBooking(booking._id, { reviewed: true, reviewRating: rating, reviewComment: comment, reviewDate: new Date().toISOString() });
-    // Update salon avg rating
-    const allReviewed = await db.findBookings({ salon: booking.salon, reviewed: true });
-    const ratings = allReviewed.map(b => b.reviewRating).filter(Boolean);
-    if (ratings.length) {
-        const avg = parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1));
-        await db.updateSalon(booking.salon, { rating: avg, reviewCount: ratings.length });
-    }
+    // reviewApproved: null = pending moderation, true = approved, false = rejected
+    await db.updateBooking(booking._id, { reviewed: true, reviewRating: rating, reviewComment: comment, reviewDate: new Date().toISOString(), reviewApproved: null });
     json(res, 200, { success: true });
 });
 
