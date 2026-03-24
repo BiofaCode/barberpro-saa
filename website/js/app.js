@@ -3,6 +3,8 @@
    ============================================ */
 
 let SALON_DATA = null;
+let _salonDataResolve;
+const salonDataReady = new Promise(resolve => { _salonDataResolve = resolve; });
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (window.SALON_SLUG) {
@@ -15,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     } catch (e) { console.warn('Could not load salon data:', e); }
   }
+  _salonDataResolve();
   initNavbar();
   initParticles();
   initCounters();
@@ -467,9 +470,10 @@ function renderStepsBar() {
   ).join('');
 }
 
-function openBooking() {
+async function openBooking() {
   document.getElementById('navHamburger')?.classList.remove('active');
   document.getElementById('navLinks')?.classList.remove('open');
+  await salonDataReady;
   bmState = { stepIdx: 0, employee: null, service: null, date: null, time: null, month: new Date().getMonth(), year: new Date().getFullYear() };
   bmSteps = buildSteps();
   renderStepsBar();
@@ -533,14 +537,11 @@ function selectEmployee(id, name, el) {
 
 function populateServices() {
   const grid = document.getElementById('bmServiceGrid');
-  const services = SALON_DATA?.services || [
-    { name: 'Coupe Classique', icon: '✂️', price: 25, duration: 30 },
-    { name: 'Soin Visage', icon: '💆', price: 35, duration: 40 },
-    { name: 'Pack Premium', icon: '💎', price: 55, duration: 60 },
-    { name: 'Coloration', icon: '🎨', price: 40, duration: 45 },
-    { name: 'Soin Capillaire', icon: '🧴', price: 30, duration: 35 },
-    { name: 'Épilation', icon: '✨', price: 20, duration: 20 },
-  ];
+  const services = SALON_DATA?.services || [];
+  if (services.length === 0) {
+    grid.innerHTML = '<p style="text-align:center;color:var(--color-text-secondary,#888);padding:1.5rem 0">Aucune prestation disponible pour le moment.</p>';
+    return;
+  }
   // Store services in a lookup so onclick can reference full object
   window._bmServices = {};
   grid.innerHTML = services.map((s, idx) => {
