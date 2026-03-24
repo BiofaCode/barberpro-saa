@@ -807,23 +807,7 @@ async function updateBookingStatus(bookingId, status) {
 
 // ---- PDF Invoice ----
 function printInvoice(b) {
-    const salon = currentSalon || {};
-    const win = window.open('', '_blank', 'width=640,height=800');
-    win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Reçu ${b.clientName}</title>
-    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:40px;color:#1a1a1a;max-width:520px;margin:0 auto}.header{border-bottom:2px solid #1a1a1a;padding-bottom:20px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-start}.salon-name{font-size:22px;font-weight:700}.salon-sub{font-size:12px;color:#666;margin-top:4px;line-height:1.5}.receipt-num{font-size:12px;color:#666;text-align:right}.receipt-title{font-size:16px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px}.line{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eee;font-size:14px}.total-line{display:flex;justify-content:space-between;padding:14px 0;font-size:18px;font-weight:700}.footer{margin-top:36px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:16px}.print-btn{margin-top:24px;padding:10px 24px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px}@media print{.print-btn{display:none}}</style>
-    </head><body>
-    <div class="header"><div><div class="salon-name">${salon.name||'Salon'}</div><div class="salon-sub">${salon.address||''}${salon.city?' · '+salon.city:''}${salon.phone?' · '+salon.phone:''}</div></div><div class="receipt-num">Reçu #${(b._id||'').slice(-6).toUpperCase()}<br>${new Date().toLocaleDateString('fr-FR')}</div></div>
-    <div class="receipt-title">Reçu de prestation</div>
-    <div class="line"><span>Client</span><span>${b.clientName}</span></div>
-    <div class="line"><span>Date</span><span>${b.date} à ${b.time}</span></div>
-    <div class="line"><span>Prestation</span><span>${b.serviceName||'—'}</span></div>
-    <div class="line"><span>Durée</span><span>${b.duration||30} min</span></div>
-    ${b.employeeName?`<div class="line"><span>Styliste</span><span>${b.employeeName}</span></div>`:''}
-    <div class="total-line"><span>Total</span><span>${b.price||0} CHF</span></div>
-    <div class="footer">Merci de votre visite ! — ${salon.name||'Salon'}</div>
-    <br><button class="print-btn" onclick="window.print()">🖨 Imprimer / Enregistrer PDF</button>
-    </body></html>`);
-    win.document.close();
+    window.open(`/receipt/${b._id}?token=${b.cancelToken || ''}`, '_blank', 'width=580,height=750');
 }
 
 // ---- Calendar View ----
@@ -1978,16 +1962,24 @@ async function loadStripeConnect(plan) {
         if (d.connected) {
             body.innerHTML = `
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-                    <div style="width:10px;height:10px;border-radius:50%;background:var(--success);flex-shrink:0"></div>
+                    <div style="width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0"></div>
                     <div>
                         <div style="font-weight:600;font-size:.95rem">Stripe connecté ✅</div>
-                        <div style="font-size:.8rem;color:var(--text-muted)">Votre compte bancaire est lié. Vous pouvez recevoir des paiements en ligne.</div>
+                        <div style="font-size:.8rem;color:var(--text-muted)">Compte bancaire lié — vous pouvez recevoir des paiements en ligne.</div>
                     </div>
                 </div>
                 <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:.83rem;color:var(--text-sec);margin-bottom:16px">
                     💡 Activez le paiement en ligne ou l'acompte par prestation dans <strong>Mes Prestations → modifier</strong>
                 </div>
-                <div style="font-size:.78rem;color:var(--text-muted)">SalonPro prélève 2,5% de frais plateforme sur chaque paiement en ligne.</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+                    <button class="btn btn-outline btn-sm" onclick="openStripeDashboard()" style="flex:1;min-width:140px">
+                        📊 Gérer mes versements
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="stripeConnectOnboard()" style="flex:1;min-width:140px">
+                        🔄 Re-configurer
+                    </button>
+                </div>
+                <div style="font-size:.78rem;color:var(--text-muted)">2,5% de frais plateforme sur chaque paiement en ligne.</div>
             `;
         } else {
             body.innerHTML = `
@@ -2008,6 +2000,18 @@ async function loadStripeConnect(plan) {
     } catch (e) {
         body.innerHTML = `<div style="color:var(--danger);font-size:.85rem">Erreur de chargement</div>`;
     }
+}
+
+async function openStripeDashboard() {
+    try {
+        const res = await apiFetch(`${API}/api/pro/stripe/connect/dashboard-link`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success && data.data?.url) {
+            window.open(data.data.url, '_blank');
+        } else {
+            showToast(data.error || 'Erreur Stripe', 'error');
+        }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
 }
 
 async function stripeConnectOnboard() {
