@@ -146,7 +146,19 @@ function initApp() {
             activatePage('bookings');
             setTimeout(loadBookings, 0);
         } else {
-            Array.from(sidebarNav.querySelectorAll('a')).forEach(a => a.style.display = 'flex');
+            // Afficher les items standard
+            Array.from(sidebarNav.querySelectorAll('a')).forEach(a => {
+                const id = a.id;
+                if (id === 'nav-branches' || id === 'nav-integrations') return; // géré ci-dessous
+                a.style.display = 'flex';
+            });
+            // Afficher les features Premium si plan premium
+            const isPremium = currentSalon?.subscription?.plan === 'premium';
+            const navBranches = document.getElementById('nav-branches');
+            const navIntegrations = document.getElementById('nav-integrations');
+            if (navBranches) navBranches.style.display = isPremium ? 'flex' : 'none';
+            if (navIntegrations) navIntegrations.style.display = isPremium ? 'flex' : 'none';
+
             activatePage('dashboard');
             setTimeout(loadDashboard, 0);
         }
@@ -250,6 +262,8 @@ function showPage(page) {
     else if (page === 'services') loadServices();
     else if (page === 'reviews') loadReviews();
     else if (page === 'settings') loadSettings();
+    else if (page === 'branches') loadMySalons();
+    else if (page === 'integrations') loadIntegrations();
 }
 
 // ---- Sidebar (mobile drawer) ----
@@ -3098,6 +3112,309 @@ function setResetMsg(msg, type) {
     el.style.border = type === 'success' ? '1px solid rgba(34,197,94,.3)' : '1px solid rgba(239,68,68,.3)';
     el.style.color = type === 'success' ? '#22c55e' : '#ef4444';
     el.textContent = msg;
+}
+
+// ============================================================
+//  PREMIUM — Multi-établissements
+// ============================================================
+
+async function loadMySalons() {
+    const container = document.getElementById('branchesList');
+    if (!container) return;
+
+    // Vérification plan
+    if (currentSalon?.subscription?.plan !== 'premium') {
+        container.innerHTML = `
+            <div class="card" style="text-align:center;padding:32px">
+                <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
+                <h3 style="margin-bottom:8px">Fonctionnalité Premium</h3>
+                <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:20px">
+                    Gérez plusieurs établissements depuis un seul compte.<br>Disponible avec le plan Premium.
+                </p>
+                <a href="/saas/#pricing" target="_blank" class="btn btn-primary">Passer au Premium →</a>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement...</div></div>';
+    try {
+        const res = await apiFetch(`${API}/api/pro/my-salons`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        renderBranchesList(data.data);
+    } catch (e) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">${e.message}</div></div>`;
+    }
+}
+
+function renderBranchesList(salons) {
+    const container = document.getElementById('branchesList');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div style="font-size:.83rem;color:var(--text-muted);margin-bottom:16px">
+            ${salons.length} établissement${salons.length > 1 ? 's' : ''} — max 5 sur le plan Premium.
+        </div>
+        ${salons.map(s => `
+            <div class="card" style="margin-bottom:12px">
+                <div class="card-body" style="display:flex;align-items:center;gap:14px">
+                    <div style="width:46px;height:46px;border-radius:12px;background:var(--bg-alt);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;overflow:hidden">
+                        ${s.logo ? `<img src="${s.logo}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">` : '🏪'}
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-weight:600;font-size:.95rem">${s.name}</div>
+                        <div style="font-size:.78rem;color:var(--text-muted)">/s/${s.slug}</div>
+                    </div>
+                    ${s.isPrimary ? '<span class="badge badge-success" style="flex-shrink:0;font-size:.72rem">Principal</span>' : ''}
+                    ${String(s._id) === String(salonId)
+                        ? '<span class="badge badge-pending" style="flex-shrink:0;font-size:.72rem">Actif</span>'
+                        : `<button class="btn btn-outline btn-sm" style="flex-shrink:0" onclick="switchToSalon('${s._id}')">Basculer →</button>`
+                    }
+                </div>
+            </div>
+        `).join('')}
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="showCreateBranch()">
+            + Ajouter un établissement
+        </button>`;
+}
+
+async function switchToSalon(targetSalonId) {
+    try {
+        const res = await apiFetch(`${API}/api/pro/switch-salon`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ salonId: targetSalonId }),
+        });
+        const data = await res.json();
+        if (!data.success) { showToast(data.error || 'Erreur', 'error'); return; }
+
+        // Mise à jour session
+        token = data.token;
+        salonId = data.user.salonId;
+        currentUser = data.user;
+        currentSalon = data.salon;
+        localStorage.setItem('proSession', JSON.stringify({ token, user: currentUser, salon: currentSalon }));
+
+        // Mise à jour interface
+        const name = currentSalon.name || 'Mon Salon';
+        const words = name.split(' ');
+        document.getElementById('sidebarSalonName').innerHTML = words[0] + (words.length > 1 ? ' <span>' + words.slice(1).join(' ') + '</span>' : '');
+        showToast(`Basculé vers ${currentSalon.name} ✅`);
+        showPage('dashboard');
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+function showCreateBranch() {
+    openModal('Nouvel établissement', `
+        <div class="form-group">
+            <label class="form-label">Nom de l'établissement *</label>
+            <input class="form-input form-input-full" id="branchName" placeholder="Ex: Salon de la Victoire - Lyon">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Adresse</label>
+            <input class="form-input form-input-full" id="branchAddress" placeholder="12 Rue du Style, Lyon">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Téléphone</label>
+            <input class="form-input form-input-full" id="branchPhone" placeholder="06 12 34 56 78" type="tel">
+        </div>
+    `, `<button class="btn btn-primary" onclick="createBranch()">Créer l'établissement</button>`);
+}
+
+async function createBranch() {
+    const name = document.getElementById('branchName')?.value.trim();
+    if (!name) { showToast('Nom requis', 'error'); return; }
+
+    try {
+        const res = await apiFetch(`${API}/api/pro/my-salons`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                address: document.getElementById('branchAddress')?.value.trim() || '',
+                phone: document.getElementById('branchPhone')?.value.trim() || '',
+            }),
+        });
+        const data = await res.json();
+        if (!data.success) { showToast(data.error || 'Erreur', 'error'); return; }
+        closeModal();
+        showToast(`Établissement "${data.data.name}" créé ✅`);
+        loadMySalons();
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+// ============================================================
+//  PREMIUM — Intégrations (iCal + Webhooks)
+// ============================================================
+
+async function loadIntegrations() {
+    const container = document.getElementById('integrationsList');
+    if (!container) return;
+
+    if (currentSalon?.subscription?.plan !== 'premium') {
+        container.innerHTML = `
+            <div class="card" style="text-align:center;padding:32px">
+                <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
+                <h3 style="margin-bottom:8px">Fonctionnalité Premium</h3>
+                <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:20px">
+                    Export calendrier iCal et webhooks sur événements.<br>Disponible avec le plan Premium.
+                </p>
+                <a href="/saas/#pricing" target="_blank" class="btn btn-primary">Passer au Premium →</a>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement...</div></div>';
+
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/webhooks`);
+        const data = await res.json();
+        const webhooks = data.success ? data.data : [];
+        renderIntegrations(webhooks);
+    } catch (e) {
+        renderIntegrations([]);
+    }
+}
+
+function renderIntegrations(webhooks) {
+    const container = document.getElementById('integrationsList');
+    if (!container) return;
+
+    container.innerHTML = `
+        <!-- iCal Export -->
+        <div class="card" style="margin-bottom:16px">
+            <div class="card-header">
+                <h3>📅 Export Calendrier (iCal)</h3>
+            </div>
+            <div class="card-body">
+                <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px">
+                    Exportez tous vos rendez-vous au format iCal (.ics) compatible avec Google Calendar, Apple Calendar, Outlook.
+                </p>
+                <a class="btn btn-primary btn-sm" href="${API}/api/pro/salon/${salonId}/bookings/ical" download>
+                    ⬇️ Télécharger le fichier .ics
+                </a>
+                <div style="font-size:.75rem;color:var(--text-muted);margin-top:10px">
+                    ⚠️ Ce lien nécessite d'être connecté. Pour un abonnement calendrier en temps réel, configurez un webhook.
+                </div>
+            </div>
+        </div>
+
+        <!-- Webhooks -->
+        <div class="card">
+            <div class="card-header">
+                <h3>🔗 Webhooks</h3>
+                <button class="btn btn-primary btn-sm" onclick="showAddWebhook()">+ Ajouter</button>
+            </div>
+            <div class="card-body">
+                <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:14px">
+                    Recevez une requête HTTP POST vers votre URL à chaque événement. Maximum 5 webhooks.
+                </p>
+                <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:14px;padding:10px 12px;background:var(--bg-alt);border-radius:8px;line-height:1.8">
+                    <strong>Événements disponibles :</strong><br>
+                    <code>booking.created</code> — Nouveau rendez-vous<br>
+                    <code>booking.cancelled</code> — Annulation de RDV
+                </div>
+                <div id="webhooksList">
+                    ${webhooks.length === 0
+                        ? '<div style="color:var(--text-muted);font-size:.85rem;text-align:center;padding:16px">Aucun webhook configuré</div>'
+                        : webhooks.map(w => `
+                            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+                                <div style="flex:1;min-width:0">
+                                    <div style="font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.url}</div>
+                                    <div style="font-size:.75rem;color:var(--text-muted)">${(w.events||[]).join(', ')}</div>
+                                </div>
+                                <span class="badge ${w.active ? 'badge-success' : ''}" style="flex-shrink:0;font-size:.7rem">${w.active ? 'Actif' : 'Inactif'}</span>
+                                <button class="btn btn-danger btn-sm" onclick="deleteWebhook('${w._id}')">🗑</button>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Marque blanche -->
+        <div class="card" style="margin-top:16px">
+            <div class="card-header"><h3>🏷 Marque blanche</h3></div>
+            <div class="card-body">
+                <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px">
+                    Masquez le badge "Propulsé par SalonPro" sur votre site public.
+                </p>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px">
+                    <input type="checkbox" id="wlEnabled" ${currentSalon?.whiteLabel?.enabled ? 'checked' : ''} style="accent-color:var(--primary);width:16px;height:16px">
+                    <span style="font-size:.9rem">Masquer le badge SalonPro sur mon site</span>
+                </label>
+                <button class="btn btn-primary btn-sm" onclick="saveWhiteLabel()">Enregistrer</button>
+            </div>
+        </div>`;
+}
+
+function showAddWebhook() {
+    openModal('Nouveau webhook', `
+        <div class="form-group">
+            <label class="form-label">URL de destination (HTTPS) *</label>
+            <input class="form-input form-input-full" id="whUrl" placeholder="https://monapp.com/webhook" type="url">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Événements</label>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" id="evBookingCreated" checked style="accent-color:var(--primary)">
+                    <span style="font-size:.88rem"><code>booking.created</code> — Nouveau RDV</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" id="evBookingCancelled" style="accent-color:var(--primary)">
+                    <span style="font-size:.88rem"><code>booking.cancelled</code> — Annulation</span>
+                </label>
+            </div>
+        </div>
+    `, `<button class="btn btn-primary" onclick="addWebhook()">Ajouter le webhook</button>`);
+}
+
+async function addWebhook() {
+    const url = document.getElementById('whUrl')?.value.trim();
+    if (!url || !url.startsWith('https://')) { showToast('URL HTTPS valide requise', 'error'); return; }
+
+    const events = [];
+    if (document.getElementById('evBookingCreated')?.checked) events.push('booking.created');
+    if (document.getElementById('evBookingCancelled')?.checked) events.push('booking.cancelled');
+    if (events.length === 0) { showToast('Sélectionnez au moins un événement', 'error'); return; }
+
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/webhooks`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, events }),
+        });
+        const data = await res.json();
+        if (!data.success) { showToast(data.error || 'Erreur', 'error'); return; }
+        closeModal();
+        showToast('Webhook ajouté ✅');
+        loadIntegrations();
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+async function deleteWebhook(webhookId) {
+    if (!confirm('Supprimer ce webhook ?')) return;
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/webhooks/${webhookId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) { showToast('Webhook supprimé'); loadIntegrations(); }
+        else showToast(data.error || 'Erreur', 'error');
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+async function saveWhiteLabel() {
+    const enabled = document.getElementById('wlEnabled')?.checked || false;
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/white-label`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentSalon = { ...currentSalon, whiteLabel: data.data.whiteLabel };
+            showToast(enabled ? 'Badge SalonPro masqué ✅' : 'Badge SalonPro rétabli');
+        } else {
+            showToast(data.error || 'Erreur', 'error');
+        }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
 }
 
 // Show reset modal if ?reset_token= in URL

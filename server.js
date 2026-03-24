@@ -1952,6 +1952,238 @@ route('POST', '/api/pro/stripe/connect/dashboard-link', async (req, res) => {
 });
 
 // ==========================
+//  PREMIUM FEATURES
+// ==========================
+
+// ---- Webhook trigger (interne) ----
+async function triggerWebhooks(salon, event, payload) {
+    const webhooks = (salon.webhooks || []).filter(w => w.active && (w.events || []).includes(event));
+    if (!webhooks.length) return;
+    const body = JSON.stringify({ event, salon: salon.slug, timestamp: new Date().toISOString(), data: payload });
+    for (const wh of webhooks) {
+        try {
+            await fetch(wh.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-SalonPro-Event': event },
+                body,
+                signal: AbortSignal.timeout(5000),
+            });
+        } catch (e) {
+            console.warn(`⚠️ Webhook failed [${event}]: ${wh.url} — ${e.message}`);
+        }
+    }
+}
+
+// ---- Multi-établissements ----
+
+// GET /api/pro/my-salons
+route('GET', '/api/pro/my-salons', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const owner = await db.findOwnerById(user.ownerId);
+    if (!owner) return json(res, 404, { success: false, error: 'Propriétaire introuvable' });
+
+    const primarySalon = await db.findSalonById(owner.salon);
+    const extras = await Promise.all((owner.extraSalons || []).map(id => db.findSalonById(id)));
+    const allSalons = [primarySalon, ...extras].filter(Boolean).map(s => ({
+        _id: s._id, name: s.name, slug: s.slug, logo: s.logo || '',
+        subscription: s.subscription, active: s.active,
+        isPrimary: String(s._id) === String(owner.salon),
+    }));
+
+    json(res, 200, { success: true, data: allSalons });
+});
+
+// POST /api/pro/my-salons — créer un nouvel établissement (Premium uniquement)
+route('POST', '/api/pro/my-salons', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const owner = await db.findOwnerById(user.ownerId);
+    if (!owner) return json(res, 404, { success: false, error: 'Propriétaire introuvable' });
+
+    const primarySalon = await db.findSalonById(owner.salon);
+    if (!primarySalon) return json(res, 404, { success: false, error: 'Salon principal introuvable' });
+    if (primarySalon.subscription?.plan !== 'premium') {
+        return json(res, 403, { success: false, error: 'Fonctionnalité réservée au plan Premium' });
+    }
+    const extraSalons = owner.extraSalons || [];
+    if (extraSalons.length >= 4) {
+        return json(res, 400, { success: false, error: 'Maximum 5 établissements atteint' });
+    }
+
+    const body = await parseBody(req);
+    if (!body.name) return json(res, 400, { success: false, error: 'Nom du salon requis' });
+
+    const slug = await makeUniqueSlug(body.name);
+    const newSalon = await db.createSalon({
+        slug, name: body.name,
+        description: body.description || '', address: body.address || '',
+        phone: body.phone || '', email: body.email || '',
+        logo: '', services: [], gallery: [],
+        hours: {
+            lundi: { open: '09:00', close: '19:00' }, mardi: { open: '09:00', close: '19:00' },
+            mercredi: { open: '09:00', close: '19:00' }, jeudi: { open: '09:00', close: '19:00' },
+            vendredi: { open: '09:00', close: '19:00' }, samedi: { open: '09:00', close: '18:00' },
+        },
+        subscription: { plan: 'premium', status: primarySalon.subscription?.status || 'active', price: 0 },
+        active: true,
+    });
+
+    await db.updateOwner(owner._id, { extraSalons: [...extraSalons, newSalon._id] });
+    console.log(`🏪 Nouvel établissement créé: ${newSalon.name} (${newSalon.slug}) par ${owner.email}`);
+    json(res, 201, { success: true, data: newSalon });
+});
+
+// POST /api/pro/switch-salon — switcher de salon, retourne un nouveau JWT
+route('POST', '/api/pro/switch-salon', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const body = await parseBody(req);
+    if (!body.salonId) return json(res, 400, { success: false, error: 'salonId requis' });
+
+    const owner = await db.findOwnerById(user.ownerId);
+    if (!owner) return json(res, 404, { success: false, error: 'Propriétaire introuvable' });
+
+    const allIds = [String(owner.salon), ...(owner.extraSalons || []).map(String)];
+    if (!allIds.includes(String(body.salonId))) {
+        return json(res, 403, { success: false, error: 'Accès non autorisé à ce salon' });
+    }
+
+    const salon = await db.findSalonById(body.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const newToken = createToken({ ownerId: owner._id, salonId: body.salonId, role: 'owner' });
+    json(res, 200, {
+        success: true, token: newToken,
+        user: { id: owner._id, salonId: body.salonId, name: owner.name, email: owner.email, role: 'owner' },
+        salon,
+    });
+});
+
+// ---- Marque blanche ----
+
+// PUT /api/pro/salon/:salonId/white-label (Premium uniquement)
+route('PUT', '/api/pro/salon/:salonId/white-label', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    if (salon.subscription?.plan !== 'premium') {
+        return json(res, 403, { success: false, error: 'Fonctionnalité réservée au plan Premium' });
+    }
+    const body = await parseBody(req);
+    const updated = await db.updateSalon(params.salonId, {
+        'whiteLabel.enabled': !!body.enabled,
+        'whiteLabel.customDomain': (body.customDomain || '').trim(),
+    });
+    json(res, 200, { success: true, data: updated });
+});
+
+// ---- Intégrations avancées : iCal export ----
+
+// GET /api/pro/salon/:salonId/bookings/ical (Premium)
+route('GET', '/api/pro/salon/:salonId/bookings/ical', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    if (salon.subscription?.plan !== 'premium') {
+        return json(res, 403, { success: false, error: 'Fonctionnalité réservée au plan Premium' });
+    }
+
+    const bookings = await db.findBookings({ salon: salon._id, status: { $in: ['confirmed', 'completed'] } });
+    const now = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+
+    const lines = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0',
+        'PRODID:-//SalonPro//SalonPro//FR',
+        `X-WR-CALNAME:${salon.name} - Rendez-vous`,
+        'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    ];
+
+    for (const b of bookings) {
+        if (!b.date || !b.time) continue;
+        const [yr, mo, dy] = b.date.split('-');
+        const [hr, mn] = b.time.split(':');
+        const startDt = `${yr}${mo}${dy}T${hr}${mn}00`;
+        const endDate = new Date(+yr, +mo - 1, +dy, +hr, +mn + (b.duration || 30));
+        const endDt = `${String(endDate.getFullYear())}${String(endDate.getMonth()+1).padStart(2,'0')}${String(endDate.getDate()).padStart(2,'0')}T${String(endDate.getHours()).padStart(2,'0')}${String(endDate.getMinutes()).padStart(2,'0')}00`;
+        lines.push(
+            'BEGIN:VEVENT',
+            `UID:booking-${b._id}@salonpro`,
+            `DTSTAMP:${now}`,
+            `DTSTART:${startDt}`,
+            `DTEND:${endDt}`,
+            `SUMMARY:${(b.serviceName || 'RDV').replace(/[,;\\]/g, '')} - ${(b.clientName || '').replace(/[,;\\]/g, '')}`,
+            `DESCRIPTION:${(b.serviceName || '')} | ${b.price ? b.price + ' CHF' : ''}${b.notes ? ' | ' + b.notes : ''}`,
+            'STATUS:CONFIRMED',
+            'END:VEVENT',
+        );
+    }
+    lines.push('END:VCALENDAR');
+
+    res.writeHead(200, {
+        'Content-Type': 'text/calendar; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${salon.slug}-rdv.ics"`,
+        'Access-Control-Allow-Origin': '*',
+    });
+    res.end(lines.join('\r\n'));
+});
+
+// ---- Webhooks ----
+
+// GET /api/pro/salon/:salonId/webhooks
+route('GET', '/api/pro/salon/:salonId/webhooks', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    if (salon.subscription?.plan !== 'premium') {
+        return json(res, 403, { success: false, error: 'Fonctionnalité réservée au plan Premium' });
+    }
+    json(res, 200, { success: true, data: salon.webhooks || [] });
+});
+
+// POST /api/pro/salon/:salonId/webhooks
+route('POST', '/api/pro/salon/:salonId/webhooks', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    if (salon.subscription?.plan !== 'premium') {
+        return json(res, 403, { success: false, error: 'Fonctionnalité réservée au plan Premium' });
+    }
+    const body = await parseBody(req);
+    if (!body.url || !body.url.startsWith('https://')) {
+        return json(res, 400, { success: false, error: 'URL HTTPS valide requise' });
+    }
+    const webhooks = salon.webhooks || [];
+    if (webhooks.length >= 5) return json(res, 400, { success: false, error: 'Maximum 5 webhooks atteint' });
+
+    const newHook = {
+        _id: crypto.randomBytes(8).toString('hex'),
+        url: body.url,
+        events: Array.isArray(body.events) ? body.events : ['booking.created'],
+        active: true,
+        createdAt: new Date().toISOString(),
+    };
+    webhooks.push(newHook);
+    await db.updateSalon(params.salonId, { webhooks });
+    json(res, 201, { success: true, data: newHook });
+});
+
+// DELETE /api/pro/salon/:salonId/webhooks/:webhookId
+route('DELETE', '/api/pro/salon/:salonId/webhooks/:webhookId', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    const webhooks = (salon.webhooks || []).filter(w => w._id !== params.webhookId);
+    await db.updateSalon(params.salonId, { webhooks });
+    json(res, 200, { success: true });
+});
+
+// ==========================
 //  PUBLIC SALON API
 // ==========================
 
@@ -1980,6 +2212,9 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
             employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties, hours: e.hours })),
             rating: salon.rating, reviewCount: salon.reviewCount,
             approvedReviews,
+            subscription: { plan: salon.subscription?.plan || 'pro' },
+            whiteLabel: salon.whiteLabel || {},
+            gallery: (salon.gallery || []).filter(Boolean),
         }
     });
 });
@@ -2036,6 +2271,12 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
 
     console.log(`  📅 Nouveau RDV: ${body.clientName} - ${body.serviceName} @ ${salon.name} (${body.date} ${body.time})`);
     json(res, 201, { success: true, data: booking });
+
+    // Non-blocking: webhooks
+    triggerWebhooks(salon, 'booking.created', {
+        bookingId: String(booking._id), clientName: body.clientName,
+        service: body.serviceName, date: body.date, time: body.time, price: body.price || 0,
+    });
 
     // Non-blocking: email + push + SMS
     const baseUrlBook = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
