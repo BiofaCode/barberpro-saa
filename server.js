@@ -2164,7 +2164,7 @@ route('DELETE', '/api/pro/salon/:salonId/webhooks/:webhookId', async (req, res, 
 route('GET', '/api/salon/:slug', async (req, res, params) => {
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon || !salon.active) return json(res, 404, { success: false, error: 'Salon non trouvé' });
-    const employees = await db.findEmployees({ salon: salon._id });
+    const employees = await db.findEmployees({ salon: String(salon._id), active: true });
     // Fetch approved client reviews (most recent 10)
     const allBookings = await db.findBookings({ salon: salon._id, reviewed: true });
     const approvedReviews = allBookings
