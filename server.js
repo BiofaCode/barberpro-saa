@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
 const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
@@ -281,6 +281,44 @@ async function sendPendingReminders() {
 setInterval(sendPendingReminders, 60 * 60 * 1000);
 // Run once at startup after a short delay
 setTimeout(sendPendingReminders, 30000);
+
+// ---- Review request cron: send ~2h after appointment ends ----
+async function sendPendingReviewRequests() {
+    const currentHour = new Date().getHours();
+    if (currentHour < 10 || currentHour >= 21) return; // only during reasonable hours
+    try {
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const yesterdayStr = new Date(now - 86400000).toISOString().split('T')[0];
+        // Check today + yesterday to catch late evening appointments
+        const bookings = await db.findBookings({
+            date: { $in: [todayStr, yesterdayStr] },
+            status: 'confirmed',
+            reviewed: { $ne: true },
+            reviewEmailSent: { $ne: true },
+        });
+        const baseUrl = `${process.env.BASE_URL || 'https://barberpro-saa.onrender.com'}`;
+        let sent = 0;
+        for (const booking of bookings) {
+            if (!booking.clientEmail || !booking.time) continue;
+            // Parse appointment datetime
+            const [hh, mm] = (booking.time || '00:00').split(':').map(Number);
+            const apptStart = new Date(`${booking.date}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00`);
+            const apptEnd = new Date(apptStart.getTime() + (booking.duration || 30) * 60000);
+            const twoHoursAfter = new Date(apptEnd.getTime() + 2 * 3600000);
+            if (now < twoHoursAfter) continue; // appointment not done + 2h yet
+            const salon = await db.findSalonById(booking.salon);
+            if (!salon) continue;
+            const reviewUrl = `${baseUrl}/review/${booking._id}`;
+            await sendReviewRequestEmail(booking, salon, reviewUrl);
+            await db.updateBooking(booking._id, { reviewEmailSent: true });
+            sent++;
+        }
+        if (sent > 0) console.log(`⭐ Emails demande d'avis envoyés: ${sent}`);
+    } catch (e) { console.error('Review request cron error:', e.message); }
+}
+setInterval(sendPendingReviewRequests, 60 * 60 * 1000); // every hour
+setTimeout(sendPendingReviewRequests, 90000); // startup check after 1.5 min
 
 // ---- Booking conflict helpers ----
 function timeToMinutes(t) {

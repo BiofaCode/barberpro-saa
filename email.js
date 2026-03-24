@@ -605,4 +605,62 @@ async function sendAdminNewSubscriptionEmail(adminEmail, { salonName, ownerEmail
   }
 }
 
-module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail };
+module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail };
+
+// ---- Review request email (sent ~2h after appointment) ----
+async function sendReviewRequestEmail(booking, salon, reviewUrl) {
+  const primaryColor = salon.branding?.primaryColor || '#6366F1';
+  const salonName = salon.name || 'SalonPro';
+  const clientName = booking.clientName?.split(' ')[0] || 'cher client';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+    <div style="background:${primaryColor};padding:32px 28px;text-align:center">
+      <div style="font-size:48px;margin-bottom:8px">⭐</div>
+      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">Comment s'est passé votre visite ?</h1>
+    </div>
+    <div style="padding:32px 28px">
+      <p style="margin:0 0 16px;font-size:16px;color:#374151">Bonjour <strong>${clientName}</strong>,</p>
+      <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6">
+        Nous espérons que votre rendez-vous chez <strong>${salonName}</strong> s'est bien passé.<br>
+        Votre avis nous aide à améliorer notre service et à aider d'autres clients à nous trouver.
+      </p>
+      <div style="background:#fafafa;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center">
+        <div style="font-size:13px;color:#9ca3af;margin-bottom:4px">${booking.serviceName || 'Prestation'} · ${booking.date || ''}</div>
+        <div style="font-size:32px;letter-spacing:4px;color:#f59e0b">★★★★★</div>
+      </div>
+      <div style="text-align:center;margin-bottom:28px">
+        <a href="${reviewUrl}" style="display:inline-block;background:${primaryColor};color:#fff;padding:16px 36px;border-radius:12px;text-decoration:none;font-size:16px;font-weight:700">
+          ⭐ Laisser mon avis
+        </a>
+      </div>
+      <p style="margin:0;font-size:12px;color:#d1d5db;text-align:center">
+        Cela prend moins de 30 secondes. Merci pour votre confiance !
+      </p>
+    </div>
+    <div style="background:#f9fafb;padding:16px 28px;text-align:center;border-top:1px solid #e5e7eb">
+      <p style="margin:0;font-size:12px;color:#9ca3af">${salonName}</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  try {
+    await resend.emails.send({
+      from: process.env.RESEND_FROM || `${salonName} <noreply@barberpro.ch>`,
+      to: booking.clientEmail,
+      subject: `⭐ Comment s'est passé votre visite chez ${salonName} ?`,
+      html,
+    });
+    console.log(`  ⭐ Email avis envoyé à ${booking.clientEmail}`);
+  } catch (e) {
+    console.error('Review request email error:', e.message);
+  }
+}
