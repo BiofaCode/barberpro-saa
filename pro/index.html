@@ -241,6 +241,7 @@
                         <button class="btn btn-ghost btn-sm" onclick="resetBookingFilters()" style="flex:1">Réinitialiser</button>
                         <button class="btn btn-ghost btn-sm" onclick="toggleCalendarView()" id="calViewBtn" style="flex:1">📅 Calendrier</button>
                         <button class="btn btn-primary btn-sm" onclick="showAddBooking()" style="flex:2">+ Ajouter</button>
+                        <button class="btn btn-outline btn-sm" onclick="showAddBlock()" title="Bloquer un créneau" style="flex-shrink:0">🚫</button>
                     </div>
                 </div>
 
@@ -250,6 +251,12 @@
                         <div class="empty-state-icon">📅</div>
                         <div class="empty-state-text">Chargement...</div>
                     </div>
+                </div>
+
+                <!-- Upcoming blocks -->
+                <div id="blocksList" style="margin-top:18px;display:none">
+                    <div style="font-size:.8rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Créneaux bloqués à venir</div>
+                    <div id="blocksListContent"></div>
                 </div>
             </div>
 

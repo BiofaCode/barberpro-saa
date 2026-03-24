@@ -234,6 +234,10 @@ setInterval(() => {
 
 // ---- Reminder Cron: run every hour ----
 async function sendPendingReminders() {
+    // Only send reminders between 08:00 and 20:00 to avoid waking clients at night
+    const currentHour = new Date().getHours();
+    if (currentHour < 8 || currentHour >= 20) return;
+
     try {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -259,6 +263,37 @@ async function sendPendingReminders() {
 setInterval(sendPendingReminders, 60 * 60 * 1000);
 // Run once at startup after a short delay
 setTimeout(sendPendingReminders, 30000);
+
+// ---- Booking conflict helpers ----
+function timeToMinutes(t) {
+    if (!t || typeof t !== 'string') return 0;
+    const [h, m] = t.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+}
+
+async function hasConflict(salonId, employeeId, date, time, duration, excludeId = null) {
+    if (!date || !time) return false;
+    const existing = await db.findBookings({ salon: salonId, date, status: { $in: ['confirmed', 'pending'] } });
+    const start = timeToMinutes(time);
+    const end = start + (duration || 30);
+    for (const b of existing) {
+        if (excludeId && b._id === excludeId) continue;
+        // Skip if both have different specific employees assigned
+        if (employeeId && b.employeeId && String(employeeId) !== String(b.employeeId)) continue;
+        const bStart = timeToMinutes(b.time);
+        const bEnd = bStart + (b.duration || 30);
+        if (start < bEnd && end > bStart) return true;
+    }
+    // Also check blocks
+    const blocks = await db.findBlocks({ salonId, date });
+    for (const bl of blocks) {
+        if (employeeId && bl.employeeId && String(employeeId) !== String(bl.employeeId)) continue;
+        const bStart = timeToMinutes(bl.startTime);
+        const bEnd = timeToMinutes(bl.endTime);
+        if (start < bEnd && end > bStart) return true;
+    }
+    return false;
+}
 
 // ---- Routing ----
 const routes = [];
@@ -1213,6 +1248,10 @@ route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
         if (emp) employeeName = emp.name;
     }
 
+    if (body.date && body.time && await hasConflict(params.salonId, employeeId, body.date, body.time, body.duration || 30)) {
+        return json(res, 409, { success: false, error: 'Ce créneau est déjà occupé.' });
+    }
+
     const booking = await db.createBooking({
         salon: params.salonId, client: client._id,
         clientName: body.clientName, clientEmail: body.clientEmail || '', clientPhone: body.clientPhone || '',
@@ -1240,6 +1279,43 @@ route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
     if (salon && salon.smsSettings?.ownerNotification && salon.smsSettings?.ownerPhone) {
         sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone);
     }
+});
+
+// Blocks (indisponibilités pro)
+route('GET', '/api/pro/salon/:salonId/blocks', async (req, res, params) => {
+    const url = new URL(req.url, 'http://localhost');
+    const from = url.searchParams.get('from');
+    const to = url.searchParams.get('to');
+    let blocks = await db.findBlocks({ salonId: params.salonId });
+    if (from) blocks = blocks.filter(b => b.date >= from);
+    if (to) blocks = blocks.filter(b => b.date <= to);
+    json(res, 200, { success: true, data: blocks });
+});
+
+route('POST', '/api/pro/salon/:salonId/blocks', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
+    const body = await parseBody(req);
+    if (!body.date || !body.startTime || !body.endTime) return json(res, 400, { success: false, error: 'date, startTime et endTime requis' });
+    if (body.startTime >= body.endTime) return json(res, 400, { success: false, error: 'L\'heure de fin doit être après l\'heure de début' });
+    const block = await db.createBlock({
+        salonId: params.salonId,
+        date: body.date,
+        startTime: body.startTime,
+        endTime: body.endTime,
+        reason: body.reason || '',
+        employeeId: body.employeeId || null,
+        employeeName: body.employeeName || null,
+        allDay: body.allDay || false,
+    });
+    json(res, 201, { success: true, data: block });
+});
+
+route('DELETE', '/api/pro/salon/:salonId/blocks/:blockId', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
+    await db.deleteBlock(params.blockId);
+    json(res, 200, { success: true });
 });
 
 // Clients
@@ -1797,6 +1873,28 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
     });
 });
 
+// Public: available time slots for a given date (used by booking page to grey out taken slots)
+route('GET', '/api/salon/:slug/available-slots', async (req, res, params) => {
+    const salon = await db.findSalonBySlug(params.slug);
+    if (!salon) return json(res, 404, { success: false });
+    const url = new URL(req.url, 'http://localhost');
+    const date = url.searchParams.get('date');
+    const employeeId = url.searchParams.get('employeeId') || null;
+    if (!date) return json(res, 400, { success: false, error: 'date requis' });
+
+    const bookings = await db.findBookings({ salon: salon._id, date, status: { $in: ['confirmed', 'pending'] } });
+    const taken = bookings
+        .filter(b => !employeeId || !b.employeeId || String(b.employeeId) === employeeId)
+        .map(b => ({ start: b.time, duration: b.duration || 30 }));
+
+    const blocks = await db.findBlocks({ salonId: salon._id, date });
+    const blocked = blocks
+        .filter(bl => !employeeId || !bl.employeeId || String(bl.employeeId) === employeeId)
+        .map(bl => ({ start: bl.startTime, duration: timeToMinutes(bl.endTime) - timeToMinutes(bl.startTime), reason: bl.reason || null }));
+
+    json(res, 200, { success: true, data: { takenSlots: taken, blockedSlots: blocked } });
+});
+
 route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
     if (rateLimit(ip, 'book', 10, 60 * 60 * 1000)) { // 10 bookings/hour per IP
@@ -1805,6 +1903,10 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
+
+    if (await hasConflict(salon._id, body.employeeId || null, body.date, body.time, body.duration || 30)) {
+        return json(res, 409, { success: false, error: 'Ce créneau n\'est plus disponible. Veuillez choisir un autre horaire.' });
+    }
 
     const client = await db.findOrCreateClient(salon._id, {
         name: body.clientName, email: body.clientEmail, phone: body.clientPhone, price: body.price || 0

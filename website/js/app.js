@@ -658,11 +658,22 @@ function isDayClosed(date) {
 
   if (bmState.employee && bmState.employee.id) {
     const emp = (SALON_DATA?.employees || []).find(e => e._id === bmState.employee.id);
-    if (emp && emp.hours) return !(emp.hours[dayName]?.open);
+    if (emp && emp.hours) return !normalizeHours(emp.hours[dayName]).isOpen;
   }
 
   if (!SALON_DATA?.hours) return date.getDay() === 0;
-  return !(SALON_DATA.hours[dayName]?.open);
+  return !normalizeHours(SALON_DATA.hours[dayName]).isOpen;
+}
+
+// Normalize a day hours entry to { open: '09:00', close: '19:00', isOpen: bool }
+function normalizeHours(h) {
+  if (!h) return { open: '09:00', close: '19:00', isOpen: false };
+  // New format: { open: bool, openTime: 'HH:MM', closeTime: 'HH:MM' }
+  if (typeof h.open === 'boolean') {
+    return { open: h.openTime || '09:00', close: h.closeTime || '19:00', isOpen: h.open };
+  }
+  // Old format: { open: 'HH:MM', close: 'HH:MM' }
+  return { open: h.open || '09:00', close: h.close || '19:00', isOpen: !!(h.open) };
 }
 
 function getOpenHours(date) {
@@ -670,13 +681,14 @@ function getOpenHours(date) {
 
   if (bmState.employee && bmState.employee.id) {
     const emp = (SALON_DATA?.employees || []).find(e => e._id === bmState.employee.id);
-    if (emp && emp.hours && emp.hours[dayName]?.open) {
-      return emp.hours[dayName];
+    if (emp && emp.hours && emp.hours[dayName]) {
+      const norm = normalizeHours(emp.hours[dayName]);
+      if (norm.isOpen) return norm;
     }
   }
 
-  if (!SALON_DATA?.hours) return { open: '09:00', close: '19:00' };
-  return SALON_DATA.hours[dayName] || { open: '09:00', close: '19:00' };
+  if (!SALON_DATA?.hours) return { open: '09:00', close: '19:00', isOpen: true };
+  return normalizeHours(SALON_DATA.hours[dayName]) || { open: '09:00', close: '19:00', isOpen: true };
 }
 
 function renderBmCalendar() {
@@ -706,15 +718,44 @@ function renderBmCalendar() {
   }
 }
 
-function renderBmTimeSlots() {
+function slotToMin(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function isSlotUnavailable(slotTime, takenSlots, blockedSlots, serviceDuration) {
+  const sStart = slotToMin(slotTime);
+  const sEnd = sStart + (serviceDuration || 30);
+  const all = [...takenSlots, ...blockedSlots];
+  return all.some(s => {
+    const tStart = slotToMin(s.start);
+    const tEnd = tStart + (s.duration || 30);
+    return sStart < tEnd && sEnd > tStart;
+  });
+}
+
+async function renderBmTimeSlots() {
   const container = document.getElementById('bmTimeSlots');
   const grid = document.getElementById('bmTimeSlotsGrid');
   container.style.display = 'block';
-  // Skeleton shimmer while slots render
+  // Skeleton shimmer while loading
   grid.innerHTML = Array(8).fill(0).map(() =>
     '<div class="bm-timeslot bm-timeslot-skeleton"></div>'
   ).join('');
-  requestAnimationFrame(() => {
+
+  // Fetch taken + blocked slots from server
+  let takenSlots = [], blockedSlots = [];
+  try {
+    const dateStr = bmState.date.toISOString().split('T')[0];
+    const empId = bmState.employee?.id || '';
+    const r = await fetch(`/api/salon/${SALON_DATA.slug}/available-slots?date=${dateStr}&employeeId=${encodeURIComponent(empId)}`);
+    if (r.ok) {
+      const d = await r.json();
+      takenSlots = d.data?.takenSlots || [];
+      blockedSlots = d.data?.blockedSlots || [];
+    }
+  } catch (e) { /* fallback: show all slots */ }
+
   grid.innerHTML = '';
 
   const hours = getOpenHours(bmState.date);
@@ -724,6 +765,7 @@ function renderBmTimeSlots() {
   const now = new Date();
   const isToday = bmState.date.toDateString() === now.toDateString();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const serviceDuration = bmState.service?.duration || 30;
 
   let h = oH, m = oM;
   while (h < cH || (h === cH && m < cM)) {
@@ -733,10 +775,16 @@ function renderBmTimeSlots() {
     // Skip lunch (12:00-13:59) and past slots for today
     if ((h < 12 || h >= 14) && !(isToday && slotMinutes <= currentMinutes)) {
       const el = document.createElement('div'); el.classList.add('bm-timeslot'); el.textContent = t;
-      el.addEventListener('click', () => {
-        grid.querySelectorAll('.bm-timeslot').forEach(s => s.classList.remove('selected'));
-        el.classList.add('selected'); bmState.time = t;
-      });
+      const unavailable = isSlotUnavailable(t, takenSlots, blockedSlots, serviceDuration);
+      if (unavailable) {
+        el.classList.add('bm-timeslot-taken');
+        el.title = 'Créneau indisponible';
+      } else {
+        el.addEventListener('click', () => {
+          grid.querySelectorAll('.bm-timeslot').forEach(s => s.classList.remove('selected'));
+          el.classList.add('selected'); bmState.time = t;
+        });
+      }
       grid.appendChild(el);
     }
     m += 30; if (m >= 60) { m = 0; h++; }
@@ -745,7 +793,6 @@ function renderBmTimeSlots() {
   if (grid.children.length === 0) {
     grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--color-text-muted);padding:1rem;font-size:0.85rem">Aucun créneau disponible pour cette date</div>';
   }
-  }); // end requestAnimationFrame
 }
 
 function populateConfirmation() {
