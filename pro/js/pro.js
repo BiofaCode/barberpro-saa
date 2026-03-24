@@ -872,7 +872,7 @@ function renderAdvancedStats(bookings) {
     const weekISOs = weekDays.map(_isoDate);
     const weekBookings = bookings.filter(b => weekISOs.includes(b.date) && b.status !== 'cancelled');
     const hoursArr = Array.isArray(currentSalon?.hours) ? currentSalon.hours : Object.values(currentSalon?.hours || {});
-    const workDays = hoursArr.filter(h => h && (h.open === true || h.open)).length || 5;
+    const workDays = hoursArr.filter(h => h && h.open !== false && (h.open || h.openTime)).length || 5;
     const slotsPerDay = 8; // avg 8h × 30min slots / 30min avg = ~16 slots, approximate
     const totalSlots = workDays * slotsPerDay;
     const occ = totalSlots > 0 ? Math.min(100, Math.round((weekBookings.length / totalSlots) * 100)) : 0;
@@ -1930,7 +1930,7 @@ async function loadSettings() {
 
         const hoursRows = days.map(d => {
             const h = hours[d];
-            const isClosed = !h || !h.open;
+            const isClosed = !h || h.open === false || (!h.openTime && !h.open);
             return `
                 <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
                     <div style="width:100px;font-weight:600;font-size:.88rem">${dayLabels[d]}</div>
@@ -1938,9 +1938,9 @@ async function loadSettings() {
                         <input type="checkbox" class="hours-check" data-day="${d}" ${!isClosed ? 'checked' : ''} onchange="toggleDay('${d}', this.checked)" style="accent-color:var(--primary)">
                         ${!isClosed ? 'Ouvert' : 'Fermé'}
                     </label>
-                    <input type="time" id="hours-${d}-open" value="${h?.open || '09:00'}" class="form-input" style="width:110px;${isClosed ? 'opacity:.3;pointer-events:none' : ''}" />
+                    <input type="time" id="hours-${d}-open" value="${h?.openTime || (typeof h?.open === 'string' ? h.open : '09:00')}" class="form-input" style="width:110px;${isClosed ? 'opacity:.3;pointer-events:none' : ''}" />
                     <span style="color:var(--text-muted)">→</span>
-                    <input type="time" id="hours-${d}-close" value="${h?.close || '19:00'}" class="form-input" style="width:110px;${isClosed ? 'opacity:.3;pointer-events:none' : ''}" />
+                    <input type="time" id="hours-${d}-close" value="${h?.closeTime || (typeof h?.close === 'string' ? h.close : '19:00')}" class="form-input" style="width:110px;${isClosed ? 'opacity:.3;pointer-events:none' : ''}" />
                 </div>
             `;
         }).join('');
