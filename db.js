@@ -185,6 +185,9 @@ const db = {
     async findOwnerBySalon(salonId) {
         return await getDB().collection('owners').findOne({ salon: salonId });
     },
+    async findOwnerById(id) {
+        return await getDB().collection('owners').findOne({ _id: id });
+    },
     async createOwner(data) {
         const pwd = await bcrypt.hash(data.password, 10);
         const owner = { _id: genId(), ...data, password: pwd, email: data.email.toLowerCase() };

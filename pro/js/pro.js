@@ -8,10 +8,25 @@ let salonId = null;
 let currentUser = null;
 let currentSalon = null;
 
+// ---- JWT helpers (client-side) ----
+function getTokenPayload(t) {
+    try {
+        const parts = (t || '').split('.');
+        if (parts.length !== 3) return null;
+        return JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    } catch { return null; }
+}
+function isTokenExpired(t) {
+    const p = getTokenPayload(t);
+    if (!p || !p.exp) return false; // legacy token sans exp → considéré valide
+    return Date.now() > p.exp;
+}
+
 // ---- Custom Fetch that injects the auth token + enforces timeout ----
 async function apiFetch(url, options = {}, timeoutMs = 25000) {
     const headers = options.headers || {};
     if (token) {
+        if (isTokenExpired(token)) { doLogout(); throw new Error('Session expirée — veuillez vous reconnecter'); }
         headers['Authorization'] = `Bearer ${token}`;
     }
     const controller = new AbortController();
@@ -19,6 +34,10 @@ async function apiFetch(url, options = {}, timeoutMs = 25000) {
     try {
         const res = await fetch(url, { ...options, headers, signal: controller.signal });
         clearTimeout(timer);
+        if (res.status === 401) {
+            doLogout();
+            throw new Error('Session expirée — veuillez vous reconnecter');
+        }
         return res;
     } catch (e) {
         clearTimeout(timer);
@@ -146,7 +165,19 @@ function initApp() {
             activatePage('bookings');
             setTimeout(loadBookings, 0);
         } else {
-            Array.from(sidebarNav.querySelectorAll('a')).forEach(a => a.style.display = 'flex');
+            // Afficher les items standard
+            Array.from(sidebarNav.querySelectorAll('a')).forEach(a => {
+                const id = a.id;
+                if (id === 'nav-branches' || id === 'nav-integrations') return; // géré ci-dessous
+                a.style.display = 'flex';
+            });
+            // Afficher les features Premium si plan premium
+            const isPremium = currentSalon?.subscription?.plan === 'premium';
+            const navBranches = document.getElementById('nav-branches');
+            const navIntegrations = document.getElementById('nav-integrations');
+            if (navBranches) navBranches.style.display = isPremium ? 'flex' : 'none';
+            if (navIntegrations) navIntegrations.style.display = isPremium ? 'flex' : 'none';
+
             activatePage('dashboard');
             setTimeout(loadDashboard, 0);
         }
@@ -250,6 +281,8 @@ function showPage(page) {
     else if (page === 'services') loadServices();
     else if (page === 'reviews') loadReviews();
     else if (page === 'settings') loadSettings();
+    else if (page === 'branches') loadMySalons();
+    else if (page === 'integrations') loadIntegrations();
 }
 
 // ---- Sidebar (mobile drawer) ----
@@ -813,7 +846,8 @@ function printInvoice(b) {
 
 // ---- Calendar View ----
 let _calendarDate = new Date();
-let _calendarView = 'list';
+let _calendarView = 'list';       // 'list' | 'calendar'
+let _calendarSubView = 'week';    // 'week' | 'day' | 'month'
 
 function toggleCalendarView() {
     _calendarView = _calendarView === 'list' ? 'calendar' : 'list';
@@ -833,6 +867,11 @@ function toggleCalendarView() {
     }
 }
 
+function switchCalendarSubView(v) {
+    _calendarSubView = v;
+    renderCalendar(_allBookings);
+}
+
 function _weekDates(ref) {
     const d = new Date(ref);
     const dow = d.getDay(); // 0=Sun
@@ -846,8 +885,23 @@ function _fmtDay(d) { return `${String(d.getDate()).padStart(2,'0')}/${String(d.
 
 function _isMobile() { return window.innerWidth < 640; }
 
+const MONTH_NAMES_FULL = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function _subViewBar() {
+    const views = [
+        { key: 'month', label: 'Mois' },
+        { key: 'week',  label: 'Semaine' },
+        { key: 'day',   label: 'Jour' },
+    ];
+    return `<div style="display:flex;gap:4px">
+        ${views.map(v => `<button class="btn btn-sm ${_calendarSubView === v.key ? 'btn-primary' : 'btn-ghost'}"
+            onclick="switchCalendarSubView('${v.key}')">${v.label}</button>`).join('')}
+    </div>`;
+}
+
 function renderCalendar(bookings) {
-    if (_isMobile()) renderCalendarDay(bookings);
+    if (_calendarSubView === 'month') renderCalendarMonth(bookings);
+    else if (_calendarSubView === 'day' || _isMobile()) renderCalendarDay(bookings);
     else renderCalendarWeek(bookings);
 }
 
@@ -864,7 +918,8 @@ function renderCalendarWeek(bookings) {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
             <button class="btn btn-ghost btn-sm" onclick="navWeek(-1)">← Précédente</button>
             <span style="font-weight:600;font-size:.88rem">${_fmtDay(weekDays[0])} — ${_fmtDay(weekDays[6])}</span>
-            <div style="display:flex;gap:6px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                ${_subViewBar()}
                 <button class="btn btn-ghost btn-sm" onclick="navWeek(0)">Aujourd'hui</button>
                 <button class="btn btn-ghost btn-sm" onclick="navWeek(1)">Suivante →</button>
             </div>
@@ -888,6 +943,135 @@ function renderCalendarWeek(bookings) {
     }).join('');
 
     container.innerHTML = navRow + `<div class="cal-wrap"><div class="cal-grid">${headers}${gridRows}</div></div>`;
+}
+
+// --- MONTH VIEW ---
+function renderCalendarMonth(bookings) {
+    const container = document.getElementById('calendarContainer');
+    if (!container) return;
+
+    const yr = _calendarDate.getFullYear();
+    const mo = _calendarDate.getMonth();
+    const todayISO = todayStr();
+    const title = `${MONTH_NAMES_FULL[mo]} ${yr}`;
+
+    // Regrouper les bookings par date
+    const byDate = {};
+    bookings.forEach(b => {
+        if (!b.date) return;
+        if (!byDate[b.date]) byDate[b.date] = [];
+        byDate[b.date].push(b);
+    });
+
+    // Premier jour du mois + décalage lundi
+    const firstDay = new Date(yr, mo, 1);
+    const lastDay  = new Date(yr, mo + 1, 0);
+    let startOffset = firstDay.getDay() - 1; // lundi=0
+    if (startOffset < 0) startOffset = 6;
+
+    const dayHeaders = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+
+    // Construire toutes les cellules (jours vides + jours du mois)
+    const totalCells = startOffset + lastDay.getDate();
+    const rows = Math.ceil(totalCells / 7);
+    let cells = '';
+
+    for (let row = 0; row < rows; row++) {
+        cells += '<tr>';
+        for (let col = 0; col < 7; col++) {
+            const cellIdx = row * 7 + col;
+            const dayNum  = cellIdx - startOffset + 1;
+            if (dayNum < 1 || dayNum > lastDay.getDate()) {
+                cells += '<td style="background:var(--bg-alt);opacity:.3"></td>';
+            } else {
+                const iso   = `${yr}-${String(mo+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+                const bkgs  = byDate[iso] || [];
+                const isToday = iso === todayISO;
+                const statusColors = { confirmed:'#6366F1', completed:'#22c55e', cancelled:'#ef4444', pending:'#f59e0b' };
+
+                // Affiche jusqu'à 3 événements, puis "+X"
+                const maxShow = 3;
+                const shown   = bkgs.slice(0, maxShow);
+                const extra   = bkgs.length - maxShow;
+
+                const eventsHtml = shown.map(b => {
+                    const color = statusColors[b.status || 'confirmed'] || '#6366F1';
+                    return `<div onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})"
+                        style="background:${color}22;border-left:2px solid ${color};border-radius:3px;padding:1px 5px;
+                               font-size:.68rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                               cursor:pointer;margin-bottom:2px;color:${color};font-weight:500">
+                        ${b.time ? b.time.substring(0,5)+' ' : ''}${b.clientName || ''}
+                    </div>`;
+                }).join('');
+
+                const extraHtml = extra > 0
+                    ? `<div style="font-size:.68rem;color:var(--text-muted);padding:1px 4px">+${extra} autre${extra>1?'s':''}</div>`
+                    : '';
+
+                cells += `<td onclick="navToDay('${iso}')"
+                    style="vertical-align:top;cursor:pointer;padding:4px 5px;min-height:80px;
+                           ${isToday ? 'background:rgba(99,102,241,.08);' : ''}
+                           transition:background .15s"
+                    onmouseover="this.style.background='rgba(255,255,255,.04)'"
+                    onmouseout="this.style.background='${isToday ? 'rgba(99,102,241,.08)' : ''}'">
+                    <div style="font-size:.8rem;font-weight:${isToday?'700':'500'};
+                                color:${isToday?'var(--primary)':'var(--text-color)'};
+                                width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+                                ${isToday?'background:var(--primary);color:#fff;':''}
+                                margin-bottom:3px">${dayNum}</div>
+                    ${eventsHtml}${extraHtml}
+                </td>`;
+            }
+        }
+        cells += '</tr>';
+    }
+
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="navMonth(-1)">← Précédent</button>
+            <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-weight:700;font-size:.95rem">${title}</span>
+                <button class="btn btn-ghost btn-sm" onclick="navMonth(0)" style="font-size:.78rem">Aujourd'hui</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+                ${_subViewBar()}
+                <button class="btn btn-ghost btn-sm" onclick="navMonth(1)">Suivant →</button>
+            </div>
+        </div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+            <thead>
+                <tr>${dayHeaders.map(d => `<th style="text-align:center;font-size:.75rem;font-weight:600;color:var(--text-muted);padding:6px 4px;border-bottom:1px solid var(--border)">${d}</th>`).join('')}</tr>
+            </thead>
+            <tbody style="border:1px solid var(--border)">
+                ${cells}
+            </tbody>
+        </table>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap">
+            ${[['confirmed','#6366F1','Confirmé'],['completed','#22c55e','Terminé'],['cancelled','#ef4444','Annulé'],['pending','#f59e0b','En attente']].map(([,c,l]) =>
+                `<div style="display:flex;align-items:center;gap:5px;font-size:.75rem;color:var(--text-muted)">
+                    <div style="width:10px;height:10px;border-radius:2px;background:${c}"></div>${l}
+                </div>`).join('')}
+        </div>`;
+}
+
+function navMonth(dir) {
+    const d = new Date(_calendarDate);
+    if (dir === 0) {
+        _calendarDate = new Date();
+    } else {
+        d.setDate(1);
+        d.setMonth(d.getMonth() + dir);
+        _calendarDate = d;
+    }
+    renderCalendar(_allBookings);
+}
+
+function navToDay(iso) {
+    _calendarDate = new Date(iso + 'T12:00:00');
+    _calendarSubView = 'day';
+    renderCalendar(_allBookings);
 }
 
 // --- DAY VIEW (mobile) ---
@@ -923,13 +1107,16 @@ function renderCalendarDay(bookings) {
     }).join('');
 
     container.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px;flex-wrap:wrap;gap:8px">
             <button class="btn btn-ghost btn-sm" onclick="navDay(-1)" style="font-size:1.2rem;padding:6px 12px">‹</button>
             <div style="text-align:center">
                 <div style="font-weight:700;font-size:1rem${dayISO === todayISO ? ';color:var(--primary)' : ''}">${dayLabel}</div>
                 ${dayISO !== todayISO ? `<button class="btn btn-ghost btn-sm" style="font-size:.75rem;margin-top:4px;padding:2px 10px" onclick="navDay(0)">Aujourd'hui</button>` : ''}
             </div>
-            <button class="btn btn-ghost btn-sm" onclick="navDay(1)" style="font-size:1.2rem;padding:6px 12px">›</button>
+            <div style="display:flex;align-items:center;gap:6px">
+                ${_subViewBar()}
+                <button class="btn btn-ghost btn-sm" onclick="navDay(1)" style="font-size:1.2rem;padding:6px 12px">›</button>
+            </div>
         </div>
         <div style="background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--border)">
             ${dayBookings.length === 0 && slots.replace(/<[^>]+>/g,'').trim() === '' ? '' : ''}
@@ -2989,11 +3176,16 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (sessionStr) {
         try {
             const data = JSON.parse(sessionStr);
+            // Reject session si token expiré
+            if (isTokenExpired(data.token)) {
+                localStorage.removeItem('proSession');
+                return; // reste sur l'écran de login
+            }
             token = data.token;
             currentUser = data.user;
             salonId = data.user.salonId;
             currentSalon = data.salon;
-            
+
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'flex';
             initApp();
@@ -3098,6 +3290,309 @@ function setResetMsg(msg, type) {
     el.style.border = type === 'success' ? '1px solid rgba(34,197,94,.3)' : '1px solid rgba(239,68,68,.3)';
     el.style.color = type === 'success' ? '#22c55e' : '#ef4444';
     el.textContent = msg;
+}
+
+// ============================================================
+//  PREMIUM — Multi-établissements
+// ============================================================
+
+async function loadMySalons() {
+    const container = document.getElementById('branchesList');
+    if (!container) return;
+
+    // Vérification plan
+    if (currentSalon?.subscription?.plan !== 'premium') {
+        container.innerHTML = `
+            <div class="card" style="text-align:center;padding:32px">
+                <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
+                <h3 style="margin-bottom:8px">Fonctionnalité Premium</h3>
+                <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:20px">
+                    Gérez plusieurs établissements depuis un seul compte.<br>Disponible avec le plan Premium.
+                </p>
+                <a href="/saas/#pricing" target="_blank" class="btn btn-primary">Passer au Premium →</a>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement...</div></div>';
+    try {
+        const res = await apiFetch(`${API}/api/pro/my-salons`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error);
+        renderBranchesList(data.data);
+    } catch (e) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">${e.message}</div></div>`;
+    }
+}
+
+function renderBranchesList(salons) {
+    const container = document.getElementById('branchesList');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div style="font-size:.83rem;color:var(--text-muted);margin-bottom:16px">
+            ${salons.length} établissement${salons.length > 1 ? 's' : ''} — max 5 sur le plan Premium.
+        </div>
+        ${salons.map(s => `
+            <div class="card" style="margin-bottom:12px">
+                <div class="card-body" style="display:flex;align-items:center;gap:14px">
+                    <div style="width:46px;height:46px;border-radius:12px;background:var(--bg-alt);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;overflow:hidden">
+                        ${s.logo ? `<img src="${s.logo}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">` : '🏪'}
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-weight:600;font-size:.95rem">${s.name}</div>
+                        <div style="font-size:.78rem;color:var(--text-muted)">/s/${s.slug}</div>
+                    </div>
+                    ${s.isPrimary ? '<span class="badge badge-success" style="flex-shrink:0;font-size:.72rem">Principal</span>' : ''}
+                    ${String(s._id) === String(salonId)
+                        ? '<span class="badge badge-pending" style="flex-shrink:0;font-size:.72rem">Actif</span>'
+                        : `<button class="btn btn-outline btn-sm" style="flex-shrink:0" onclick="switchToSalon('${s._id}')">Basculer →</button>`
+                    }
+                </div>
+            </div>
+        `).join('')}
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="showCreateBranch()">
+            + Ajouter un établissement
+        </button>`;
+}
+
+async function switchToSalon(targetSalonId) {
+    try {
+        const res = await apiFetch(`${API}/api/pro/switch-salon`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ salonId: targetSalonId }),
+        });
+        const data = await res.json();
+        if (!data.success) { showToast(data.error || 'Erreur', 'error'); return; }
+
+        // Mise à jour session
+        token = data.token;
+        salonId = data.user.salonId;
+        currentUser = data.user;
+        currentSalon = data.salon;
+        localStorage.setItem('proSession', JSON.stringify({ token, user: currentUser, salon: currentSalon }));
+
+        // Mise à jour interface
+        const name = currentSalon.name || 'Mon Salon';
+        const words = name.split(' ');
+        document.getElementById('sidebarSalonName').innerHTML = words[0] + (words.length > 1 ? ' <span>' + words.slice(1).join(' ') + '</span>' : '');
+        showToast(`Basculé vers ${currentSalon.name} ✅`);
+        showPage('dashboard');
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+function showCreateBranch() {
+    openModal('Nouvel établissement', `
+        <div class="form-group">
+            <label class="form-label">Nom de l'établissement *</label>
+            <input class="form-input form-input-full" id="branchName" placeholder="Ex: Salon de la Victoire - Lyon">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Adresse</label>
+            <input class="form-input form-input-full" id="branchAddress" placeholder="12 Rue du Style, Lyon">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Téléphone</label>
+            <input class="form-input form-input-full" id="branchPhone" placeholder="06 12 34 56 78" type="tel">
+        </div>
+    `, `<button class="btn btn-primary" onclick="createBranch()">Créer l'établissement</button>`);
+}
+
+async function createBranch() {
+    const name = document.getElementById('branchName')?.value.trim();
+    if (!name) { showToast('Nom requis', 'error'); return; }
+
+    try {
+        const res = await apiFetch(`${API}/api/pro/my-salons`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                address: document.getElementById('branchAddress')?.value.trim() || '',
+                phone: document.getElementById('branchPhone')?.value.trim() || '',
+            }),
+        });
+        const data = await res.json();
+        if (!data.success) { showToast(data.error || 'Erreur', 'error'); return; }
+        closeModal();
+        showToast(`Établissement "${data.data.name}" créé ✅`);
+        loadMySalons();
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+// ============================================================
+//  PREMIUM — Intégrations (iCal + Webhooks)
+// ============================================================
+
+async function loadIntegrations() {
+    const container = document.getElementById('integrationsList');
+    if (!container) return;
+
+    if (currentSalon?.subscription?.plan !== 'premium') {
+        container.innerHTML = `
+            <div class="card" style="text-align:center;padding:32px">
+                <div style="font-size:2.5rem;margin-bottom:12px">🔒</div>
+                <h3 style="margin-bottom:8px">Fonctionnalité Premium</h3>
+                <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:20px">
+                    Export calendrier iCal et webhooks sur événements.<br>Disponible avec le plan Premium.
+                </p>
+                <a href="/saas/#pricing" target="_blank" class="btn btn-primary">Passer au Premium →</a>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement...</div></div>';
+
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/webhooks`);
+        const data = await res.json();
+        const webhooks = data.success ? data.data : [];
+        renderIntegrations(webhooks);
+    } catch (e) {
+        renderIntegrations([]);
+    }
+}
+
+function renderIntegrations(webhooks) {
+    const container = document.getElementById('integrationsList');
+    if (!container) return;
+
+    container.innerHTML = `
+        <!-- iCal Export -->
+        <div class="card" style="margin-bottom:16px">
+            <div class="card-header">
+                <h3>📅 Export Calendrier (iCal)</h3>
+            </div>
+            <div class="card-body">
+                <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px">
+                    Exportez tous vos rendez-vous au format iCal (.ics) compatible avec Google Calendar, Apple Calendar, Outlook.
+                </p>
+                <a class="btn btn-primary btn-sm" href="${API}/api/pro/salon/${salonId}/bookings/ical" download>
+                    ⬇️ Télécharger le fichier .ics
+                </a>
+                <div style="font-size:.75rem;color:var(--text-muted);margin-top:10px">
+                    ⚠️ Ce lien nécessite d'être connecté. Pour un abonnement calendrier en temps réel, configurez un webhook.
+                </div>
+            </div>
+        </div>
+
+        <!-- Webhooks -->
+        <div class="card">
+            <div class="card-header">
+                <h3>🔗 Webhooks</h3>
+                <button class="btn btn-primary btn-sm" onclick="showAddWebhook()">+ Ajouter</button>
+            </div>
+            <div class="card-body">
+                <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:14px">
+                    Recevez une requête HTTP POST vers votre URL à chaque événement. Maximum 5 webhooks.
+                </p>
+                <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:14px;padding:10px 12px;background:var(--bg-alt);border-radius:8px;line-height:1.8">
+                    <strong>Événements disponibles :</strong><br>
+                    <code>booking.created</code> — Nouveau rendez-vous<br>
+                    <code>booking.cancelled</code> — Annulation de RDV
+                </div>
+                <div id="webhooksList">
+                    ${webhooks.length === 0
+                        ? '<div style="color:var(--text-muted);font-size:.85rem;text-align:center;padding:16px">Aucun webhook configuré</div>'
+                        : webhooks.map(w => `
+                            <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+                                <div style="flex:1;min-width:0">
+                                    <div style="font-size:.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${w.url}</div>
+                                    <div style="font-size:.75rem;color:var(--text-muted)">${(w.events||[]).join(', ')}</div>
+                                </div>
+                                <span class="badge ${w.active ? 'badge-success' : ''}" style="flex-shrink:0;font-size:.7rem">${w.active ? 'Actif' : 'Inactif'}</span>
+                                <button class="btn btn-danger btn-sm" onclick="deleteWebhook('${w._id}')">🗑</button>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Marque blanche -->
+        <div class="card" style="margin-top:16px">
+            <div class="card-header"><h3>🏷 Marque blanche</h3></div>
+            <div class="card-body">
+                <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px">
+                    Masquez le badge "Propulsé par SalonPro" sur votre site public.
+                </p>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px">
+                    <input type="checkbox" id="wlEnabled" ${currentSalon?.whiteLabel?.enabled ? 'checked' : ''} style="accent-color:var(--primary);width:16px;height:16px">
+                    <span style="font-size:.9rem">Masquer le badge SalonPro sur mon site</span>
+                </label>
+                <button class="btn btn-primary btn-sm" onclick="saveWhiteLabel()">Enregistrer</button>
+            </div>
+        </div>`;
+}
+
+function showAddWebhook() {
+    openModal('Nouveau webhook', `
+        <div class="form-group">
+            <label class="form-label">URL de destination (HTTPS) *</label>
+            <input class="form-input form-input-full" id="whUrl" placeholder="https://monapp.com/webhook" type="url">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Événements</label>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" id="evBookingCreated" checked style="accent-color:var(--primary)">
+                    <span style="font-size:.88rem"><code>booking.created</code> — Nouveau RDV</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" id="evBookingCancelled" style="accent-color:var(--primary)">
+                    <span style="font-size:.88rem"><code>booking.cancelled</code> — Annulation</span>
+                </label>
+            </div>
+        </div>
+    `, `<button class="btn btn-primary" onclick="addWebhook()">Ajouter le webhook</button>`);
+}
+
+async function addWebhook() {
+    const url = document.getElementById('whUrl')?.value.trim();
+    if (!url || !url.startsWith('https://')) { showToast('URL HTTPS valide requise', 'error'); return; }
+
+    const events = [];
+    if (document.getElementById('evBookingCreated')?.checked) events.push('booking.created');
+    if (document.getElementById('evBookingCancelled')?.checked) events.push('booking.cancelled');
+    if (events.length === 0) { showToast('Sélectionnez au moins un événement', 'error'); return; }
+
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/webhooks`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, events }),
+        });
+        const data = await res.json();
+        if (!data.success) { showToast(data.error || 'Erreur', 'error'); return; }
+        closeModal();
+        showToast('Webhook ajouté ✅');
+        loadIntegrations();
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+async function deleteWebhook(webhookId) {
+    if (!confirm('Supprimer ce webhook ?')) return;
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/webhooks/${webhookId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) { showToast('Webhook supprimé'); loadIntegrations(); }
+        else showToast(data.error || 'Erreur', 'error');
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+async function saveWhiteLabel() {
+    const enabled = document.getElementById('wlEnabled')?.checked || false;
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/white-label`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentSalon = { ...currentSalon, whiteLabel: data.data.whiteLabel };
+            showToast(enabled ? 'Badge SalonPro masqué ✅' : 'Badge SalonPro rétabli');
+        } else {
+            showToast(data.error || 'Erreur', 'error');
+        }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
 }
 
 // Show reset modal if ?reset_token= in URL

@@ -112,6 +112,12 @@
             <a class="nav-item" onclick="showPage('reviews');closeSidebar()">
                 <span class="nav-icon">⭐</span>Avis clients
             </a>
+            <a class="nav-item" id="nav-branches" style="display:none" onclick="showPage('branches');closeSidebar()">
+                <span class="nav-icon">🏪</span>Mes établissements
+            </a>
+            <a class="nav-item" id="nav-integrations" style="display:none" onclick="showPage('integrations');closeSidebar()">
+                <span class="nav-icon">🔗</span>Intégrations
+            </a>
             <a class="nav-item" onclick="showPage('settings');closeSidebar()">
                 <span class="nav-icon">⚙️</span>Mon Salon
             </a>
@@ -306,6 +312,31 @@
                     <button class="btn btn-ghost btn-sm" id="rtab-all" onclick="filterReviews('all')">Tous</button>
                 </div>
                 <div id="reviewsList"></div>
+            </div>
+
+            <!-- ── Mes établissements (Premium) ── -->
+            <div class="page" id="page-branches">
+                <div class="page-header">
+                    <h2>🏪 Mes établissements</h2>
+                    <button class="btn btn-primary btn-sm" onclick="showCreateBranch()">+ Nouveau</button>
+                </div>
+                <div id="branchesList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🏪</div>
+                        <div class="empty-state-text">Chargement...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Intégrations (Premium) ── -->
+            <div class="page" id="page-integrations">
+                <div class="page-header"><h2>🔗 Intégrations</h2></div>
+                <div id="integrationsList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔗</div>
+                        <div class="empty-state-text">Chargement...</div>
+                    </div>
+                </div>
             </div>
 
             <!-- ── Settings ── -->

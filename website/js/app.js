@@ -179,6 +179,14 @@ function applySalonBranding(salon) {
   document.title = `${salon.name} | Réservation en ligne`;
   updateMetaTags(salon);
 
+  // Footer: nom du salon + badge "Propulsé par SalonPro" (masqué si marque blanche Premium)
+  const footerNameEl = document.getElementById('footerSalonName');
+  if (footerNameEl) footerNameEl.textContent = `© ${new Date().getFullYear()} ${salon.name}. Tous droits réservés.`;
+  const poweredEl = document.getElementById('poweredBySalonPro');
+  if (poweredEl && salon.subscription?.plan === 'premium' && salon.whiteLabel?.enabled) {
+    poweredEl.style.display = 'none';
+  }
+
   if (salon.services?.length > 0) {
     const servicesGrid = document.querySelector('.services-grid');
     if (servicesGrid) {
