@@ -3121,6 +3121,15 @@ async function deleteTestimonial(id) {
 }
 
 // ---- Utils ----
+function openModal(title, bodyHtml, footerHtml) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalBody').innerHTML = bodyHtml;
+    document.getElementById('modalFooter').innerHTML = footerHtml !== undefined
+        ? footerHtml
+        : `<button class="btn btn-ghost" onclick="closeModal()">Annuler</button>`;
+    document.getElementById('modal').classList.add('active');
+}
+
 function closeModal() {
     document.getElementById('modal').classList.remove('active');
 }
@@ -3466,9 +3475,9 @@ function renderIntegrations(webhooks) {
                 <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px">
                     Exportez tous vos rendez-vous au format iCal (.ics) compatible avec Google Calendar, Apple Calendar, Outlook.
                 </p>
-                <a class="btn btn-primary btn-sm" href="${API}/api/pro/salon/${salonId}/bookings/ical" download>
+                <button class="btn btn-primary btn-sm" onclick="downloadIcal()">
                     ⬇️ Télécharger le fichier .ics
-                </a>
+                </button>
                 <div style="font-size:.75rem;color:var(--text-muted);margin-top:10px">
                     ⚠️ Ce lien nécessite d'être connecté. Pour un abonnement calendrier en temps réel, configurez un webhook.
                 </div>
@@ -3593,6 +3602,26 @@ async function saveWhiteLabel() {
             showToast(data.error || 'Erreur', 'error');
         }
     } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+async function downloadIcal() {
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/bookings/ical`);
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.error || 'Erreur export iCal', 'error');
+            return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rendez-vous-${salonId}.ics`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (e) { showToast('Erreur de téléchargement', 'error'); }
 }
 
 // Show reset modal if ?reset_token= in URL
