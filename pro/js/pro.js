@@ -8,10 +8,25 @@ let salonId = null;
 let currentUser = null;
 let currentSalon = null;
 
+// ---- JWT helpers (client-side) ----
+function getTokenPayload(t) {
+    try {
+        const parts = (t || '').split('.');
+        if (parts.length !== 3) return null;
+        return JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+    } catch { return null; }
+}
+function isTokenExpired(t) {
+    const p = getTokenPayload(t);
+    if (!p || !p.exp) return false; // legacy token sans exp → considéré valide
+    return Date.now() > p.exp;
+}
+
 // ---- Custom Fetch that injects the auth token + enforces timeout ----
 async function apiFetch(url, options = {}, timeoutMs = 25000) {
     const headers = options.headers || {};
     if (token) {
+        if (isTokenExpired(token)) { doLogout(); throw new Error('Session expirée — veuillez vous reconnecter'); }
         headers['Authorization'] = `Bearer ${token}`;
     }
     const controller = new AbortController();
@@ -19,6 +34,10 @@ async function apiFetch(url, options = {}, timeoutMs = 25000) {
     try {
         const res = await fetch(url, { ...options, headers, signal: controller.signal });
         clearTimeout(timer);
+        if (res.status === 401) {
+            doLogout();
+            throw new Error('Session expirée — veuillez vous reconnecter');
+        }
         return res;
     } catch (e) {
         clearTimeout(timer);
@@ -827,7 +846,8 @@ function printInvoice(b) {
 
 // ---- Calendar View ----
 let _calendarDate = new Date();
-let _calendarView = 'list';
+let _calendarView = 'list';       // 'list' | 'calendar'
+let _calendarSubView = 'week';    // 'week' | 'day' | 'month'
 
 function toggleCalendarView() {
     _calendarView = _calendarView === 'list' ? 'calendar' : 'list';
@@ -847,6 +867,11 @@ function toggleCalendarView() {
     }
 }
 
+function switchCalendarSubView(v) {
+    _calendarSubView = v;
+    renderCalendar(_allBookings);
+}
+
 function _weekDates(ref) {
     const d = new Date(ref);
     const dow = d.getDay(); // 0=Sun
@@ -860,8 +885,23 @@ function _fmtDay(d) { return `${String(d.getDate()).padStart(2,'0')}/${String(d.
 
 function _isMobile() { return window.innerWidth < 640; }
 
+const MONTH_NAMES_FULL = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function _subViewBar() {
+    const views = [
+        { key: 'month', label: 'Mois' },
+        { key: 'week',  label: 'Semaine' },
+        { key: 'day',   label: 'Jour' },
+    ];
+    return `<div style="display:flex;gap:4px">
+        ${views.map(v => `<button class="btn btn-sm ${_calendarSubView === v.key ? 'btn-primary' : 'btn-ghost'}"
+            onclick="switchCalendarSubView('${v.key}')">${v.label}</button>`).join('')}
+    </div>`;
+}
+
 function renderCalendar(bookings) {
-    if (_isMobile()) renderCalendarDay(bookings);
+    if (_calendarSubView === 'month') renderCalendarMonth(bookings);
+    else if (_calendarSubView === 'day' || _isMobile()) renderCalendarDay(bookings);
     else renderCalendarWeek(bookings);
 }
 
@@ -878,7 +918,8 @@ function renderCalendarWeek(bookings) {
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
             <button class="btn btn-ghost btn-sm" onclick="navWeek(-1)">← Précédente</button>
             <span style="font-weight:600;font-size:.88rem">${_fmtDay(weekDays[0])} — ${_fmtDay(weekDays[6])}</span>
-            <div style="display:flex;gap:6px">
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                ${_subViewBar()}
                 <button class="btn btn-ghost btn-sm" onclick="navWeek(0)">Aujourd'hui</button>
                 <button class="btn btn-ghost btn-sm" onclick="navWeek(1)">Suivante →</button>
             </div>
@@ -902,6 +943,135 @@ function renderCalendarWeek(bookings) {
     }).join('');
 
     container.innerHTML = navRow + `<div class="cal-wrap"><div class="cal-grid">${headers}${gridRows}</div></div>`;
+}
+
+// --- MONTH VIEW ---
+function renderCalendarMonth(bookings) {
+    const container = document.getElementById('calendarContainer');
+    if (!container) return;
+
+    const yr = _calendarDate.getFullYear();
+    const mo = _calendarDate.getMonth();
+    const todayISO = todayStr();
+    const title = `${MONTH_NAMES_FULL[mo]} ${yr}`;
+
+    // Regrouper les bookings par date
+    const byDate = {};
+    bookings.forEach(b => {
+        if (!b.date) return;
+        if (!byDate[b.date]) byDate[b.date] = [];
+        byDate[b.date].push(b);
+    });
+
+    // Premier jour du mois + décalage lundi
+    const firstDay = new Date(yr, mo, 1);
+    const lastDay  = new Date(yr, mo + 1, 0);
+    let startOffset = firstDay.getDay() - 1; // lundi=0
+    if (startOffset < 0) startOffset = 6;
+
+    const dayHeaders = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+
+    // Construire toutes les cellules (jours vides + jours du mois)
+    const totalCells = startOffset + lastDay.getDate();
+    const rows = Math.ceil(totalCells / 7);
+    let cells = '';
+
+    for (let row = 0; row < rows; row++) {
+        cells += '<tr>';
+        for (let col = 0; col < 7; col++) {
+            const cellIdx = row * 7 + col;
+            const dayNum  = cellIdx - startOffset + 1;
+            if (dayNum < 1 || dayNum > lastDay.getDate()) {
+                cells += '<td style="background:var(--bg-alt);opacity:.3"></td>';
+            } else {
+                const iso   = `${yr}-${String(mo+1).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+                const bkgs  = byDate[iso] || [];
+                const isToday = iso === todayISO;
+                const statusColors = { confirmed:'#6366F1', completed:'#22c55e', cancelled:'#ef4444', pending:'#f59e0b' };
+
+                // Affiche jusqu'à 3 événements, puis "+X"
+                const maxShow = 3;
+                const shown   = bkgs.slice(0, maxShow);
+                const extra   = bkgs.length - maxShow;
+
+                const eventsHtml = shown.map(b => {
+                    const color = statusColors[b.status || 'confirmed'] || '#6366F1';
+                    return `<div onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})"
+                        style="background:${color}22;border-left:2px solid ${color};border-radius:3px;padding:1px 5px;
+                               font-size:.68rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                               cursor:pointer;margin-bottom:2px;color:${color};font-weight:500">
+                        ${b.time ? b.time.substring(0,5)+' ' : ''}${b.clientName || ''}
+                    </div>`;
+                }).join('');
+
+                const extraHtml = extra > 0
+                    ? `<div style="font-size:.68rem;color:var(--text-muted);padding:1px 4px">+${extra} autre${extra>1?'s':''}</div>`
+                    : '';
+
+                cells += `<td onclick="navToDay('${iso}')"
+                    style="vertical-align:top;cursor:pointer;padding:4px 5px;min-height:80px;
+                           ${isToday ? 'background:rgba(99,102,241,.08);' : ''}
+                           transition:background .15s"
+                    onmouseover="this.style.background='rgba(255,255,255,.04)'"
+                    onmouseout="this.style.background='${isToday ? 'rgba(99,102,241,.08)' : ''}'">
+                    <div style="font-size:.8rem;font-weight:${isToday?'700':'500'};
+                                color:${isToday?'var(--primary)':'var(--text-color)'};
+                                width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+                                ${isToday?'background:var(--primary);color:#fff;':''}
+                                margin-bottom:3px">${dayNum}</div>
+                    ${eventsHtml}${extraHtml}
+                </td>`;
+            }
+        }
+        cells += '</tr>';
+    }
+
+    container.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="navMonth(-1)">← Précédent</button>
+            <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-weight:700;font-size:.95rem">${title}</span>
+                <button class="btn btn-ghost btn-sm" onclick="navMonth(0)" style="font-size:.78rem">Aujourd'hui</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+                ${_subViewBar()}
+                <button class="btn btn-ghost btn-sm" onclick="navMonth(1)">Suivant →</button>
+            </div>
+        </div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+            <thead>
+                <tr>${dayHeaders.map(d => `<th style="text-align:center;font-size:.75rem;font-weight:600;color:var(--text-muted);padding:6px 4px;border-bottom:1px solid var(--border)">${d}</th>`).join('')}</tr>
+            </thead>
+            <tbody style="border:1px solid var(--border)">
+                ${cells}
+            </tbody>
+        </table>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap">
+            ${[['confirmed','#6366F1','Confirmé'],['completed','#22c55e','Terminé'],['cancelled','#ef4444','Annulé'],['pending','#f59e0b','En attente']].map(([,c,l]) =>
+                `<div style="display:flex;align-items:center;gap:5px;font-size:.75rem;color:var(--text-muted)">
+                    <div style="width:10px;height:10px;border-radius:2px;background:${c}"></div>${l}
+                </div>`).join('')}
+        </div>`;
+}
+
+function navMonth(dir) {
+    const d = new Date(_calendarDate);
+    if (dir === 0) {
+        _calendarDate = new Date();
+    } else {
+        d.setDate(1);
+        d.setMonth(d.getMonth() + dir);
+        _calendarDate = d;
+    }
+    renderCalendar(_allBookings);
+}
+
+function navToDay(iso) {
+    _calendarDate = new Date(iso + 'T12:00:00');
+    _calendarSubView = 'day';
+    renderCalendar(_allBookings);
 }
 
 // --- DAY VIEW (mobile) ---
@@ -937,13 +1107,16 @@ function renderCalendarDay(bookings) {
     }).join('');
 
     container.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px;flex-wrap:wrap;gap:8px">
             <button class="btn btn-ghost btn-sm" onclick="navDay(-1)" style="font-size:1.2rem;padding:6px 12px">‹</button>
             <div style="text-align:center">
                 <div style="font-weight:700;font-size:1rem${dayISO === todayISO ? ';color:var(--primary)' : ''}">${dayLabel}</div>
                 ${dayISO !== todayISO ? `<button class="btn btn-ghost btn-sm" style="font-size:.75rem;margin-top:4px;padding:2px 10px" onclick="navDay(0)">Aujourd'hui</button>` : ''}
             </div>
-            <button class="btn btn-ghost btn-sm" onclick="navDay(1)" style="font-size:1.2rem;padding:6px 12px">›</button>
+            <div style="display:flex;align-items:center;gap:6px">
+                ${_subViewBar()}
+                <button class="btn btn-ghost btn-sm" onclick="navDay(1)" style="font-size:1.2rem;padding:6px 12px">›</button>
+            </div>
         </div>
         <div style="background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--border)">
             ${dayBookings.length === 0 && slots.replace(/<[^>]+>/g,'').trim() === '' ? '' : ''}
@@ -3003,11 +3176,16 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (sessionStr) {
         try {
             const data = JSON.parse(sessionStr);
+            // Reject session si token expiré
+            if (isTokenExpired(data.token)) {
+                localStorage.removeItem('proSession');
+                return; // reste sur l'écran de login
+            }
             token = data.token;
             currentUser = data.user;
             salonId = data.user.salonId;
             currentSalon = data.salon;
-            
+
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appScreen').style.display = 'flex';
             initApp();

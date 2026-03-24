@@ -175,9 +175,13 @@ async function uploadImageBuffer(buffer, ext, folder = 'barbershop') {
     });
 }
 
-function createToken(payload) {
+function createToken(payload, expiresInDays = 30) {
     const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-    const body = Buffer.from(JSON.stringify({ ...payload, iat: Date.now() })).toString('base64url');
+    const body = Buffer.from(JSON.stringify({
+        ...payload,
+        iat: Date.now(),
+        exp: Date.now() + expiresInDays * 24 * 60 * 60 * 1000,
+    })).toString('base64url');
     const sig = crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${body}`).digest('base64url');
     return `${header}.${body}.${sig}`;
 }
@@ -201,9 +205,11 @@ function verifyToken(req) {
         const parts = token.split('.');
         if (parts.length !== 3) return null;
         const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
-        // Basic verify sig
+        // Verify signature
         const sig = crypto.createHmac('sha256', JWT_SECRET).update(`${parts[0]}.${parts[1]}`).digest('base64url');
         if (sig !== parts[2]) return null;
+        // Check expiration (only enforced if exp is present — legacy tokens without exp still work)
+        if (payload.exp && Date.now() > payload.exp) return null;
         return payload;
     } catch { return null; }
 }
