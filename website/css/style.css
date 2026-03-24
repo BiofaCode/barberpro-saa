@@ -1046,6 +1046,15 @@ h3 {
   cursor: default;
 }
 
+.bm-timeslot.bm-timeslot-taken {
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: line-through;
+  pointer-events: none;
+  border-color: rgba(239,68,68,0.3);
+  color: #ef4444;
+}
+
 @keyframes skeletonShimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }

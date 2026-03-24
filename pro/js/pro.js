@@ -567,6 +567,7 @@ async function loadBookings(_retry = 0) {
         populateEmployeeFilter(_allBookings);
         renderBookingsList(_allBookings);
         renderAdvancedStats(_allBookings);
+        loadBlocks();
     } catch (e) {
         console.error('Bookings error:', e.message);
         if (_retry < 2) {
@@ -637,6 +638,117 @@ function populateEmployeeFilter(bookings) {
     // Keep current value
     const cur = sel.value;
     sel.innerHTML = '<option value="">Tous</option>' + names.map(n => `<option value="${n}" ${n === cur ? 'selected' : ''}>${n}</option>`).join('');
+}
+
+// ---- Blocks (indisponibilités) ----
+let _allBlocks = [];
+
+async function loadBlocks() {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/blocks?from=${today}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        _allBlocks = data.data || [];
+        renderBlocksList();
+    } catch (e) { /* non-blocking */ }
+}
+
+function renderBlocksList() {
+    const wrap = document.getElementById('blocksList');
+    const container = document.getElementById('blocksListContent');
+    if (!wrap || !container) return;
+    if (_allBlocks.length === 0) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    container.innerHTML = '<div class="data-grid">' + _allBlocks.map(bl => `
+        <div class="data-card" style="border-left:3px solid #ef4444">
+            <div class="data-card-icon" style="background:#fee2e2;color:#ef4444;font-size:18px;flex-shrink:0">🚫</div>
+            <div class="data-card-info" style="min-width:0;flex:1">
+                <div class="data-card-name">${bl.date} · ${bl.startTime}–${bl.endTime}</div>
+                <div class="data-card-sub">${bl.reason || 'Indisponible'}${bl.employeeName ? ' · ' + bl.employeeName : ' · Tout le salon'}</div>
+            </div>
+            <button class="btn btn-danger btn-sm" onclick="deleteBlock('${bl._id}')" title="Supprimer">🗑</button>
+        </div>
+    `).join('') + '</div>';
+}
+
+function showAddBlock() {
+    const today = new Date().toISOString().split('T')[0];
+    const empOptions = (currentSalon?.employees || [])
+        .map(e => `<option value="${e._id}" data-name="${e.name}">${e.name}</option>`).join('');
+
+    document.getElementById('modalTitle').textContent = '🚫 Bloquer un créneau';
+    document.getElementById('modalBody').innerHTML = `
+        <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-input form-input-full" id="blockDate" value="${today}" min="${today}">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="form-group">
+                <label class="form-label">De</label>
+                <input type="time" class="form-input form-input-full" id="blockStart" value="09:00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">À</label>
+                <input type="time" class="form-input form-input-full" id="blockEnd" value="10:00">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Raison (optionnel)</label>
+            <input type="text" class="form-input form-input-full" id="blockReason" placeholder="Ex: réunion, maintenance...">
+        </div>
+        ${empOptions ? `<div class="form-group">
+            <label class="form-label">Concerne</label>
+            <select class="form-input form-input-full" id="blockEmployee">
+                <option value="">Tout le salon</option>
+                ${empOptions}
+            </select>
+        </div>` : ''}
+        <div id="blockError" style="display:none;color:#ef4444;font-size:13px;margin-top:4px"></div>
+    `;
+    document.getElementById('modalFooter').innerHTML = `
+        <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="submitBlock()">Bloquer</button>
+    `;
+    document.getElementById('modal').classList.add('active');
+}
+
+async function submitBlock() {
+    const date = document.getElementById('blockDate').value;
+    const startTime = document.getElementById('blockStart').value;
+    const endTime = document.getElementById('blockEnd').value;
+    const reason = document.getElementById('blockReason').value.trim();
+    const empSel = document.getElementById('blockEmployee');
+    const employeeId = empSel?.value || null;
+    const employeeName = empSel?.options[empSel?.selectedIndex]?.dataset?.name || null;
+    const errEl = document.getElementById('blockError');
+
+    if (!date || !startTime || !endTime) { errEl.style.display = 'block'; errEl.textContent = 'Veuillez remplir tous les champs'; return; }
+    if (startTime >= endTime) { errEl.style.display = 'block'; errEl.textContent = 'L\'heure de fin doit être après le début'; return; }
+    errEl.style.display = 'none';
+
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/blocks`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ date, startTime, endTime, reason, employeeId, employeeName })
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal();
+            loadBlocks();
+            showToast('Créneau bloqué ✅');
+        } else {
+            errEl.style.display = 'block'; errEl.textContent = data.error || 'Erreur';
+        }
+    } catch (e) { errEl.style.display = 'block'; errEl.textContent = 'Erreur de connexion'; }
+}
+
+async function deleteBlock(blockId) {
+    try {
+        await apiFetch(`${API}/api/pro/salon/${salonId}/blocks/${blockId}`, { method: 'DELETE' });
+        loadBlocks();
+        showToast('Créneau débloqué');
+    } catch (e) { showToast('Erreur', 'error'); }
 }
 
 // ---- Booking Detail Modal ----

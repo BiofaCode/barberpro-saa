@@ -338,6 +338,19 @@ const db = {
         return await getDB().collection('salonLogs').find({ salonId }).sort({ timestamp: -1 }).limit(limit).toArray();
     },
 
+    // ---- Blocks (indisponibilités) ----
+    async findBlocks(query = {}) {
+        return await getDB().collection('blocks').find(query).sort({ date: 1, startTime: 1 }).toArray();
+    },
+    async createBlock(data) {
+        const block = { _id: genId(), ...data, createdAt: new Date().toISOString() };
+        await getDB().collection('blocks').insertOne(block);
+        return block;
+    },
+    async deleteBlock(id) {
+        await getDB().collection('blocks').deleteOne({ _id: id });
+    },
+
     // ---- Counts ----
     async countSalons() { return await getDB().collection('salons').countDocuments(); },
     async countOwners() { return await getDB().collection('owners').countDocuments(); },
