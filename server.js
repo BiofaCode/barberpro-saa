@@ -629,38 +629,6 @@ route('GET', '/api/admin/salons/:id/magic-link', async (req, res, params) => {
 
 
 // ==========================
-//  PUBLIC SALON API
-// ==========================
-
-route('GET', '/api/salon/:slug', async (req, res, params) => {
-    const salon = await db.findSalonBySlug(params.slug);
-    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
-    const employees = await db.findEmployees({ salon: salon._id });
-    json(res, 200, {
-        success: true,
-        data: {
-            _id: salon._id,
-            name: salon.name,
-            slug: salon.slug,
-            description: salon.description,
-            address: salon.address,
-            phone: salon.phone,
-            email: salon.email,
-            logo: salon.logo,
-            branding: salon.branding,
-            services: salon.services,
-            hours: salon.hours,
-            gallery: salon.gallery || [],
-            testimonials: salon.testimonials || [],
-            employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties, hours: e.hours })),
-            rating: salon.rating,
-            reviewCount: salon.reviewCount,
-            plan: salon.subscription?.plan || salon.plan || 'pro',
-        }
-    });
-});
-
-// ==========================
 //  BARBER (OWNER) API
 // ==========================
 

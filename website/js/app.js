@@ -502,11 +502,12 @@ function populateEmployees(serviceName = null) {
   const grid = document.getElementById('bmEmployeeGrid');
   let emps = getEmployees();
 
-  // Filter employees by service assignment
+  // Filter employees by service assignment (compare as strings pour éviter mismatch ObjectId)
   if (serviceName) {
     const service = (SALON_DATA?.services || []).find(s => s.name === serviceName);
     if (service && service.assignedEmployees && service.assignedEmployees.length > 0) {
-      emps = emps.filter(e => service.assignedEmployees.includes(e._id));
+      const assigned = service.assignedEmployees.map(String);
+      emps = emps.filter(e => assigned.includes(String(e._id)));
     }
   }
 
