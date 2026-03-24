@@ -232,6 +232,24 @@ setInterval(() => {
     for (const [k, v] of resetTokens) { if (now > v.expiry) resetTokens.delete(k); }
 }, 30 * 60 * 1000);
 
+// ---- Pending payment cleanup: cancel stale bookings after 30 min ----
+async function cancelStalePendingPayments() {
+    try {
+        const cutoff = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+        const stale = await db.findBookings({ status: 'pending', paymentStatus: 'pending_payment' });
+        let count = 0;
+        for (const b of stale) {
+            if (b.createdAt && b.createdAt < cutoff) {
+                await db.updateBooking(b._id, { status: 'cancelled', paymentStatus: 'failed' });
+                count++;
+            }
+        }
+        if (count > 0) console.log(`🗑 ${count} RDV en attente de paiement annulés (timeout 30 min)`);
+    } catch (e) { console.error('Pending cleanup error:', e.message); }
+}
+setInterval(cancelStalePendingPayments, 10 * 60 * 1000); // every 10 min
+setTimeout(cancelStalePendingPayments, 60000); // once at startup after 1 min
+
 // ---- Reminder Cron: run every hour ----
 async function sendPendingReminders() {
     // Only send reminders between 08:00 and 20:00 to avoid waking clients at night
@@ -1032,6 +1050,35 @@ route('DELETE', '/api/pro/salon/:salonId/logo_old', async (req, res, params) => 
 });
 
 // ---- Testimonials ----
+// ---- Reviews (client-submitted, with moderation) ----
+route('GET', '/api/pro/salon/:salonId/reviews', async (req, res, params) => {
+    const all = await db.findBookings({ salon: params.salonId, reviewed: true });
+    const reviews = all.map(b => ({
+        _id: b._id, clientName: b.clientName, serviceName: b.serviceName,
+        date: b.date, reviewRating: b.reviewRating, reviewComment: b.reviewComment,
+        reviewDate: b.reviewDate, reviewApproved: b.reviewApproved ?? null,
+    })).sort((a, b) => (b.reviewDate || '').localeCompare(a.reviewDate || ''));
+    json(res, 200, { success: true, data: reviews });
+});
+
+route('PUT', '/api/pro/salon/:salonId/reviews/:bookingId/moderate', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
+    const body = await parseBody(req);
+    const approved = body.approved === true || body.approved === 'true';
+    await db.updateBooking(params.bookingId, { reviewApproved: approved });
+    // Recalculate salon rating from approved reviews only
+    const all = await db.findBookings({ salon: params.salonId, reviewed: true });
+    const approvedRatings = all.filter(b => b.reviewApproved === true).map(b => b.reviewRating).filter(Boolean);
+    if (approvedRatings.length) {
+        const avg = parseFloat((approvedRatings.reduce((a, b) => a + b, 0) / approvedRatings.length).toFixed(1));
+        await db.updateSalon(params.salonId, { rating: avg, reviewCount: approvedRatings.length });
+    } else {
+        await db.updateSalon(params.salonId, { rating: 0, reviewCount: 0 });
+    }
+    json(res, 200, { success: true });
+});
+
 route('GET', '/api/pro/salon/:salonId/testimonials', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
@@ -1270,7 +1317,8 @@ route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
     const cancelUrl = booking.cancelToken ? `${baseUrl}/cancel/${booking.cancelToken}` : null;
-    if (salon && booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrl);
+    const receiptUrl = booking.cancelToken ? `${baseUrl}/receipt/${booking._id}?token=${booking.cancelToken}` : null;
+    if (salon && booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrl, receiptUrl);
     if (salon && salon.smsSettings?.clientConfirmation !== false && booking.clientPhone && (salon.smsCredits || 0) > 0) {
         sendSMSConfirmation(booking, salon).then(result => {
             if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
@@ -1689,7 +1737,8 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             if (booking && salon2 && booking.clientEmail) {
                 const baseUrl2 = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
                 const cancelUrl2 = booking.cancelToken ? `${baseUrl2}/cancel/${booking.cancelToken}` : null;
-                sendBookingConfirmation(booking, salon2, cancelUrl2);
+                const receiptUrl2 = booking.cancelToken ? `${baseUrl2}/receipt/${booking._id}?token=${booking.cancelToken}` : null;
+                sendBookingConfirmation(booking, salon2, cancelUrl2, receiptUrl2);
             }
             json(res, 200, { received: true });
             return;
@@ -1849,6 +1898,21 @@ route('GET', '/api/pro/stripe/connect/status', async (req, res) => {
     }
 });
 
+// 3. Dashboard Express — génère un lien de connexion vers le dashboard Stripe
+route('POST', '/api/pro/stripe/connect/dashboard-link', async (req, res) => {
+    if (!stripe) return json(res, 500, { success: false, error: 'Stripe non configuré' });
+    const user = verifyToken(req);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const salon = await db.findSalonById(user.salonId);
+    if (!salon?.stripeConnect?.accountId) return json(res, 400, { success: false, error: 'Compte Stripe non connecté' });
+    try {
+        const loginLink = await stripe.accounts.createLoginLink(salon.stripeConnect.accountId);
+        json(res, 200, { success: true, data: { url: loginLink.url } });
+    } catch (err) {
+        json(res, 500, { success: false, error: err.message });
+    }
+});
+
 // ==========================
 //  PUBLIC SALON API
 // ==========================
@@ -1857,6 +1921,13 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon || !salon.active) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const employees = await db.findEmployees({ salon: salon._id });
+    // Fetch approved client reviews (most recent 10)
+    const allBookings = await db.findBookings({ salon: salon._id, reviewed: true });
+    const approvedReviews = allBookings
+        .filter(b => b.reviewApproved === true && b.reviewRating && b.reviewComment)
+        .map(b => ({ rating: b.reviewRating, comment: b.reviewComment, clientName: b.clientName, date: b.reviewDate, service: b.serviceName }))
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+        .slice(0, 10);
     json(res, 200, {
         success: true,
         data: {
@@ -1867,8 +1938,10 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
             services: (salon.services || []).filter(s => s.active),
             hours: salon.hours,
             closedDates: salon.closedDates || [],
-            employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties })),
+            testimonials: salon.testimonials || [],
+            employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties, hours: e.hours })),
             rating: salon.rating, reviewCount: salon.reviewCount,
+            approvedReviews,
         }
     });
 });
@@ -1929,7 +2002,8 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     // Non-blocking: email + push + SMS
     const baseUrlBook = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
     const cancelUrlBook = booking.cancelToken ? `${baseUrlBook}/cancel/${booking.cancelToken}` : null;
-    if (booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrlBook);
+    const receiptUrlBook = booking.cancelToken ? `${baseUrlBook}/receipt/${booking._id}?token=${booking.cancelToken}` : null;
+    if (booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrlBook, receiptUrlBook);
 
     // Push notification to owner
     sendPushToSalon(salon._id, {
@@ -2231,14 +2305,8 @@ route('POST', '/api/review/:bookingId', async (req, res, params) => {
     if (booking.reviewed) return json(res, 409, { success: false, error: 'Avis déjà soumis' });
     const rating = Math.min(5, Math.max(1, parseInt(body.rating) || 5));
     const comment = (body.comment || '').trim().slice(0, 500);
-    await db.updateBooking(booking._id, { reviewed: true, reviewRating: rating, reviewComment: comment, reviewDate: new Date().toISOString() });
-    // Update salon avg rating
-    const allReviewed = await db.findBookings({ salon: booking.salon, reviewed: true });
-    const ratings = allReviewed.map(b => b.reviewRating).filter(Boolean);
-    if (ratings.length) {
-        const avg = parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1));
-        await db.updateSalon(booking.salon, { rating: avg, reviewCount: ratings.length });
-    }
+    // reviewApproved: null = pending moderation, true = approved, false = rejected
+    await db.updateBooking(booking._id, { reviewed: true, reviewRating: rating, reviewComment: comment, reviewDate: new Date().toISOString(), reviewApproved: null });
     json(res, 200, { success: true });
 });
 
@@ -2331,6 +2399,91 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(reviewHtml);
         return;
+    }
+    else if (pathname.startsWith('/receipt/')) {
+        const bookingId = pathname.split('/receipt/')[1]?.split('?')[0] || '';
+        const url = new URL(req.url, 'http://localhost');
+        const token = url.searchParams.get('token') || '';
+
+        const booking = await db.findBookingById(bookingId).catch(() => null);
+        const isValidToken = booking && (booking.cancelToken === token);
+        // Also allow pro owners via JWT
+        const proUser = verifyToken(req);
+        const isProAccess = proUser && (proUser.role === 'owner' || proUser.role === 'employee');
+
+        if (!booking || (!isValidToken && !isProAccess)) {
+            res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+            return res.end('<!DOCTYPE html><html><body style="font-family:system-ui;text-align:center;padding:60px;color:#6b7280"><h2>Reçu introuvable</h2><p>Ce lien est invalide ou a expiré.</p></body></html>');
+        }
+        const salon = await db.findSalonById(booking.salon).catch(() => null);
+        const salonName = salon?.name || 'SalonPro';
+        const primaryColor = salon?.branding?.primaryColor || '#6366F1';
+
+        const payStatusLabel = {
+            'fully_paid': '✅ Payé en ligne',
+            'deposit_paid': '💳 Acompte payé',
+            'pending_payment': '⏳ Paiement en attente',
+            'failed': '❌ Paiement échoué',
+        }[booking.paymentStatus] || '💶 À régler sur place';
+
+        const receiptNum = `REC-${bookingId.slice(-8).toUpperCase()}`;
+        const dateISO = booking.date || '';
+        const dateFR = dateISO ? new Date(dateISO + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '—';
+
+        const receiptHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reçu ${receiptNum}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f4f4f5;color:#18181b;padding:24px}
+.receipt{max-width:520px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.1)}
+.header{background:${primaryColor};padding:28px 28px 20px;color:#fff}
+.header h1{font-size:20px;font-weight:700;margin-bottom:4px}
+.header .sub{font-size:13px;opacity:.85}
+.body{padding:24px 28px}
+.receipt-num{font-size:12px;color:#71717a;margin-bottom:20px;letter-spacing:.5px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:20px}
+td{padding:10px 0;color:#3f3f46}
+td:first-child{color:#71717a;width:140px}
+tr+tr td{border-top:1px solid #f0f0f0}
+.total td{border-top:2px solid #e4e4e7!important;font-weight:700;font-size:16px;padding-top:14px}
+.total td:last-child{color:${primaryColor}}
+.badge{display:inline-block;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;margin-bottom:20px}
+.badge.pending{background:#fefce8;color:#a16207;border-color:#fde047}
+.salon-info{background:#fafafa;border-radius:10px;padding:14px 16px;font-size:13px;color:#6b7280;margin-bottom:20px;line-height:1.8}
+.salon-info strong{color:#18181b;display:block;margin-bottom:4px}
+.actions{display:flex;gap:10px}
+.btn{flex:1;padding:12px;border-radius:10px;border:none;font-size:.9rem;font-weight:600;cursor:pointer;text-align:center}
+.btn-print{background:${primaryColor};color:#fff}
+.btn-close{background:#f4f4f5;color:#3f3f46}
+@media print{body{background:#fff;padding:0}.actions{display:none!important}.receipt{box-shadow:none;border-radius:0}}
+</style></head><body>
+<div class="receipt">
+  <div class="header">
+    <h1>🧾 Reçu de réservation</h1>
+    <div class="sub">${salonName}</div>
+  </div>
+  <div class="body">
+    <div class="receipt-num">N° ${receiptNum} · ${new Date().toLocaleDateString('fr-FR')}</div>
+    <div class="badge${booking.paymentStatus === 'pending_payment' ? ' pending' : ''}">${payStatusLabel}</div>
+    <table>
+      <tr><td>Client</td><td><strong>${booking.clientName}</strong></td></tr>
+      <tr><td>Service</td><td>${booking.serviceIcon || '✂️'} ${booking.serviceName || '—'}</td></tr>
+      <tr><td>Date</td><td>${dateFR}</td></tr>
+      <tr><td>Heure</td><td>${booking.time || '—'}</td></tr>
+      <tr><td>Durée</td><td>${booking.duration || 30} min</td></tr>
+      ${booking.employeeName ? `<tr><td>Avec</td><td>${booking.employeeName}</td></tr>` : ''}
+      ${booking.amountPaid ? `<tr><td>Acompte versé</td><td>${booking.amountPaid} CHF</td></tr>` : ''}
+      <tr class="total"><td>Total</td><td>${booking.price || 0} CHF</td></tr>
+    </table>
+    ${salon?.address || salon?.phone ? `<div class="salon-info"><strong>${salonName}</strong>${salon.address ? `📍 ${salon.address}<br>` : ''}${salon.phone ? `📞 ${salon.phone}` : ''}</div>` : ''}
+    <div class="actions">
+      <button class="btn btn-print" onclick="window.print()">🖨️ Imprimer</button>
+      <button class="btn btn-close" onclick="window.close()">Fermer</button>
+    </div>
+  </div>
+</div>
+</body></html>`;
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        return res.end(receiptHtml);
     }
     else if (pathname.startsWith('/cancel/')) {
         const filePath = path.join(__dirname, 'website', 'cancel.html');

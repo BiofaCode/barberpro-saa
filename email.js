@@ -11,7 +11,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 console.log(`📧 Email configuré via API Resend`);
 
 // Beautiful HTML email template
-function buildConfirmationEmail(booking, salon, cancelUrl) {
+function buildConfirmationEmail(booking, salon, cancelUrl, receiptUrl) {
   const primaryColor = salon.branding?.primaryColor || '#6366F1';
   const salonName = salon.name || 'SalonPro';
 
@@ -82,10 +82,10 @@ function buildConfirmationEmail(booking, salon, cancelUrl) {
         Si vous devez modifier votre rendez-vous, veuillez contacter le salon directement.
       </p>
 
-      ${cancelUrl ? `
-      <div style="text-align:center;margin:20px 0 0">
-        <a href="${cancelUrl}" style="color:#ef4444;font-size:12px;text-decoration:underline">Annuler ce rendez-vous</a>
-      </div>` : ''}
+      <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+        ${receiptUrl ? `<a href="${receiptUrl}" style="flex:1;min-width:130px;text-align:center;background:${primaryColor};color:#fff;padding:12px 16px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600">🧾 Voir le reçu</a>` : ''}
+        ${cancelUrl ? `<a href="${cancelUrl}" style="flex:1;min-width:130px;text-align:center;background:#fef2f2;color:#ef4444;padding:12px 16px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;border:1px solid #fecaca">Annuler le RDV</a>` : ''}
+      </div>
     </div>
 
     <!-- Footer -->
@@ -108,7 +108,7 @@ function formatDateFR(dateStr) {
 }
 
 // Send confirmation email (non-blocking)
-async function sendBookingConfirmation(booking, salon, cancelUrl) {
+async function sendBookingConfirmation(booking, salon, cancelUrl, receiptUrl) {
   const clientEmail = booking.clientEmail;
   if (!clientEmail || !clientEmail.includes('@')) {
     console.log('  ⚠️ Pas d\'email client, confirmation non envoyée');
@@ -126,7 +126,7 @@ async function sendBookingConfirmation(booking, salon, cancelUrl) {
       from: `${fromName} <${fromEmail}>`,
       to: [clientEmail], // Resend expects an array for multiple recipients, or string for one. Array is safer.
       subject: `✅ RDV confirmé — ${booking.serviceName} le ${formatDateFR(booking.date)} à ${booking.time}`,
-      html: buildConfirmationEmail(booking, salon, cancelUrl),
+      html: buildConfirmationEmail(booking, salon, cancelUrl, receiptUrl),
     });
 
     if (error) {

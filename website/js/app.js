@@ -236,9 +236,20 @@ function applySalonBranding(salon) {
     } else {
       const testimonialsGrid = testimonialsSection.querySelector('.testimonials-grid');
       if (testimonialsGrid) {
-        if (salon.testimonials?.length > 0) {
-          const stars = n => '★'.repeat(Math.max(0, Math.min(5, n || 5))) + '☆'.repeat(5 - Math.max(0, Math.min(5, n || 5)));
-          testimonialsGrid.innerHTML = salon.testimonials.map(t => `
+        const stars = n => '★'.repeat(Math.max(0, Math.min(5, n || 5))) + '☆'.repeat(5 - Math.max(0, Math.min(5, n || 5)));
+
+        // Merge owner-written testimonials + approved client reviews
+        const ownerTestimonials = (salon.testimonials || []).map(t => ({
+          stars: t.stars || 5, text: t.text, name: t.name || 'Client', role: t.role || 'Client', isOwnerAdded: true
+        }));
+        const clientReviews = (salon.approvedReviews || []).map(r => ({
+          stars: r.rating, text: r.comment, name: r.clientName || 'Client',
+          role: r.service || 'Client vérifié ✓', isOwnerAdded: false
+        }));
+        const allCards = [...ownerTestimonials, ...clientReviews];
+
+        if (allCards.length > 0) {
+          testimonialsGrid.innerHTML = allCards.map(t => `
             <div class="testimonial-card reveal active">
               <div class="testimonial-stars">${stars(t.stars)}</div>
               <p class="testimonial-text">"${t.text}"</p>
@@ -247,18 +258,18 @@ function applySalonBranding(salon) {
                   ${t.name ? t.name[0].toUpperCase() : '?'}
                 </div>
                 <div>
-                  <div class="testimonial-name">${t.name || 'Client'}</div>
-                  <div class="testimonial-role">${t.role || 'Client'}</div>
+                  <div class="testimonial-name">${t.name}</div>
+                  <div class="testimonial-role">${t.role}</div>
                 </div>
               </div>
             </div>
           `).join('');
-          if (salon.testimonials.length > 3) {
+          if (allCards.length > 3) {
             initTestimonialCarousel(testimonialsGrid);
-            return; // keep flex carousel layout
+            return;
           }
         }
-        // ≤3 dynamic OR static hardcoded cards → grid layout (no scroll)
+        // ≤3 cards OR empty → grid layout
         const cols = window.innerWidth < 640 ? '1fr' : 'repeat(auto-fit,minmax(260px,1fr))';
         testimonialsGrid.style.cssText = `display:grid;grid-template-columns:${cols};gap:20px;overflow:visible;scroll-snap-type:none;padding:0`;
       }

@@ -248,6 +248,7 @@ function showPage(page) {
     else if (page === 'clients') loadClients();
     else if (page === 'employees') loadEmployees();
     else if (page === 'services') loadServices();
+    else if (page === 'reviews') loadReviews();
     else if (page === 'settings') loadSettings();
 }
 
@@ -807,23 +808,7 @@ async function updateBookingStatus(bookingId, status) {
 
 // ---- PDF Invoice ----
 function printInvoice(b) {
-    const salon = currentSalon || {};
-    const win = window.open('', '_blank', 'width=640,height=800');
-    win.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Reçu ${b.clientName}</title>
-    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:40px;color:#1a1a1a;max-width:520px;margin:0 auto}.header{border-bottom:2px solid #1a1a1a;padding-bottom:20px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-start}.salon-name{font-size:22px;font-weight:700}.salon-sub{font-size:12px;color:#666;margin-top:4px;line-height:1.5}.receipt-num{font-size:12px;color:#666;text-align:right}.receipt-title{font-size:16px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px}.line{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #eee;font-size:14px}.total-line{display:flex;justify-content:space-between;padding:14px 0;font-size:18px;font-weight:700}.footer{margin-top:36px;font-size:11px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:16px}.print-btn{margin-top:24px;padding:10px 24px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px}@media print{.print-btn{display:none}}</style>
-    </head><body>
-    <div class="header"><div><div class="salon-name">${salon.name||'Salon'}</div><div class="salon-sub">${salon.address||''}${salon.city?' · '+salon.city:''}${salon.phone?' · '+salon.phone:''}</div></div><div class="receipt-num">Reçu #${(b._id||'').slice(-6).toUpperCase()}<br>${new Date().toLocaleDateString('fr-FR')}</div></div>
-    <div class="receipt-title">Reçu de prestation</div>
-    <div class="line"><span>Client</span><span>${b.clientName}</span></div>
-    <div class="line"><span>Date</span><span>${b.date} à ${b.time}</span></div>
-    <div class="line"><span>Prestation</span><span>${b.serviceName||'—'}</span></div>
-    <div class="line"><span>Durée</span><span>${b.duration||30} min</span></div>
-    ${b.employeeName?`<div class="line"><span>Styliste</span><span>${b.employeeName}</span></div>`:''}
-    <div class="total-line"><span>Total</span><span>${b.price||0} CHF</span></div>
-    <div class="footer">Merci de votre visite ! — ${salon.name||'Salon'}</div>
-    <br><button class="print-btn" onclick="window.print()">🖨 Imprimer / Enregistrer PDF</button>
-    </body></html>`);
-    win.document.close();
+    window.open(`/receipt/${b._id}?token=${b.cancelToken || ''}`, '_blank', 'width=580,height=750');
 }
 
 // ---- Calendar View ----
@@ -979,26 +964,49 @@ function renderAdvancedStats(bookings) {
     const el = document.getElementById('advancedStats');
     if (!el) return;
 
+    const active = bookings.filter(b => b.status !== 'cancelled');
+    const cancelled = bookings.filter(b => b.status === 'cancelled');
+    const cancelRate = bookings.length > 0 ? Math.round((cancelled.length / bookings.length) * 100) : 0;
+
     // Occupancy this week
     const weekDays = _weekDates(new Date());
     const weekISOs = weekDays.map(_isoDate);
-    const weekBookings = bookings.filter(b => weekISOs.includes(b.date) && b.status !== 'cancelled');
+    const weekBookings = active.filter(b => weekISOs.includes(b.date));
     const hoursArr = Array.isArray(currentSalon?.hours) ? currentSalon.hours : Object.values(currentSalon?.hours || {});
     const workDays = hoursArr.filter(h => h && h.open !== false && (h.open || h.openTime)).length || 5;
-    const slotsPerDay = 8; // avg 8h × 30min slots / 30min avg = ~16 slots, approximate
-    const totalSlots = workDays * slotsPerDay;
+    const totalSlots = workDays * 8;
     const occ = totalSlots > 0 ? Math.min(100, Math.round((weekBookings.length / totalSlots) * 100)) : 0;
 
-    // Revenue per employee (all time from loaded bookings)
+    // Revenue per employee
     const empMap = {};
-    bookings.filter(b => b.employeeName && b.status !== 'cancelled').forEach(b => {
+    active.filter(b => b.employeeName).forEach(b => {
         empMap[b.employeeName] = (empMap[b.employeeName] || 0) + (b.price || 0);
     });
     const empEntries = Object.entries(empMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
     const maxEmp = empEntries[0]?.[1] || 1;
 
+    // Best day of week
+    const dayCount = { 0:0, 1:0, 2:0, 3:0, 4:0, 5:0, 6:0 };
+    const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    active.forEach(b => { if (b.date) { const d = new Date(b.date + 'T12:00:00').getDay(); dayCount[d] = (dayCount[d] || 0) + 1; } });
+    const bestDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0];
+    const bestDayLabel = bestDay ? dayNames[bestDay[0]] : '—';
+
+    // Best hour of day
+    const hourCount = {};
+    active.forEach(b => { if (b.time) { const h = b.time.split(':')[0]; hourCount[h] = (hourCount[h] || 0) + 1; } });
+    const bestHour = Object.entries(hourCount).sort((a, b) => b[1] - a[1])[0];
+    const bestHourLabel = bestHour ? `${bestHour[0]}h` : '—';
+
+    // Returning clients (have > 1 booking)
+    const clientBkgCount = {};
+    active.forEach(b => { if (b.clientName) clientBkgCount[b.clientName] = (clientBkgCount[b.clientName] || 0) + 1; });
+    const returningClients = Object.values(clientBkgCount).filter(c => c > 1).length;
+    const totalClients = Object.keys(clientBkgCount).length;
+    const retentionRate = totalClients > 0 ? Math.round((returningClients / totalClients) * 100) : 0;
+
     el.innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
             <div class="card" style="padding:0">
                 <div class="card-body">
                     <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Occupation cette semaine</div>
@@ -1009,17 +1017,41 @@ function renderAdvancedStats(bookings) {
             </div>
             <div class="card" style="padding:0">
                 <div class="card-body">
-                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">CA par styliste</div>
-                    ${empEntries.length ? empEntries.map(([name, rev]) => `
-                        <div style="margin-bottom:8px">
-                            <div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:3px">
-                                <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px">${name}</span>
-                                <span style="font-weight:600;flex-shrink:0">${rev} CHF</span>
-                            </div>
-                            <div class="occ-bar-wrap"><div class="occ-bar" style="width:${Math.round((rev/maxEmp)*100)}%;background:var(--primary)"></div></div>
-                        </div>
-                    `).join('') : '<div style="color:var(--text-muted);font-size:.85rem">Aucune donnée</div>'}
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Taux d'annulation</div>
+                    <div style="font-size:28px;font-weight:700;color:${cancelRate>20?'#ef4444':cancelRate>10?'#f59e0b':'#22c55e'}">${cancelRate}%</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:10px">${cancelled.length} annulé${cancelled.length>1?'s':''} / ${bookings.length} total</div>
                 </div>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div class="card" style="padding:0">
+                <div class="card-body">
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Fidélisation clients</div>
+                    <div style="font-size:28px;font-weight:700;color:var(--primary)">${retentionRate}%</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:10px">${returningClients} client${returningClients>1?'s':''} revenu${returningClients>1?'s':''} / ${totalClients} total</div>
+                </div>
+            </div>
+            <div class="card" style="padding:0">
+                <div class="card-body">
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Meilleur créneau</div>
+                    <div style="font-size:22px;font-weight:700;color:var(--primary);margin-bottom:4px">${bestDayLabel}</div>
+                    <div style="font-size:16px;font-weight:600;color:var(--text-sec)">${bestHourLabel}</div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Jour et heure les plus chargés</div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="padding:0">
+            <div class="card-body">
+                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">CA par styliste</div>
+                ${empEntries.length ? empEntries.map(([name, rev]) => `
+                    <div style="margin-bottom:10px">
+                        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:4px">
+                            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;font-weight:500">${name}</span>
+                            <span style="font-weight:700;flex-shrink:0;color:var(--primary)">${rev} CHF</span>
+                        </div>
+                        <div class="occ-bar-wrap"><div class="occ-bar" style="width:${Math.round((rev/maxEmp)*100)}%;background:var(--primary)"></div></div>
+                    </div>
+                `).join('') : '<div style="color:var(--text-muted);font-size:.85rem">Aucune donnée — assignez des employés aux RDV</div>'}
             </div>
         </div>
     `;
@@ -1846,6 +1878,104 @@ async function deleteService(id) {
     showToast('Prestation supprimée');
 }
 
+// ---- Reviews (modération) ----
+let _allReviews = [];
+let _reviewFilter = 'pending';
+
+async function loadReviews() {
+    const container = document.getElementById('reviewsList');
+    if (container) container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-text">Chargement…</div></div>';
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/reviews`);
+        const data = await res.json();
+        _allReviews = data.data || [];
+        renderReviews();
+    } catch (e) {
+        if (container) container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Erreur de chargement</div></div>';
+    }
+}
+
+function filterReviews(filter) {
+    _reviewFilter = filter;
+    ['pending', 'approved', 'rejected', 'all'].forEach(f => {
+        const btn = document.getElementById(`rtab-${f}`);
+        if (btn) { btn.className = f === filter ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'; }
+    });
+    renderReviews();
+}
+
+function renderReviews() {
+    const container = document.getElementById('reviewsList');
+    if (!container) return;
+
+    const filtered = _allReviews.filter(r => {
+        if (_reviewFilter === 'pending') return r.reviewApproved === null || r.reviewApproved === undefined;
+        if (_reviewFilter === 'approved') return r.reviewApproved === true;
+        if (_reviewFilter === 'rejected') return r.reviewApproved === false;
+        return true;
+    });
+
+    const pendingCount = _allReviews.filter(r => r.reviewApproved === null || r.reviewApproved === undefined).length;
+    const pendingBtn = document.getElementById('rtab-pending');
+    if (pendingBtn && pendingCount > 0) {
+        pendingBtn.textContent = `⏳ En attente (${pendingCount})`;
+    }
+
+    if (filtered.length === 0) {
+        const msgs = { pending: 'Aucun avis en attente de modération', approved: 'Aucun avis approuvé', rejected: 'Aucun avis rejeté', all: 'Aucun avis client pour le moment' };
+        container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⭐</div><div class="empty-state-text">${msgs[_reviewFilter] || msgs.all}</div></div>`;
+        return;
+    }
+
+    const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
+    const statusBadge = r => {
+        if (r.reviewApproved === true) return '<span class="badge badge-confirmed" style="font-size:.7rem">Publié</span>';
+        if (r.reviewApproved === false) return '<span class="badge badge-cancelled" style="font-size:.7rem">Rejeté</span>';
+        return '<span class="badge badge-pending" style="font-size:.7rem">En attente</span>';
+    };
+
+    container.innerHTML = '<div class="data-grid">' + filtered.map(r => `
+        <div class="data-card" style="flex-direction:column;align-items:flex-start;gap:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+                <div style="display:flex;align-items:center;gap:8px">
+                    <div class="data-card-icon" style="font-size:16px;background:var(--bg-surface);flex-shrink:0">
+                        ${r.clientName?.[0]?.toUpperCase() || '?'}
+                    </div>
+                    <div>
+                        <div style="font-weight:600;font-size:.9rem">${r.clientName}</div>
+                        <div style="font-size:.75rem;color:var(--text-muted)">${r.serviceName || ''}${r.date ? ' · ' + r.date : ''}</div>
+                    </div>
+                </div>
+                ${statusBadge(r)}
+            </div>
+            <div style="color:#f59e0b;font-size:1.1rem;letter-spacing:1px">${stars(r.reviewRating || 0)}</div>
+            ${r.reviewComment ? `<div style="font-size:.85rem;color:var(--text-sec);font-style:italic;line-height:1.5">"${r.reviewComment}"</div>` : ''}
+            ${r.reviewApproved === null || r.reviewApproved === undefined ? `
+            <div style="display:flex;gap:8px;width:100%;margin-top:4px">
+                <button class="btn btn-primary btn-sm" style="flex:1" onclick="moderateReview('${r._id}', true)">✅ Publier</button>
+                <button class="btn btn-danger btn-sm" style="flex:1" onclick="moderateReview('${r._id}', false)">❌ Rejeter</button>
+            </div>` : `
+            <div style="display:flex;gap:8px;width:100%;margin-top:4px">
+                ${r.reviewApproved === true
+                    ? `<button class="btn btn-ghost btn-sm" style="flex:1" onclick="moderateReview('${r._id}', false)">Retirer</button>`
+                    : `<button class="btn btn-outline btn-sm" style="flex:1" onclick="moderateReview('${r._id}', true)">✅ Publier quand même</button>`
+                }
+            </div>`}
+        </div>
+    `).join('') + '</div>';
+}
+
+async function moderateReview(bookingId, approved) {
+    try {
+        await apiFetch(`${API}/api/pro/salon/${salonId}/reviews/${bookingId}/moderate`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ approved })
+        });
+        showToast(approved ? 'Avis publié ✅' : 'Avis rejeté');
+        loadReviews();
+    } catch (e) { showToast('Erreur', 'error'); }
+}
+
 // ---- Settings ----
 async function saveSMSSettings() {
     const settings = {
@@ -1978,16 +2108,24 @@ async function loadStripeConnect(plan) {
         if (d.connected) {
             body.innerHTML = `
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-                    <div style="width:10px;height:10px;border-radius:50%;background:var(--success);flex-shrink:0"></div>
+                    <div style="width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0"></div>
                     <div>
                         <div style="font-weight:600;font-size:.95rem">Stripe connecté ✅</div>
-                        <div style="font-size:.8rem;color:var(--text-muted)">Votre compte bancaire est lié. Vous pouvez recevoir des paiements en ligne.</div>
+                        <div style="font-size:.8rem;color:var(--text-muted)">Compte bancaire lié — vous pouvez recevoir des paiements en ligne.</div>
                     </div>
                 </div>
                 <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:.83rem;color:var(--text-sec);margin-bottom:16px">
                     💡 Activez le paiement en ligne ou l'acompte par prestation dans <strong>Mes Prestations → modifier</strong>
                 </div>
-                <div style="font-size:.78rem;color:var(--text-muted)">SalonPro prélève 2,5% de frais plateforme sur chaque paiement en ligne.</div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+                    <button class="btn btn-outline btn-sm" onclick="openStripeDashboard()" style="flex:1;min-width:140px">
+                        📊 Gérer mes versements
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="stripeConnectOnboard()" style="flex:1;min-width:140px">
+                        🔄 Re-configurer
+                    </button>
+                </div>
+                <div style="font-size:.78rem;color:var(--text-muted)">2,5% de frais plateforme sur chaque paiement en ligne.</div>
             `;
         } else {
             body.innerHTML = `
@@ -2008,6 +2146,18 @@ async function loadStripeConnect(plan) {
     } catch (e) {
         body.innerHTML = `<div style="color:var(--danger);font-size:.85rem">Erreur de chargement</div>`;
     }
+}
+
+async function openStripeDashboard() {
+    try {
+        const res = await apiFetch(`${API}/api/pro/stripe/connect/dashboard-link`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success && data.data?.url) {
+            window.open(data.data.url, '_blank');
+        } else {
+            showToast(data.error || 'Erreur Stripe', 'error');
+        }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
 }
 
 async function stripeConnectOnboard() {
