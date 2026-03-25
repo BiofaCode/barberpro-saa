@@ -788,8 +788,8 @@ async function renderBmTimeSlots() {
     const t = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     const slotMinutes = h * 60 + m;
 
-    // Skip lunch (12:00-13:59) and past slots for today
-    if ((h < 12 || h >= 14) && !(isToday && slotMinutes <= currentMinutes)) {
+    // Skip past slots for today
+    if (!(isToday && slotMinutes <= currentMinutes)) {
       const unavailable = isSlotUnavailable(t, takenSlots, blockedSlots, serviceDuration);
       if (!unavailable) {
         const el = document.createElement('div'); el.classList.add('bm-timeslot'); el.textContent = t;

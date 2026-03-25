@@ -692,24 +692,52 @@ function renderBlocksList() {
     const wrap = document.getElementById('blocksList');
     const container = document.getElementById('blocksListContent');
     if (!wrap || !container) return;
-    if (_allBlocks.length === 0) { wrap.style.display = 'none'; return; }
+    const isEmployee = currentUser?.role === 'employee';
+    const blocks = isEmployee
+        ? _allBlocks.filter(bl => !bl.employeeId || String(bl.employeeId) === String(currentUser.id))
+        : _allBlocks;
+    if (blocks.length === 0) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'block';
-    container.innerHTML = '<div class="data-grid">' + _allBlocks.map(bl => `
-        <div class="data-card" style="border-left:3px solid #ef4444">
+    container.innerHTML = '<div class="data-grid">' + blocks.map(bl => {
+        const canDelete = !isEmployee || String(bl.employeeId) === String(currentUser.id);
+        return `<div class="data-card" style="border-left:3px solid #ef4444">
             <div class="data-card-icon" style="background:#fee2e2;color:#ef4444;font-size:18px;flex-shrink:0">🚫</div>
             <div class="data-card-info" style="min-width:0;flex:1">
                 <div class="data-card-name">${bl.date} · ${bl.startTime}–${bl.endTime}</div>
                 <div class="data-card-sub">${bl.reason || 'Indisponible'}${bl.employeeName ? ' · ' + bl.employeeName : ' · Tout le salon'}</div>
             </div>
-            <button class="btn btn-danger btn-sm" onclick="deleteBlock('${bl._id}')" title="Supprimer">🗑</button>
+            ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteBlock('${bl._id}')" title="Supprimer">🗑</button>` : ''}
         </div>
-    `).join('') + '</div>';
+    `; }).join('') + '</div>';
 }
 
-function showAddBlock() {
+async function showAddBlock() {
+    const isEmployee = currentUser?.role === 'employee';
     const today = new Date().toISOString().split('T')[0];
-    const empOptions = (currentSalon?.employees || [])
-        .map(e => `<option value="${e._id}" data-name="${e.name}">${e.name}</option>`).join('');
+
+    let empSection = '';
+    if (!isEmployee) {
+        // Owner: fetch employees to let them choose who to block (or whole salon)
+        try {
+            const empRes = await apiFetch(`${API}/api/pro/salon/${salonId}/employees`);
+            const empData = await empRes.json();
+            const emps = (empData.data || []).filter(e => e.role === 'employee');
+            if (emps.length > 0) {
+                const opts = emps.map(e => `<option value="${e._id}" data-name="${e.name}">${e.name}</option>`).join('');
+                empSection = `<div class="form-group">
+                    <label class="form-label">Concerne</label>
+                    <select class="form-input form-input-full" id="blockEmployee">
+                        <option value="">Tout le salon</option>
+                        ${opts}
+                    </select>
+                </div>`;
+            }
+        } catch (e) {}
+    } else {
+        empSection = `<div class="form-group" style="padding:8px 12px;background:var(--bg);border-radius:8px;font-size:.85rem;color:var(--text-muted)">
+            🔒 Ce blocage sera appliqué à votre planning personnel
+        </div>`;
+    }
 
     document.getElementById('modalTitle').textContent = '🚫 Bloquer un créneau';
     document.getElementById('modalBody').innerHTML = `
@@ -729,15 +757,9 @@ function showAddBlock() {
         </div>
         <div class="form-group">
             <label class="form-label">Raison (optionnel)</label>
-            <input type="text" class="form-input form-input-full" id="blockReason" placeholder="Ex: réunion, maintenance...">
+            <input type="text" class="form-input form-input-full" id="blockReason" placeholder="Ex: réunion, formation...">
         </div>
-        ${empOptions ? `<div class="form-group">
-            <label class="form-label">Concerne</label>
-            <select class="form-input form-input-full" id="blockEmployee">
-                <option value="">Tout le salon</option>
-                ${empOptions}
-            </select>
-        </div>` : ''}
+        ${empSection}
         <div id="blockError" style="display:none;color:#ef4444;font-size:13px;margin-top:4px"></div>
     `;
     document.getElementById('modalFooter').innerHTML = `
@@ -752,9 +774,11 @@ async function submitBlock() {
     const startTime = document.getElementById('blockStart').value;
     const endTime = document.getElementById('blockEnd').value;
     const reason = document.getElementById('blockReason').value.trim();
+    const isEmployee = currentUser?.role === 'employee';
+    // Employees always block their own schedule; owners can pick or leave empty for whole salon
     const empSel = document.getElementById('blockEmployee');
-    const employeeId = empSel?.value || null;
-    const employeeName = empSel?.options[empSel?.selectedIndex]?.dataset?.name || null;
+    const employeeId = isEmployee ? (currentUser.id || null) : (empSel?.value || null);
+    const employeeName = isEmployee ? (currentUser.name || null) : (empSel?.options[empSel?.selectedIndex]?.dataset?.name || null);
     const errEl = document.getElementById('blockError');
 
     if (!date || !startTime || !endTime) { errEl.style.display = 'block'; errEl.textContent = 'Veuillez remplir tous les champs'; return; }
