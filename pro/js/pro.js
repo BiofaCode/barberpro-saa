@@ -686,6 +686,7 @@ async function loadBlocks() {
         const data = await res.json();
         _allBlocks = data.data || [];
         renderBlocksList();
+        if (_calendarView === 'calendar') applyBookingFilters(); // refresh calendar with updated blocks
     } catch (e) { /* non-blocking */ }
 }
 
@@ -1366,9 +1367,15 @@ async function showAddBooking() {
 
     const svcOptions = services.map(s => `<option value="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">${s.icon} ${s.name} — ${s.price} CHF (${s.duration}min)</option>`).join('');
 
+    const isEmp = currentUser?.role === 'employee';
+
     window._mbEmployees = employees;
     window._mbServices = services;
     window.renderEmpOptions = (serviceName) => {
+        if (isEmp) {
+            // Employee always books for themselves
+            return `<option value="${currentUser.id}" selected>${currentUser.name || 'Moi'}</option>`;
+        }
         if (window._mbEmployees.length === 0) return '<option value="">Aucun membre</option>';
         const validEmps = window._mbEmployees.filter(e => {
             if (!serviceName) return true;
@@ -1398,8 +1405,8 @@ async function showAddBooking() {
                 <input type="time" class="form-input form-input-full" id="mbTime" value="10:00">
             </div>
         </div>
-        ${employees.length > 0 ? `<div class="form-group"><label class="form-label">Employé</label>
-            <select class="form-input form-input-full" id="mbEmployee">${empOptions}</select>
+        ${(employees.length > 0 || isEmp) ? `<div class="form-group"><label class="form-label">Employé</label>
+            <select class="form-input form-input-full" id="mbEmployee" ${isEmp ? 'disabled' : ''}>${empOptions}</select>
         </div>` : ''}
         <div class="form-group" style="position:relative">
             <label class="form-label">Nom du client *</label>
@@ -1756,13 +1763,17 @@ function showAddEmployee() {
 }
 
 async function addEmployee() {
+    const btn = document.querySelector('#modalFooter .btn-primary');
+    if (btn?.disabled) return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Ajout…'; }
+
     const role = document.getElementById('empRole').value;
     const name = document.getElementById('empName').value.trim();
     const email = document.getElementById('empEmail').value.trim();
     const password = document.getElementById('empPassword').value.trim();
     const phone = document.getElementById('empPhone').value.trim();
     const specs = role === 'owner' ? [] : document.getElementById('empSpecs').value.split(',').map(s => s.trim()).filter(Boolean);
-    if (!name) return;
+    if (!name) { if (btn) { btn.disabled = false; btn.textContent = 'Ajouter'; } return; }
 
     const res = await apiFetch(`${API}/api/pro/salon/${salonId}/employees`, {
         method: 'POST',
@@ -1772,6 +1783,7 @@ async function addEmployee() {
 
     const data = await res.json();
     if (!data.success) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Ajouter'; }
         alert(data.error || "Erreur lors de l'ajout");
         return;
     }
