@@ -2190,8 +2190,19 @@ route('DELETE', '/api/pro/salon/:salonId/webhooks/:webhookId', async (req, res, 
 route('GET', '/api/salon/:slug', async (req, res, params) => {
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon || !salon.active) return json(res, 404, { success: false, error: 'Salon non trouvé' });
-    const allEmployees = await db.findEmployees({ salon: String(salon._id) });
+    const [allEmployees, owners] = await Promise.all([
+        db.findEmployees({ salon: String(salon._id) }),
+        db.findOwners({ salon: String(salon._id) })
+    ]);
     const employees = allEmployees.filter(e => e.active !== false);
+    // Build unified staff list: owners first (they are bookable staff too), then employees
+    const staff = [
+        ...owners.filter(o => o.active !== false).map(o => ({
+            _id: o._id, name: o.name, specialties: o.specialties || [],
+            hours: o.hours || salon.hours || null, isOwner: true
+        })),
+        ...employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties, hours: e.hours }))
+    ];
     // Fetch approved client reviews (most recent 10)
     const allBookings = await db.findBookings({ salon: salon._id, reviewed: true });
     const approvedReviews = allBookings
@@ -2210,7 +2221,7 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
             hours: salon.hours,
             closedDates: salon.closedDates || [],
             testimonials: salon.testimonials || [],
-            employees: employees.map(e => ({ _id: e._id, name: e.name, specialties: e.specialties, hours: e.hours })),
+            employees: staff,
             rating: salon.rating, reviewCount: salon.reviewCount,
             approvedReviews,
             subscription: { plan: salon.subscription?.plan || 'pro' },
