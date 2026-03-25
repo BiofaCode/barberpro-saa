@@ -448,11 +448,14 @@ let bmSteps = [];
 
 function getEmployees() { return SALON_DATA?.employees || []; }
 function hasMultipleEmployees() { return getEmployees().length > 1; }
+function localDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 function buildSteps() {
   const steps = [];
-  steps.push({ id: 'service', label: 'Prestation' });
   if (hasMultipleEmployees()) steps.push({ id: 'employee', label: 'Pro' });
+  steps.push({ id: 'service', label: 'Prestation' });
   steps.push({ id: 'datetime', label: 'Date' });
   steps.push({ id: 'info', label: 'Infos' });
   steps.push({ id: 'confirm', label: 'Confirmer' });
@@ -477,9 +480,8 @@ async function openBooking() {
   bmState = { stepIdx: 0, employee: null, service: null, date: null, time: null, month: new Date().getMonth(), year: new Date().getFullYear() };
   bmSteps = buildSteps();
   renderStepsBar();
-  populateServices();
-  // We'll populate employees later when transitioning to the employee step, 
-  // so we can filter them by the selected service.
+  if (hasMultipleEmployees()) populateEmployees();
+  else populateServices();
 
   // Reset form fields
   ['bmFirstName', 'bmLastName', 'bmEmail', 'bmPhone', 'bmNotes'].forEach(id => {
@@ -502,21 +504,12 @@ function closeBooking() {
   document.body.style.overflow = '';
 }
 
-function populateEmployees(serviceName = null) {
+function populateEmployees() {
   const grid = document.getElementById('bmEmployeeGrid');
-  let emps = getEmployees();
-
-  // Filter employees by service assignment (compare as strings pour éviter mismatch ObjectId)
-  if (serviceName) {
-    const service = (SALON_DATA?.services || []).find(s => s.name === serviceName);
-    if (service && service.assignedEmployees && service.assignedEmployees.length > 0) {
-      const assigned = service.assignedEmployees.map(String);
-      emps = emps.filter(e => assigned.includes(String(e._id)));
-    }
-  }
+  const emps = getEmployees();
 
   if (emps.length === 0) {
-    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec)">Aucun professionnel disponible pour cette prestation.</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec)">Aucun professionnel disponible.</div>';
     return;
   }
 
@@ -610,7 +603,8 @@ function goToStep(idx) {
 
   document.getElementById('bmPrev').style.display = idx === 0 ? 'none' : '';
   document.getElementById('bmNext').textContent = idx === bmSteps.length - 1 ? '✓ Confirmer' : 'Suivant →';
-  if (stepId === 'employee') populateEmployees(bmState.service?.name);
+  if (stepId === 'employee') populateEmployees();
+  if (stepId === 'service') populateServices();
   if (stepId === 'datetime') renderBmCalendar();
   if (stepId === 'confirm') populateConfirmation();
 }
@@ -619,6 +613,7 @@ function bmNextStep() {
   const stepId = currentStepId();
   if (stepId === 'employee' && !bmState.employee) { showToast('Choisissez un professionnel'); return; }
   if (stepId === 'service' && !bmState.service) { showToast('Choisissez une prestation'); return; }
+  if (stepId === 'employee' && bmState.employee) { bmState.service = null; }
   if (stepId === 'datetime' && (!bmState.date || !bmState.time)) { showToast('Choisissez une date et un créneau'); return; }
   if (stepId === 'info') {
     const fn = document.getElementById('bmFirstName').value.trim();
@@ -767,7 +762,7 @@ async function renderBmTimeSlots() {
   // Fetch taken + blocked slots from server
   let takenSlots = [], blockedSlots = [];
   try {
-    const dateStr = bmState.date.toISOString().split('T')[0];
+    const dateStr = localDateStr(bmState.date);
     const empId = bmState.employee?.id || '';
     const r = await fetch(`/api/salon/${SALON_DATA.slug}/available-slots?date=${dateStr}&employeeId=${encodeURIComponent(empId)}`);
     if (r.ok) {
@@ -795,18 +790,15 @@ async function renderBmTimeSlots() {
 
     // Skip lunch (12:00-13:59) and past slots for today
     if ((h < 12 || h >= 14) && !(isToday && slotMinutes <= currentMinutes)) {
-      const el = document.createElement('div'); el.classList.add('bm-timeslot'); el.textContent = t;
       const unavailable = isSlotUnavailable(t, takenSlots, blockedSlots, serviceDuration);
-      if (unavailable) {
-        el.classList.add('bm-timeslot-taken');
-        el.title = 'Créneau indisponible';
-      } else {
+      if (!unavailable) {
+        const el = document.createElement('div'); el.classList.add('bm-timeslot'); el.textContent = t;
         el.addEventListener('click', () => {
           grid.querySelectorAll('.bm-timeslot').forEach(s => s.classList.remove('selected'));
           el.classList.add('selected'); bmState.time = t;
         });
+        grid.appendChild(el);
       }
-      grid.appendChild(el);
     }
     m += 30; if (m >= 60) { m = 0; h++; }
   }
@@ -855,7 +847,7 @@ async function submitBooking() {
     serviceIcon: bmState.service?.icon || '✂️',
     price: bmState.service?.price || 0,
     duration: bmState.service?.duration || 30,
-    date: bmState.date ? bmState.date.toISOString().split('T')[0] : '',
+    date: bmState.date ? localDateStr(bmState.date) : '',
     time: bmState.time,
     employeeId: bmState.employee?.id || null,
     employeeName: bmState.employee?.name || null,
