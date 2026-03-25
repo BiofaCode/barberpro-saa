@@ -1363,18 +1363,28 @@ route('GET', '/api/pro/salon/:salonId/blocks', async (req, res, params) => {
 
 route('POST', '/api/pro/salon/:salonId/blocks', async (req, res, params) => {
     const user = verifySalonAccess(req, params.salonId);
-    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     const body = await parseBody(req);
     if (!body.date || !body.startTime || !body.endTime) return json(res, 400, { success: false, error: 'date, startTime et endTime requis' });
     if (body.startTime >= body.endTime) return json(res, 400, { success: false, error: 'L\'heure de fin doit être après l\'heure de début' });
+
+    // Employees can only block their own schedule (forced to self)
+    let employeeId = body.employeeId || null;
+    let employeeName = body.employeeName || null;
+    if (user.role === 'employee') {
+        const emp = await db.findEmployeeById(user.employeeId);
+        employeeId = user.employeeId;
+        employeeName = emp?.name || null;
+    }
+
     const block = await db.createBlock({
         salonId: params.salonId,
         date: body.date,
         startTime: body.startTime,
         endTime: body.endTime,
         reason: body.reason || '',
-        employeeId: body.employeeId || null,
-        employeeName: body.employeeName || null,
+        employeeId,
+        employeeName,
         allDay: body.allDay || false,
     });
     json(res, 201, { success: true, data: block });
@@ -1382,7 +1392,14 @@ route('POST', '/api/pro/salon/:salonId/blocks', async (req, res, params) => {
 
 route('DELETE', '/api/pro/salon/:salonId/blocks/:blockId', async (req, res, params) => {
     const user = verifySalonAccess(req, params.salonId);
-    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
+    // Employees can only delete their own blocks
+    if (user.role === 'employee') {
+        const [target] = await db.findBlocks({ _id: params.blockId });
+        if (!target || String(target.employeeId) !== String(user.employeeId)) {
+            return json(res, 403, { success: false, error: 'Vous ne pouvez supprimer que vos propres bloquages' });
+        }
+    }
     await db.deleteBlock(params.blockId);
     json(res, 200, { success: true });
 });
@@ -2173,7 +2190,8 @@ route('DELETE', '/api/pro/salon/:salonId/webhooks/:webhookId', async (req, res, 
 route('GET', '/api/salon/:slug', async (req, res, params) => {
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon || !salon.active) return json(res, 404, { success: false, error: 'Salon non trouvé' });
-    const employees = await db.findEmployees({ salon: String(salon._id), active: true });
+    const allEmployees = await db.findEmployees({ salon: String(salon._id) });
+    const employees = allEmployees.filter(e => e.active !== false);
     // Fetch approved client reviews (most recent 10)
     const allBookings = await db.findBookings({ salon: salon._id, reviewed: true });
     const approvedReviews = allBookings

@@ -289,6 +289,7 @@ function applySalonBranding(salon) {
 
   updateFooter(salon);
   updateAvailabilityBadge(salon);
+  renderTeamSection(salon);
 }
 
 function toggleServices(extra) {
@@ -447,14 +448,14 @@ let bmState = {};
 let bmSteps = [];
 
 function getEmployees() { return SALON_DATA?.employees || []; }
-function hasMultipleEmployees() { return getEmployees().length > 1; }
+function hasEmployees() { return getEmployees().length >= 1; }
 function localDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function buildSteps() {
   const steps = [];
-  if (hasMultipleEmployees()) steps.push({ id: 'employee', label: 'Pro' });
+  if (hasEmployees()) steps.push({ id: 'employee', label: 'Pro' });
   steps.push({ id: 'service', label: 'Prestation' });
   steps.push({ id: 'datetime', label: 'Date' });
   steps.push({ id: 'info', label: 'Infos' });
@@ -480,7 +481,7 @@ async function openBooking() {
   bmState = { stepIdx: 0, employee: null, service: null, date: null, time: null, month: new Date().getMonth(), year: new Date().getFullYear() };
   bmSteps = buildSteps();
   renderStepsBar();
-  if (hasMultipleEmployees()) populateEmployees();
+  if (hasEmployees()) populateEmployees();
   else populateServices();
 
   // Reset form fields
@@ -788,8 +789,8 @@ async function renderBmTimeSlots() {
     const t = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     const slotMinutes = h * 60 + m;
 
-    // Skip lunch (12:00-13:59) and past slots for today
-    if ((h < 12 || h >= 14) && !(isToday && slotMinutes <= currentMinutes)) {
+    // Skip past slots for today
+    if (!(isToday && slotMinutes <= currentMinutes)) {
       const unavailable = isSlotUnavailable(t, takenSlots, blockedSlots, serviceDuration);
       if (!unavailable) {
         const el = document.createElement('div'); el.classList.add('bm-timeslot'); el.textContent = t;
