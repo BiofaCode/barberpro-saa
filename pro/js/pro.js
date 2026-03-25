@@ -959,9 +959,15 @@ function renderCalendarWeek(bookings) {
         const slots = weekDays.map(d => {
             const iso = _isoDate(d);
             const slotBkgs = bookings.filter(b => b.date === iso && b.time && parseInt(b.time) === h);
-            const slotBlocks = _allBlocks.filter(bl => bl.date === iso && bl.startTime && parseInt(bl.startTime) === h);
-            return `<div class="cal-slot${iso === todayISO ? ' cal-today-col' : ''}" onclick="showAddBookingOnDate('${iso}','${hStr}:00')">
-                ${slotBlocks.map(bl => `<div class="cal-booking" style="background:rgba(239,68,68,0.15);border-left:3px solid #ef4444;color:#ef4444;font-size:.72rem" onclick="event.stopPropagation()"><div class="cal-booking-name">🚫 ${bl.reason || 'Bloqué'}</div><div class="cal-booking-svc">${bl.startTime}–${bl.endTime}${bl.employeeName ? ' · '+bl.employeeName : ''}</div></div>`).join('')}
+            // Block starting at this hour → show card
+            const startBlocks = _allBlocks.filter(bl => bl.date === iso && bl.startTime && parseInt(bl.startTime) === h);
+            // Block covering this hour (not start) → red background only
+            const coverBlocks = _allBlocks.filter(bl => bl.date === iso && bl.startTime && parseInt(bl.startTime) < h && parseInt(bl.endTime) > h);
+            const isCovered = coverBlocks.length > 0;
+            const bgStyle = isCovered ? 'background:rgba(239,68,68,0.12);' : '';
+            const blockCards = startBlocks.map(bl => `<div class="cal-booking" style="background:rgba(239,68,68,0.22);border-left:3px solid #ef4444;color:#ef4444;font-size:.72rem" onclick="event.stopPropagation()"><div class="cal-booking-name">🚫 ${bl.reason || 'Bloqué'}</div><div class="cal-booking-svc">${bl.startTime}–${bl.endTime}${bl.employeeName ? ' · '+bl.employeeName : ''}</div></div>`).join('');
+            return `<div class="cal-slot${iso === todayISO ? ' cal-today-col' : ''}" onclick="showAddBookingOnDate('${iso}','${hStr}:00')" style="${bgStyle}">
+                ${blockCards}
                 ${slotBkgs.map(b => `<div class="cal-booking cal-booking-${b.status||'confirmed'}" onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})"><div class="cal-booking-name">${b.clientName}</div><div class="cal-booking-svc">${b.serviceName||''}</div></div>`).join('')}
             </div>`;
         }).join('');
@@ -1125,13 +1131,15 @@ function renderCalendarDay(bookings) {
     const slots = hours.map(h => {
         const hStr = String(h).padStart(2, '0');
         const slotBkgs = dayBookings.filter(b => b.time && parseInt(b.time) === h);
-        const slotBlocks = dayBlocks.filter(bl => bl.startTime && parseInt(bl.startTime) === h);
+        const startBlocks = dayBlocks.filter(bl => bl.startTime && parseInt(bl.startTime) === h);
+        const coverBlocks = dayBlocks.filter(bl => bl.startTime && parseInt(bl.startTime) < h && parseInt(bl.endTime) > h);
+        const isCovered = coverBlocks.length > 0;
         return `
-            <div style="display:flex;gap:0;border-top:1px solid var(--border)">
-                <div style="width:44px;flex-shrink:0;padding:10px 6px 10px 0;text-align:right;color:var(--text-muted);font-size:.7rem;padding-top:12px">${hStr}h</div>
+            <div style="display:flex;gap:0;border-top:1px solid var(--border);${isCovered ? 'background:rgba(239,68,68,0.08)' : ''}">
+                <div style="width:44px;flex-shrink:0;padding:10px 6px 10px 0;text-align:right;color:${isCovered ? '#ef4444' : 'var(--text-muted)'};font-size:.7rem;padding-top:12px">${hStr}h</div>
                 <div style="flex:1;padding:4px 0 4px 8px;min-height:48px;cursor:pointer" onclick="showAddBookingOnDate('${dayISO}','${hStr}:00')">
-                    ${slotBlocks.map(bl => `
-                        <div class="cal-booking" style="background:rgba(239,68,68,0.15);border-left:3px solid #ef4444;color:#ef4444;font-size:.72rem;margin-bottom:4px"
+                    ${startBlocks.map(bl => `
+                        <div class="cal-booking" style="background:rgba(239,68,68,0.22);border-left:3px solid #ef4444;color:#ef4444;font-size:.75rem;margin-bottom:4px"
                              onclick="event.stopPropagation()">
                             <div class="cal-booking-name">🚫 ${bl.reason || 'Bloqué'} · ${bl.startTime}–${bl.endTime}</div>
                             <div class="cal-booking-svc">${bl.employeeName || 'Tout le salon'}</div>
