@@ -605,7 +605,47 @@ async function sendAdminNewSubscriptionEmail(adminEmail, { salonName, ownerEmail
   }
 }
 
-module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail };
+// Notify the assigned employee when a booking is created
+async function sendEmployeeBookingNotification(booking, salon, employeeEmail) {
+  if (!employeeEmail || !employeeEmail.includes('@')) return;
+  const fromName = process.env.SMTP_FROM_NAME || salon.name || 'SalonPro';
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const primaryColor = salon.branding?.primaryColor || '#6366F1';
+  const salonName = salon.name || 'SalonPro';
+  try {
+    await resend.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: [employeeEmail],
+      subject: `📅 Nouveau RDV — ${booking.clientName} · ${booking.serviceName} le ${formatDateFR(booking.date)} à ${booking.time}`,
+      html: `<!DOCTYPE html><html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+  <div style="max-width:520px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+    <div style="background:${primaryColor};padding:28px;text-align:center">
+      <div style="font-size:40px;margin-bottom:6px">📅</div>
+      <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700">Nouveau rendez-vous</h1>
+      <p style="color:rgba(255,255,255,.85);margin:6px 0 0;font-size:.9rem">${salonName}</p>
+    </div>
+    <div style="padding:28px">
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem">
+        <tr><td style="padding:8px 0;color:#6b7280;width:110px">Client</td><td style="padding:8px 0;font-weight:600">${booking.clientName}</td></tr>
+        <tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Prestation</td><td style="padding:8px 0;font-weight:600">${booking.serviceName || '—'}</td></tr>
+        <tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Date</td><td style="padding:8px 0;font-weight:600">${formatDateFR(booking.date)} à ${booking.time}</td></tr>
+        ${booking.duration ? `<tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Durée</td><td style="padding:8px 0">${booking.duration} min</td></tr>` : ''}
+        ${booking.clientPhone ? `<tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Téléphone</td><td style="padding:8px 0">${booking.clientPhone}</td></tr>` : ''}
+        ${booking.notes ? `<tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Notes</td><td style="padding:8px 0">${booking.notes}</td></tr>` : ''}
+      </table>
+      <p style="margin:20px 0 0;text-align:center"><a href="${process.env.BASE_URL || ''}/pro" style="background:${primaryColor};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:.9rem">Voir dans le panel</a></p>
+    </div>
+  </div>
+</body></html>`,
+    });
+    console.log(`  📧 Notification employé envoyée à ${employeeEmail}`);
+  } catch (e) {
+    console.error('Employee booking notification error:', e.message);
+  }
+}
+
+module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification };
 
 // ---- Review request email (sent ~2h after appointment) ----
 async function sendReviewRequestEmail(booking, salon, reviewUrl) {

@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
 const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
@@ -1340,6 +1340,13 @@ route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
     const cancelUrl = booking.cancelToken ? `${baseUrl}/cancel/${booking.cancelToken}` : null;
     const receiptUrl = booking.cancelToken ? `${baseUrl}/receipt/${booking._id}?token=${booking.cancelToken}` : null;
     if (salon && booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrl, receiptUrl);
+    if (salon && booking.employeeId) {
+        // Notify the assigned employee by email (non-blocking)
+        (async () => {
+            const emp = await db.findEmployeeById(booking.employeeId) || await db.findOwnerById(booking.employeeId);
+            if (emp?.email) sendEmployeeBookingNotification(booking, salon, emp.email);
+        })();
+    }
     if (salon && salon.smsSettings?.clientConfirmation !== false && booking.clientPhone && (salon.smsCredits || 0) > 0) {
         sendSMSConfirmation(booking, salon).then(result => {
             if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
@@ -2242,12 +2249,12 @@ route('GET', '/api/salon/:slug/available-slots', async (req, res, params) => {
 
     const bookings = await db.findBookings({ salon: salon._id, date, status: { $in: ['confirmed', 'pending'] } });
     const taken = bookings
-        .filter(b => !employeeId || !b.employeeId || String(b.employeeId) === employeeId)
+        .filter(b => !b.employeeId || (employeeId && String(b.employeeId) === employeeId))
         .map(b => ({ start: b.time, duration: b.duration || 30 }));
 
     const blocks = await db.findBlocks({ salonId: salon._id, date });
     const blocked = blocks
-        .filter(bl => !employeeId || !bl.employeeId || String(bl.employeeId) === employeeId)
+        .filter(bl => !bl.employeeId || (employeeId && String(bl.employeeId) === employeeId))
         .map(bl => ({ start: bl.startTime, duration: timeToMinutes(bl.endTime) - timeToMinutes(bl.startTime), reason: bl.reason || null }));
 
     json(res, 200, { success: true, data: { takenSlots: taken, blockedSlots: blocked } });
@@ -2295,6 +2302,14 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     const cancelUrlBook = booking.cancelToken ? `${baseUrlBook}/cancel/${booking.cancelToken}` : null;
     const receiptUrlBook = booking.cancelToken ? `${baseUrlBook}/receipt/${booking._id}?token=${booking.cancelToken}` : null;
     if (booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrlBook, receiptUrlBook);
+
+    // Notify assigned employee by email (non-blocking)
+    if (booking.employeeId) {
+        (async () => {
+            const emp = await db.findEmployeeById(booking.employeeId) || await db.findOwnerById(booking.employeeId);
+            if (emp?.email) sendEmployeeBookingNotification(booking, salon, emp.email);
+        })();
+    }
 
     // Push notification to owner
     sendPushToSalon(salon._id, {
