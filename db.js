@@ -220,6 +220,9 @@ const db = {
     async findEmployeeByEmail(email) {
         return await getDB().collection('employees').findOne({ email: email.toLowerCase() });
     },
+    async findEmployeeById(id) {
+        return await getDB().collection('employees').findOne({ _id: id });
+    },
     async createEmployee(data) {
         let pwd = null;
         if (data.password) {
