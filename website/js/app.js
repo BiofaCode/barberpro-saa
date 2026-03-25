@@ -531,7 +531,14 @@ function selectEmployee(id, name, el) {
 
 function populateServices() {
   const grid = document.getElementById('bmServiceGrid');
-  const services = SALON_DATA?.services || [];
+  let services = SALON_DATA?.services || [];
+  // If an employee is selected, only show services assigned to them (or to everyone = no assignment)
+  if (bmState.employee?.id) {
+    services = services.filter(s =>
+      !s.assignedEmployees || s.assignedEmployees.length === 0 ||
+      s.assignedEmployees.includes(bmState.employee.id)
+    );
+  }
   if (services.length === 0) {
     grid.innerHTML = '<p style="text-align:center;color:var(--color-text-secondary,#888);padding:1.5rem 0">Aucune prestation disponible pour le moment.</p>';
     return;
