@@ -669,9 +669,10 @@ function populateEmployeeFilter(bookings) {
     const sel = document.getElementById('bookingEmployee');
     if (!sel) return;
     const names = [...new Set(bookings.map(b => b.employeeName).filter(Boolean))].sort();
-    // Keep current value
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">Tous</option>' + names.map(n => `<option value="${n}" ${n === cur ? 'selected' : ''}>${n}</option>`).join('');
+    // Keep current value; on first load for employees, default to their own name
+    const isFirstLoad = sel.value === '' && sel.options.length <= 1;
+    const defaultVal = (isFirstLoad && currentUser?.role === 'employee') ? (currentUser.name || '') : sel.value;
+    sel.innerHTML = '<option value="">Tous</option>' + names.map(n => `<option value="${n}" ${n === defaultVal ? 'selected' : ''}>${n}</option>`).join('');
 }
 
 // ---- Blocks (indisponibilités) ----
@@ -939,13 +940,15 @@ function renderCalendarWeek(bookings) {
     const hours = Array.from({length: 13}, (_, i) => i + 8);
 
     const navRow = `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="navWeek(-1)">← Précédente</button>
-            <span style="font-weight:600;font-size:.88rem">${_fmtDay(weekDays[0])} — ${_fmtDay(weekDays[6])}</span>
-            <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
                 ${_subViewBar()}
-                <button class="btn btn-ghost btn-sm" onclick="navWeek(0)">Aujourd'hui</button>
-                <button class="btn btn-ghost btn-sm" onclick="navWeek(1)">Suivante →</button>
+                <button class="btn btn-ghost btn-sm" onclick="navWeek(0)" style="font-size:.78rem">Aujourd'hui</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center">
+                <button class="btn btn-ghost btn-sm" onclick="navWeek(-1)" style="justify-self:start">‹ Préc.</button>
+                <span style="font-weight:600;font-size:.88rem;text-align:center;padding:0 8px">${_fmtDay(weekDays[0])} — ${_fmtDay(weekDays[6])}</span>
+                <button class="btn btn-ghost btn-sm" onclick="navWeek(1)" style="justify-self:end">Suiv. ›</button>
             </div>
         </div>`;
 
@@ -1054,15 +1057,17 @@ function renderCalendarMonth(bookings) {
     }
 
     container.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="navMonth(-1)">← Précédent</button>
-            <div style="display:flex;align-items:center;gap:10px">
-                <span style="font-weight:700;font-size:.95rem">${title}</span>
+        <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+                ${_subViewBar()}
                 <button class="btn btn-ghost btn-sm" onclick="navMonth(0)" style="font-size:.78rem">Aujourd'hui</button>
             </div>
-            <div style="display:flex;align-items:center;gap:8px">
-                ${_subViewBar()}
-                <button class="btn btn-ghost btn-sm" onclick="navMonth(1)">Suivant →</button>
+            <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center">
+                <button class="btn btn-ghost btn-sm" onclick="navMonth(-1)" style="justify-self:start">‹ Préc.</button>
+                <span style="font-weight:700;font-size:.95rem;text-align:center;padding:0 8px">${title}</span>
+                <div style="display:flex;align-items:center;gap:8px;justify-self:end">
+                <button class="btn btn-ghost btn-sm" onclick="navMonth(1)">Suiv. ›</button>
+                </div>
             </div>
         </div>
         <div style="overflow-x:auto">
@@ -1143,15 +1148,15 @@ function renderCalendarDay(bookings) {
     }).join('');
 
     container.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 12px;flex-wrap:wrap;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="navDay(-1)" style="font-size:1.2rem;padding:6px 12px">‹</button>
-            <div style="text-align:center">
-                <div style="font-weight:700;font-size:1rem${dayISO === todayISO ? ';color:var(--primary)' : ''}">${dayLabel}</div>
-                ${dayISO !== todayISO ? `<button class="btn btn-ghost btn-sm" style="font-size:.75rem;margin-top:4px;padding:2px 10px" onclick="navDay(0)">Aujourd'hui</button>` : ''}
-            </div>
-            <div style="display:flex;align-items:center;gap:6px">
+        <div style="margin-bottom:12px;padding-top:4px">
+            <div style="display:flex;justify-content:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
                 ${_subViewBar()}
-                <button class="btn btn-ghost btn-sm" onclick="navDay(1)" style="font-size:1.2rem;padding:6px 12px">›</button>
+                ${dayISO !== todayISO ? `<button class="btn btn-ghost btn-sm" style="font-size:.78rem" onclick="navDay(0)">Aujourd'hui</button>` : ''}
+            </div>
+            <div style="display:grid;grid-template-columns:44px 1fr 44px;align-items:center">
+                <button class="btn btn-ghost btn-sm" onclick="navDay(-1)" style="font-size:1.3rem;padding:4px 0;justify-self:start">‹</button>
+                <div style="text-align:center;font-weight:700;font-size:.95rem${dayISO === todayISO ? ';color:var(--primary)' : ''}">${dayLabel}</div>
+                <button class="btn btn-ghost btn-sm" onclick="navDay(1)" style="font-size:1.3rem;padding:4px 0;justify-self:end">›</button>
             </div>
         </div>
         <div style="background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--border)">
