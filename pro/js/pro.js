@@ -959,7 +959,7 @@ function renderCalendarWeek(bookings) {
         const slots = weekDays.map(d => {
             const iso = _isoDate(d);
             const slotBkgs = bookings.filter(b => b.date === iso && b.time && parseInt(b.time) === h);
-            const slotBlocks = _allBlocks.filter(bl => bl.date === iso && bl.startTime && parseInt(bl.startTime) <= h && parseInt(bl.endTime) > h);
+            const slotBlocks = _allBlocks.filter(bl => bl.date === iso && bl.startTime && parseInt(bl.startTime) === h);
             return `<div class="cal-slot${iso === todayISO ? ' cal-today-col' : ''}" onclick="showAddBookingOnDate('${iso}','${hStr}:00')">
                 ${slotBlocks.map(bl => `<div class="cal-booking" style="background:rgba(239,68,68,0.15);border-left:3px solid #ef4444;color:#ef4444;font-size:.72rem" onclick="event.stopPropagation()"><div class="cal-booking-name">🚫 ${bl.reason || 'Bloqué'}</div><div class="cal-booking-svc">${bl.startTime}–${bl.endTime}${bl.employeeName ? ' · '+bl.employeeName : ''}</div></div>`).join('')}
                 ${slotBkgs.map(b => `<div class="cal-booking cal-booking-${b.status||'confirmed'}" onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})"><div class="cal-booking-name">${b.clientName}</div><div class="cal-booking-svc">${b.serviceName||''}</div></div>`).join('')}
@@ -1125,7 +1125,7 @@ function renderCalendarDay(bookings) {
     const slots = hours.map(h => {
         const hStr = String(h).padStart(2, '0');
         const slotBkgs = dayBookings.filter(b => b.time && parseInt(b.time) === h);
-        const slotBlocks = dayBlocks.filter(bl => bl.startTime && parseInt(bl.startTime) <= h && parseInt(bl.endTime) > h);
+        const slotBlocks = dayBlocks.filter(bl => bl.startTime && parseInt(bl.startTime) === h);
         return `
             <div style="display:flex;gap:0;border-top:1px solid var(--border)">
                 <div style="width:44px;flex-shrink:0;padding:10px 6px 10px 0;text-align:right;color:var(--text-muted);font-size:.7rem;padding-top:12px">${hStr}h</div>
@@ -1365,12 +1365,15 @@ async function showAddBooking() {
         employees = (await empRes.json()).data || [];
     } catch (e) { }
 
-    const svcOptions = services.map(s => `<option value="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">${s.icon} ${s.name} — ${s.price} CHF (${s.duration}min)</option>`).join('');
-
     const isEmp = currentUser?.role === 'employee';
+    // Employees only see services assigned to them (or with no assignment = available to all)
+    const visibleServices = isEmp
+        ? services.filter(s => !s.assignedEmployees || s.assignedEmployees.length === 0 || s.assignedEmployees.includes(currentUser.id))
+        : services;
+    const svcOptions = visibleServices.map(s => `<option value="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">${s.icon} ${s.name} — ${s.price} CHF (${s.duration}min)</option>`).join('');
 
     window._mbEmployees = employees;
-    window._mbServices = services;
+    window._mbServices = visibleServices;
     window.renderEmpOptions = (serviceName) => {
         if (isEmp) {
             // Employee always books for themselves
