@@ -599,7 +599,7 @@ async function loadBookings(_retry = 0) {
         const data = await res.json();
         _allBookings = data.data || [];
         populateEmployeeFilter(_allBookings);
-        renderBookingsList(_allBookings);
+        applyBookingFilters();
         renderAdvancedStats(_allBookings);
         loadBlocks();
     } catch (e) {
@@ -927,10 +927,13 @@ function renderCalendarWeek(bookings) {
 
     const gridRows = hours.map(h => {
         const timeLbl = `<div class="cal-time-cell">${h}h</div>`;
+        const hStr = String(h).padStart(2,'0');
         const slots = weekDays.map(d => {
             const iso = _isoDate(d);
             const slotBkgs = bookings.filter(b => b.date === iso && b.time && parseInt(b.time) === h);
-            return `<div class="cal-slot${iso === todayISO ? ' cal-today-col' : ''}" onclick="showAddBookingOnDate('${iso}','${String(h).padStart(2,'0')}:00')">
+            const slotBlocks = _allBlocks.filter(bl => bl.date === iso && bl.startTime && parseInt(bl.startTime) <= h && parseInt(bl.endTime) > h);
+            return `<div class="cal-slot${iso === todayISO ? ' cal-today-col' : ''}" onclick="showAddBookingOnDate('${iso}','${hStr}:00')">
+                ${slotBlocks.map(bl => `<div class="cal-booking" style="background:rgba(239,68,68,0.15);border-left:3px solid #ef4444;color:#ef4444;font-size:.72rem" onclick="event.stopPropagation()"><div class="cal-booking-name">🚫 ${bl.reason || 'Bloqué'}</div><div class="cal-booking-svc">${bl.startTime}–${bl.endTime}${bl.employeeName ? ' · '+bl.employeeName : ''}</div></div>`).join('')}
                 ${slotBkgs.map(b => `<div class="cal-booking cal-booking-${b.status||'confirmed'}" onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})"><div class="cal-booking-name">${b.clientName}</div><div class="cal-booking-svc">${b.serviceName||''}</div></div>`).join('')}
             </div>`;
         }).join('');
@@ -1088,13 +1091,22 @@ function renderCalendarDay(bookings) {
     const d = _calendarDate;
     const dayLabel = `${DAY_NAMES_FULL[d.getDay()]} ${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
 
+    const dayBlocks = _allBlocks.filter(bl => bl.date === dayISO);
     const slots = hours.map(h => {
         const hStr = String(h).padStart(2, '0');
         const slotBkgs = dayBookings.filter(b => b.time && parseInt(b.time) === h);
+        const slotBlocks = dayBlocks.filter(bl => bl.startTime && parseInt(bl.startTime) <= h && parseInt(bl.endTime) > h);
         return `
             <div style="display:flex;gap:0;border-top:1px solid var(--border)">
                 <div style="width:44px;flex-shrink:0;padding:10px 6px 10px 0;text-align:right;color:var(--text-muted);font-size:.7rem;padding-top:12px">${hStr}h</div>
                 <div style="flex:1;padding:4px 0 4px 8px;min-height:48px;cursor:pointer" onclick="showAddBookingOnDate('${dayISO}','${hStr}:00')">
+                    ${slotBlocks.map(bl => `
+                        <div class="cal-booking" style="background:rgba(239,68,68,0.15);border-left:3px solid #ef4444;color:#ef4444;font-size:.72rem;margin-bottom:4px"
+                             onclick="event.stopPropagation()">
+                            <div class="cal-booking-name">🚫 ${bl.reason || 'Bloqué'} · ${bl.startTime}–${bl.endTime}</div>
+                            <div class="cal-booking-svc">${bl.employeeName || 'Tout le salon'}</div>
+                        </div>
+                    `).join('')}
                     ${slotBkgs.map(b => `
                         <div class="cal-booking cal-booking-${b.status||'confirmed'}" style="margin-bottom:4px"
                              onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})">
