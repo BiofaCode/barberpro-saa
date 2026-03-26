@@ -678,6 +678,46 @@ function populateEmployeeFilter(bookings) {
 // ---- Blocks (indisponibilités) ----
 let _allBlocks = [];
 
+// Returns blocks visible for current user/filter context (used in calendar rendering)
+function _calBlocks() {
+    const isEmp = currentUser?.role === 'employee';
+    const empFilterName = document.getElementById('bookingEmployee')?.value || '';
+    return _allBlocks.filter(bl => {
+        if (!bl.employeeId) return true; // whole-salon block always visible
+        if (isEmp) return String(bl.employeeId) === String(currentUser.id);
+        if (empFilterName) return bl.employeeName === empFilterName;
+        return true;
+    });
+}
+
+// Show a block detail modal (allows delete)
+function showBlockDetail(bl) {
+    const isEmp = currentUser?.role === 'employee';
+    const canDelete = !isEmp || String(bl.employeeId) === String(currentUser?.id);
+    document.getElementById('modalTitle').textContent = '🚫 Créneau bloqué';
+    document.getElementById('modalBody').innerHTML = `
+        <div style="display:grid;gap:8px;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--text-muted)">Date</span><strong>${bl.date}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--text-muted)">Horaire</span><strong>${bl.startTime} – ${bl.endTime}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span style="color:var(--text-muted)">Employé</span><strong>${bl.employeeName || 'Tout le salon'}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0">
+                <span style="color:var(--text-muted)">Motif</span><strong>${bl.reason || '—'}</strong>
+            </div>
+        </div>
+    `;
+    document.getElementById('modalFooter').innerHTML = `
+        <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
+        ${canDelete ? `<button class="btn btn-danger" onclick="deleteBlock('${bl._id}');closeModal()">🗑 Supprimer</button>` : ''}
+    `;
+    document.getElementById('modal').classList.add('active');
+}
+
 async function loadBlocks() {
     try {
         const today = new Date().toISOString().split('T')[0];
@@ -959,13 +999,14 @@ function renderCalendarWeek(bookings) {
         const slots = weekDays.map(d => {
             const iso = _isoDate(d);
             const slotBkgs = bookings.filter(b => b.date === iso && b.time && parseInt(b.time) === h);
+            const visBlocks = _calBlocks();
             // Block starting at this hour → show card
-            const startBlocks = _allBlocks.filter(bl => bl.date === iso && bl.startTime && parseInt(bl.startTime) === h);
+            const startBlocks = visBlocks.filter(bl => bl.date === iso && bl.startTime && parseInt(bl.startTime) === h);
             // Block covering this hour (not start) → red background only
-            const coverBlocks = _allBlocks.filter(bl => bl.date === iso && bl.startTime && parseInt(bl.startTime) < h && parseInt(bl.endTime) > h);
+            const coverBlocks = visBlocks.filter(bl => bl.date === iso && bl.startTime && parseInt(bl.startTime) < h && parseInt(bl.endTime) > h);
             const isCovered = coverBlocks.length > 0;
             const bgStyle = isCovered ? 'background:rgba(239,68,68,0.12);' : '';
-            const blockCards = startBlocks.map(bl => `<div class="cal-booking" style="background:rgba(239,68,68,0.22);border-left:3px solid #ef4444;color:#ef4444;font-size:.72rem" onclick="event.stopPropagation()"><div class="cal-booking-name">🚫 ${bl.reason || 'Bloqué'}</div><div class="cal-booking-svc">${bl.startTime}–${bl.endTime}${bl.employeeName ? ' · '+bl.employeeName : ''}</div></div>`).join('');
+            const blockCards = startBlocks.map(bl => `<div class="cal-booking" style="background:rgba(239,68,68,0.22);border-left:3px solid #ef4444;color:#ef4444;font-size:.72rem;cursor:pointer" onclick="event.stopPropagation();showBlockDetail(${JSON.stringify(bl).replace(/"/g,'&quot;')})"><div class="cal-booking-name">🚫 ${bl.reason || 'Bloqué'}</div><div class="cal-booking-svc">${bl.startTime}–${bl.endTime}${bl.employeeName ? ' · '+bl.employeeName : ''}</div></div>`).join('');
             return `<div class="cal-slot${iso === todayISO ? ' cal-today-col' : ''}" onclick="showAddBookingOnDate('${iso}','${hStr}:00')" style="${bgStyle}">
                 ${blockCards}
                 ${slotBkgs.map(b => `<div class="cal-booking cal-booking-${b.status||'confirmed'}" onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})"><div class="cal-booking-name">${b.clientName}</div><div class="cal-booking-svc">${b.serviceName||''}</div></div>`).join('')}
@@ -1127,7 +1168,7 @@ function renderCalendarDay(bookings) {
     const d = _calendarDate;
     const dayLabel = `${DAY_NAMES_FULL[d.getDay()]} ${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
 
-    const dayBlocks = _allBlocks.filter(bl => bl.date === dayISO);
+    const dayBlocks = _calBlocks().filter(bl => bl.date === dayISO);
     const slots = hours.map(h => {
         const hStr = String(h).padStart(2, '0');
         const slotBkgs = dayBookings.filter(b => b.time && parseInt(b.time) === h);
@@ -1139,8 +1180,8 @@ function renderCalendarDay(bookings) {
                 <div style="width:44px;flex-shrink:0;padding:10px 6px 10px 0;text-align:right;color:${isCovered ? '#ef4444' : 'var(--text-muted)'};font-size:.7rem;padding-top:12px">${hStr}h</div>
                 <div style="flex:1;padding:4px 0 4px 8px;min-height:48px;cursor:pointer" onclick="showAddBookingOnDate('${dayISO}','${hStr}:00')">
                     ${startBlocks.map(bl => `
-                        <div class="cal-booking" style="background:rgba(239,68,68,0.22);border-left:3px solid #ef4444;color:#ef4444;font-size:.75rem;margin-bottom:4px"
-                             onclick="event.stopPropagation()">
+                        <div class="cal-booking" style="background:rgba(239,68,68,0.22);border-left:3px solid #ef4444;color:#ef4444;font-size:.75rem;margin-bottom:4px;cursor:pointer"
+                             onclick="event.stopPropagation();showBlockDetail(${JSON.stringify(bl).replace(/"/g,'&quot;')})">
                             <div class="cal-booking-name">🚫 ${bl.reason || 'Bloqué'} · ${bl.startTime}–${bl.endTime}</div>
                             <div class="cal-booking-svc">${bl.employeeName || 'Tout le salon'}</div>
                         </div>
