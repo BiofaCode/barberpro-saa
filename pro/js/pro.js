@@ -471,6 +471,7 @@ async function loadDashboard(_retry = 0) {
         }
         const earningsDisplay = monthlyEarnings !== null ? `${monthlyEarnings} CHF` : '— CHF';
 
+        const bookingPageUrl = `${location.origin}/s/${currentSalon?.slug || ''}`;
         document.getElementById('dashStats').innerHTML = subBanner + `
             <div class="stat-card gold">
                 <div class="stat-icon">📅</div>
@@ -496,6 +497,16 @@ async function loadDashboard(_retry = 0) {
                 <div class="stat-icon">🗓️</div>
                 <div class="stat-value">${earningsDisplay}</div>
                 <div class="stat-label">Revenus du mois (est.)</div>
+            </div>
+            <div style="grid-column:1/-1;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                <div>
+                    <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:3px">🔗 Lien de réservation</div>
+                    <div style="font-size:.85rem;color:var(--text-color);word-break:break-all">${bookingPageUrl}</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-shrink:0">
+                    <button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText('${bookingPageUrl}').then(()=>showToast('Lien copié ✅'))">📋 Copier</button>
+                    <a href="${bookingPageUrl}" target="_blank" class="btn btn-ghost btn-sm" style="text-decoration:none">🌐 Voir</a>
+                </div>
             </div>
         `;
 
@@ -618,7 +629,11 @@ async function loadBookings(_retry = 0) {
 function renderBookingsList(bookings) {
     const container = document.getElementById('bookingsList');
     if (bookings.length === 0) {
-        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-text">Aucun rendez-vous correspondant</div></div>';
+        const isFirstTime = _allBookings.length === 0;
+        const bookingUrl = `${location.origin}/s/${currentSalon?.slug || ''}`;
+        container.innerHTML = isFirstTime
+            ? `<div class="empty-state"><div class="empty-state-icon">🚀</div><div class="empty-state-text">Pas encore de rendez-vous<br><span style="font-size:.8rem;color:var(--text-muted);display:block;margin-top:4px">Partagez votre lien pour recevoir vos premiers RDVs</span><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px"><button class="btn btn-primary btn-sm" onclick="navigator.clipboard.writeText('${bookingUrl}').then(()=>showToast('Lien copié ✅'))">🔗 Copier le lien</button><button class="btn btn-ghost btn-sm" onclick="showAddBooking()">+ RDV manuel</button></div></div></div>`
+            : '<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-text">Aucun rendez-vous correspondant</div></div>';
         return;
     }
     container.innerHTML = '<div class="data-grid">' + bookings.map(b => `
@@ -713,7 +728,7 @@ function showBlockDetail(bl) {
     `;
     document.getElementById('modalFooter').innerHTML = `
         <button class="btn btn-ghost" onclick="closeModal()">Fermer</button>
-        ${canDelete ? `<button class="btn btn-danger" onclick="deleteBlock('${bl._id}');closeModal()">🗑 Supprimer</button>` : ''}
+        ${canDelete ? `<button class="btn btn-danger" onclick="deleteBlock('${bl._id}',true);closeModal()">🗑 Supprimer</button>` : ''}
     `;
     document.getElementById('modal').classList.add('active');
 }
@@ -843,7 +858,8 @@ async function submitBlock() {
     } catch (e) { errEl.style.display = 'block'; errEl.textContent = 'Erreur de connexion'; }
 }
 
-async function deleteBlock(blockId) {
+async function deleteBlock(blockId, skipConfirm = false) {
+    if (!skipConfirm && !confirm('Supprimer ce créneau bloqué ?')) return;
     try {
         await apiFetch(`${API}/api/pro/salon/${salonId}/blocks/${blockId}`, { method: 'DELETE' });
         loadBlocks();
@@ -1213,7 +1229,7 @@ function renderCalendarDay(bookings) {
             ${dayBookings.length === 0 && slots.replace(/<[^>]+>/g,'').trim() === '' ? '' : ''}
             ${slots}
         </div>
-        ${dayBookings.length === 0 ? `<div class="empty-state" style="margin-top:16px"><div class="empty-state-icon">😴</div><div class="empty-state-text">Aucun RDV ce jour<br><button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="showAddBookingOnDate('${dayISO}','10:00')">+ Ajouter</button></div></div>` : ''}
+        ${dayBookings.length === 0 ? `<div class="empty-state" style="margin-top:16px"><div class="empty-state-icon">😴</div><div class="empty-state-text">Aucun RDV ce jour<br><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px"><button class="btn btn-primary btn-sm" onclick="showAddBookingOnDate('${dayISO}','10:00')">+ Ajouter un RDV</button><button class="btn btn-ghost btn-sm" onclick="navigator.clipboard.writeText(location.origin+'/s/'+(currentSalon?.slug||'')).then(()=>showToast('Lien copié ✅'))">🔗 Partager le lien</button></div></div></div>` : ''}
     `;
 }
 

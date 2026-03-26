@@ -901,6 +901,7 @@ function showBookingSuccess() {
 
   const successView = document.getElementById('bmSuccessView');
   successView.style.display = 'flex';
+  const clientEmail = document.getElementById('bmEmail')?.value || '';
   successView.innerHTML = `
     <div style="text-align:center;padding:2rem 1rem">
       <div style="font-size:4rem;margin-bottom:1rem;animation:fadeInUp 0.5s ease-out">✅</div>
@@ -908,8 +909,10 @@ function showBookingSuccess() {
       <p style="color:var(--color-text-secondary);margin-bottom:0.5rem;font-size:0.9rem">
         ${bmState.service?.name || 'Prestation'} — ${bmState.date ? bmState.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''} à ${bmState.time || ''}
       </p>
-      ${bmState.employee ? `<p style="color:var(--color-text-muted);font-size:0.85rem;margin-bottom:1.5rem">avec ${bmState.employee.name}</p>` : '<div style="margin-bottom:1.5rem"></div>'}
-      <p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:2rem">Vous recevrez une confirmation par email avec tous les détails.</p>
+      ${bmState.employee ? `<p style="color:var(--color-text-muted);font-size:0.85rem;margin-bottom:1rem">avec ${bmState.employee.name}</p>` : '<div style="margin-bottom:0.5rem"></div>'}
+      ${clientEmail ? `<div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:12px 16px;margin-bottom:1.5rem;font-size:0.83rem;color:var(--color-text-secondary)">
+        📧 Un email de confirmation a été envoyé à<br><strong style="color:var(--color-text)">${clientEmail}</strong>
+      </div>` : `<p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:2rem">Vous recevrez une confirmation par email avec tous les détails.</p>`}
       <button class="btn btn-primary" onclick="closeBooking()" style="margin:0 auto">Parfait, merci ! 🎉</button>
     </div>
   `;
