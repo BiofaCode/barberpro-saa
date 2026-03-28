@@ -37,7 +37,10 @@ async function sendSMS(to, body) {
     }
 
     // Clean phone number — ensure international format
-    const phone = to.startsWith('+') ? to : `+${to.replace(/\D/g, '')}`;
+    let phone = to.replace(/\s/g, '');
+    if (phone.startsWith('00')) phone = '+' + phone.slice(2);
+    else if (phone.startsWith('0')) phone = '+41' + phone.slice(1); // Swiss local format
+    else if (!phone.startsWith('+')) phone = '+' + phone.replace(/\D/g, '');
 
     try {
         const msg = await client.messages.create({ from: FROM, to: phone, body });
