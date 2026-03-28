@@ -12,9 +12,10 @@ if (!process.env.MONGODB_URI) {
         console.error('🚨 CRITICAL: MONGODB_URI environment variable is not set! Refusing to start.');
         process.exit(1);
     }
-    console.warn('⚠️  MONGODB_URI not set — using embedded fallback URI (dev/demo only). Set MONGODB_URI in production.');
+    console.warn('⚠️  MONGODB_URI not set — please set MONGODB_URI in your environment variables.');
+    process.exit(1);
 }
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb+srv://info_db_user:mrQ0tFyyilw4hpUu@salonpro.kpketkg.mongodb.net/';
+const MONGO_URI = process.env.MONGODB_URI;
 const DB_NAME = 'salonpro';
 
 let client;

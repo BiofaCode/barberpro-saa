@@ -2425,8 +2425,8 @@ route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
     const email = (body.email || '').trim().toLowerCase();
     if (!email) return json(res, 400, { success: false, error: 'Email requis' });
 
-    // Generate 4 digit code
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    // Generate 6 digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = Date.now() + 10 * 60 * 1000; // 10 minutes valid
     otpStore.set(email, { code, expires });
 
