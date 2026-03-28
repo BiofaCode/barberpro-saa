@@ -1601,6 +1601,74 @@ route('POST', '/api/stripe/portal/session', async (req, res) => {
     }
 });
 
+// ---- Sector templates ----
+const genId = () => require('crypto').randomBytes(12).toString('hex');
+const SECTOR_TEMPLATES = {
+    coiffure: {
+        primaryColor: '#4F46E5', accentColor: '#818CF8',
+        heroSubtitle: 'Coiffure professionnelle sur mesure',
+        services: [
+            { name: 'Coupe homme', icon: '✂️', price: 25, duration: 30 },
+            { name: 'Coupe femme', icon: '💇‍♀️', price: 45, duration: 45 },
+            { name: 'Barbe', icon: '🪒', price: 20, duration: 20 },
+            { name: 'Coloration', icon: '🎨', price: 80, duration: 90 },
+            { name: 'Brushing', icon: '💨', price: 30, duration: 30 },
+        ],
+    },
+    beaute: {
+        primaryColor: '#DB2777', accentColor: '#F472B6',
+        heroSubtitle: 'Prenez soin de vous',
+        services: [
+            { name: 'Soin visage', icon: '✨', price: 65, duration: 60 },
+            { name: 'Gommage corps', icon: '🌸', price: 55, duration: 45 },
+            { name: 'Massage relaxant', icon: '💆‍♀️', price: 70, duration: 60 },
+            { name: 'Maquillage', icon: '💄', price: 50, duration: 45 },
+            { name: 'Épilation sourcils', icon: '👁️', price: 15, duration: 15 },
+        ],
+    },
+    epilation: {
+        primaryColor: '#7C3AED', accentColor: '#A78BFA',
+        heroSubtitle: 'Épilation douce et professionnelle',
+        services: [
+            { name: 'Jambes complètes', icon: '🦵', price: 40, duration: 45 },
+            { name: 'Maillot', icon: '🌿', price: 25, duration: 20 },
+            { name: 'Aisselles', icon: '✨', price: 15, duration: 15 },
+            { name: 'Sourcils', icon: '👁️', price: 12, duration: 15 },
+            { name: 'Lèvre supérieure', icon: '💋', price: 10, duration: 10 },
+        ],
+    },
+    ongles: {
+        primaryColor: '#EA580C', accentColor: '#FB923C',
+        heroSubtitle: 'Manucure et nail art professionnel',
+        services: [
+            { name: 'Manucure classique', icon: '💅', price: 35, duration: 45 },
+            { name: 'Pédicure', icon: '🦶', price: 40, duration: 45 },
+            { name: 'Pose gel', icon: '✨', price: 55, duration: 60 },
+            { name: 'Nail art', icon: '🎨', price: 70, duration: 75 },
+            { name: 'Dépose gel', icon: '🌟', price: 20, duration: 20 },
+        ],
+    },
+    massage: {
+        primaryColor: '#059669', accentColor: '#34D399',
+        heroSubtitle: 'Détente et bien-être au naturel',
+        services: [
+            { name: 'Massage relaxant', icon: '💆', price: 75, duration: 60 },
+            { name: 'Massage sportif', icon: '💪', price: 85, duration: 60 },
+            { name: 'Shiatsu', icon: '☯️', price: 80, duration: 60 },
+            { name: 'Réflexologie', icon: '🦶', price: 65, duration: 45 },
+            { name: 'Hot stones', icon: '🪨', price: 90, duration: 75 },
+        ],
+    },
+    autre: {
+        primaryColor: '#6366F1', accentColor: '#818CF8',
+        heroSubtitle: 'Réservation en ligne simplifiée',
+        services: [
+            { name: 'Consultation', icon: '📋', price: 50, duration: 30 },
+            { name: 'Séance', icon: '⏱️', price: 80, duration: 60 },
+        ],
+    },
+};
+
 // Register + Checkout in one step
 route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
     const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
@@ -1609,7 +1677,7 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
     }
 
     const body = await parseBody(req);
-    const { salonName, ownerName, email, password, phone, plan } = body;
+    const { salonName, ownerName, email, password, phone, plan, sector } = body;
 
     // Validation
     if (!salonName || !ownerName || !email || !password) {
@@ -1631,11 +1699,16 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
     // Generate slug from salon name (clean, with collision detection)
     const slug = await makeUniqueSlug(salonName);
 
+    // Apply sector template
+    const tpl = SECTOR_TEMPLATES[sector] || SECTOR_TEMPLATES.autre;
+    const sectorServices = tpl.services.map(s => ({ _id: genId(), ...s, description: '', active: true }));
+
     try {
         // Create salon
         const salon = await db.createSalon({
             slug,
             name: salonName,
+            sector: sector || 'autre',
             description: '',
             address: '',
             phone: phone || '',
@@ -1643,15 +1716,12 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
             plan: plan || 'pro',
             logo: '',
             branding: {
-                primaryColor: '#6366F1',
-                accentColor: '#818CF8',
+                primaryColor: tpl.primaryColor,
+                accentColor: tpl.accentColor,
                 heroTitle: `Bienvenue chez ${salonName}`,
-                heroSubtitle: 'Excellence, style et précision',
+                heroSubtitle: tpl.heroSubtitle,
             },
-            services: [
-                { _id: require('./db').genId ? require('crypto').randomBytes(12).toString('hex') : Date.now().toString(), name: 'Coupe', icon: '✂️', price: 30, duration: 30, description: 'Coupe classique', active: true },
-                { _id: require('crypto').randomBytes(12).toString('hex'), name: 'Coupe & Brushing', icon: '💇‍♀️', price: 45, duration: 45, description: 'Coupe et brushing', active: true },
-            ],
+            services: sectorServices,
             hours: {
                 lundi: { open: '09:00', close: '19:00' },
                 mardi: { open: '09:00', close: '19:00' },

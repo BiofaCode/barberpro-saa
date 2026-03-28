@@ -779,46 +779,90 @@
   </footer>
 
   <!-- ═══════════════════════════════════════════
-       SIGNUP MODAL (identique, fonctionnel)
+       SIGNUP MODAL — 2 étapes
   ═══════════════════════════════════════════ -->
   <div id="signupModal" class="modal-overlay" style="display:none">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width:520px">
       <button class="modal-close" onclick="closeSignupModal()">✕</button>
-      <div class="modal-head">
-        <div class="modal-logo-wrap"><span class="nav-logo-mark">S</span></div>
-        <h2>Créer votre salon</h2>
-        <p id="modalPlanLabel">Pack Pro — 49 CHF/mois</p>
+
+      <!-- ÉTAPE 1 : Choix du secteur -->
+      <div id="signupStep1">
+        <div class="modal-head">
+          <div class="modal-logo-wrap"><span class="nav-logo-mark">S</span></div>
+          <h2>Votre secteur d'activité</h2>
+          <p style="color:var(--muted);font-weight:400">Votre espace sera configuré en 10 minutes ✨</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="sector-card" onclick="selectSector('coiffure')" data-sector="coiffure">
+            <span class="sector-icon">✂️</span>
+            <span class="sector-label">Coiffure / Barber</span>
+          </div>
+          <div class="sector-card" onclick="selectSector('beaute')" data-sector="beaute">
+            <span class="sector-icon">✨</span>
+            <span class="sector-label">Institut beauté / Spa</span>
+          </div>
+          <div class="sector-card" onclick="selectSector('epilation')" data-sector="epilation">
+            <span class="sector-icon">🌿</span>
+            <span class="sector-label">Épilation</span>
+          </div>
+          <div class="sector-card" onclick="selectSector('ongles')" data-sector="ongles">
+            <span class="sector-icon">💅</span>
+            <span class="sector-label">Ongles / Nail Art</span>
+          </div>
+          <div class="sector-card" onclick="selectSector('massage')" data-sector="massage">
+            <span class="sector-icon">💆</span>
+            <span class="sector-label">Massage / Bien-être</span>
+          </div>
+          <div class="sector-card" onclick="selectSector('autre')" data-sector="autre">
+            <span class="sector-icon">🏪</span>
+            <span class="sector-label">Autre</span>
+          </div>
+        </div>
       </div>
-      <form id="signupForm" onsubmit="event.preventDefault(); submitSignup();">
-        <div class="mform-group">
-          <label>Nom du salon</label>
-          <input type="text" id="signupSalonName" placeholder="ex: Beauty Lounge Lausanne" required>
+
+      <!-- ÉTAPE 2 : Formulaire -->
+      <div id="signupStep2" style="display:none">
+        <div class="modal-head">
+          <div id="signupSectorBadge" style="display:inline-flex;align-items:center;gap:6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);border-radius:20px;padding:5px 14px;font-size:13px;margin-bottom:12px;cursor:pointer" onclick="goBackToSector()">
+            <span id="signupSectorIcon">✂️</span>
+            <span id="signupSectorName">Coiffure</span>
+            <span style="opacity:.5;font-size:11px">· changer</span>
+          </div>
+          <h2 style="margin-bottom:2px">Créer votre espace</h2>
+          <p id="modalPlanLabel" style="color:var(--primary);font-weight:600;font-size:13px">Pack Pro — 49 CHF/mois</p>
         </div>
-        <div class="mform-row">
+        <form id="signupForm" onsubmit="event.preventDefault(); submitSignup();">
           <div class="mform-group">
-            <label>Votre nom</label>
-            <input type="text" id="signupOwnerName" placeholder="Prénom Nom" required>
+            <label>Nom du salon</label>
+            <input type="text" id="signupSalonName" placeholder="ex: Beauty Lounge Lausanne" required>
+          </div>
+          <div class="mform-row">
+            <div class="mform-group">
+              <label>Votre nom</label>
+              <input type="text" id="signupOwnerName" placeholder="Prénom Nom" required>
+            </div>
+            <div class="mform-group">
+              <label>Téléphone</label>
+              <input type="tel" id="signupPhone" placeholder="+41 79 123 45 67">
+            </div>
           </div>
           <div class="mform-group">
-            <label>Téléphone</label>
-            <input type="tel" id="signupPhone" placeholder="+41 79 123 45 67">
+            <label>Email (votre identifiant)</label>
+            <input type="email" id="signupEmail" placeholder="vous@exemple.ch" required>
           </div>
-        </div>
-        <div class="mform-group">
-          <label>Email (votre identifiant)</label>
-          <input type="email" id="signupEmail" placeholder="vous@exemple.ch" required>
-        </div>
-        <div class="mform-group">
-          <label>Mot de passe</label>
-          <input type="password" id="signupPassword" placeholder="Minimum 6 caractères" minlength="6" required>
-        </div>
-        <input type="hidden" id="signupPlan" value="pro">
-        <button type="submit" id="signupSubmitBtn" class="btn btn-primary btn-full btn-lg">
-          Continuer vers le paiement →
-        </button>
-        <p class="modal-note">Essai gratuit 14 jours · Annulation à tout moment · Aucun engagement</p>
-        <div id="signupError" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#ef4444;font-size:13px;"></div>
-      </form>
+          <div class="mform-group">
+            <label>Mot de passe</label>
+            <input type="password" id="signupPassword" placeholder="Minimum 6 caractères" minlength="6" required>
+          </div>
+          <input type="hidden" id="signupPlan" value="pro">
+          <input type="hidden" id="signupSector" value="coiffure">
+          <button type="submit" id="signupSubmitBtn" class="btn btn-primary btn-full btn-lg">
+            Continuer vers le paiement →
+          </button>
+          <p class="modal-note">Essai gratuit 14 jours · Annulation à tout moment · Aucun engagement</p>
+          <div id="signupError" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#ef4444;font-size:13px;"></div>
+        </form>
+      </div>
     </div>
   </div>
 
@@ -904,9 +948,41 @@
       pro:     'Pack Pro — 49 CHF/mois',
       premium: 'Pack Premium — 89 CHF/mois',
     };
+    const SECTOR_LABELS = {
+      coiffure: { label: 'Coiffure / Barber', icon: '✂️' },
+      beaute:   { label: 'Institut beauté / Spa', icon: '✨' },
+      epilation:{ label: 'Épilation', icon: '🌿' },
+      ongles:   { label: 'Ongles / Nail Art', icon: '💅' },
+      massage:  { label: 'Massage / Bien-être', icon: '💆' },
+      autre:    { label: 'Autre', icon: '🏪' },
+    };
+
+    function selectSector(sector) {
+      document.querySelectorAll('.sector-card').forEach(c => c.classList.remove('selected'));
+      const card = document.querySelector(`[data-sector="${sector}"]`);
+      if (card) card.classList.add('selected');
+      document.getElementById('signupSector').value = sector;
+      const info = SECTOR_LABELS[sector] || SECTOR_LABELS.autre;
+      document.getElementById('signupSectorIcon').textContent = info.icon;
+      document.getElementById('signupSectorName').textContent = info.label;
+      setTimeout(() => {
+        document.getElementById('signupStep1').style.display = 'none';
+        document.getElementById('signupStep2').style.display = 'block';
+      }, 160);
+    }
+
+    function goBackToSector() {
+      document.getElementById('signupStep2').style.display = 'none';
+      document.getElementById('signupStep1').style.display = 'block';
+    }
+
     function startCheckout(plan) {
       document.getElementById('signupPlan').value = plan;
       document.getElementById('modalPlanLabel').textContent = planLabels[plan] || plan;
+      // Reset to step 1
+      document.getElementById('signupStep1').style.display = 'block';
+      document.getElementById('signupStep2').style.display = 'none';
+      document.querySelectorAll('.sector-card').forEach(c => c.classList.remove('selected'));
       document.getElementById('signupModal').style.display = 'flex';
       document.body.style.overflow = 'hidden';
     }
@@ -927,7 +1003,7 @@
       const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
       const salonName = v('signupSalonName'), ownerName = v('signupOwnerName');
       const email = v('signupEmail'), password = document.getElementById('signupPassword')?.value ?? '';
-      const phone = v('signupPhone'), plan = v('signupPlan');
+      const phone = v('signupPhone'), plan = v('signupPlan'), sector = v('signupSector') || 'coiffure';
 
       if (!salonName || !ownerName || !email || !password) {
         showToast('Veuillez remplir tous les champs obligatoires', 'error');
@@ -936,7 +1012,7 @@
       try {
         const res = await fetch('/api/stripe/register-and-checkout', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ salonName, ownerName, email, password, phone, plan }),
+          body: JSON.stringify({ salonName, ownerName, email, password, phone, plan, sector }),
         });
         const data = await res.json().catch(() => null);
         if (!data) { showToast('Erreur serveur', 'error'); btn.textContent = origText; btn.disabled = false; return; }
