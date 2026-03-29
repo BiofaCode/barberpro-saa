@@ -2612,6 +2612,13 @@ async function loadSettings() {
                         <div style="font-size:.75rem;color:var(--text-muted);margin-top:6px">Image affichée en fond de la section hero de votre page publique. JPG/PNG/WebP, max 5 Mo.</div>
                     </div>
                     
+                    <div id="advancedBrandingToggle" style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
+                        <button type="button" onclick="toggleAdvancedSettings()" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:10px 16px;width:100%;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:var(--text-sec);font-size:.88rem">
+                            <span>⚙️ Options avancées (hero, stats, réseaux sociaux…)</span>
+                            <span id="advancedArrow" style="transition:transform .2s">▼</span>
+                        </button>
+                    </div>
+                    <div id="advancedBrandingContent" style="display:none">
                     <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
                         <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;">
                             <div style="font-weight:600;font-size:.9rem">📊 Statistiques d'accroche (Hero)</div>
@@ -2644,9 +2651,19 @@ async function loadSettings() {
                         </div>
                         <div style="font-size:.75rem;color:var(--text-muted);margin-top:8px">Laissez vide pour ne pas afficher le réseau sur votre site.</div>
                     </div>
+                    </div><!-- end advancedBrandingContent -->
                     <button class="btn btn-primary" onclick="saveBranding()" style="margin-top:12px">🎨 Enregistrer le branding</button>
                 </div>
             </div>
+
+            <!-- SECTION AVANCÉE : domaine, galerie, témoignages -->
+            <div style="margin-bottom:8px">
+                <button type="button" onclick="toggleAdvancedSections()" style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:10px 16px;width:100%;display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:var(--text-sec);font-size:.88rem">
+                    <span>🔧 Fonctionnalités avancées (domaine, galerie, témoignages)</span>
+                    <span id="advancedSectionsArrow" style="transition:transform .2s">▼</span>
+                </button>
+            </div>
+            <div id="advancedSectionsContent" style="display:none">
 
             <!-- DOMAINE PERSONNALISÉ -->
             <div class="card" style="margin-bottom:20px">
@@ -2754,6 +2771,8 @@ async function loadSettings() {
                 </div>
             </div>
             `}
+
+            </div><!-- end advancedSectionsContent -->
 
             <!-- HORAIRES -->
             <div class="card" style="margin-bottom:20px">
@@ -2937,6 +2956,24 @@ function updateColorPreview() {
 }
 
 // ---- Save Hours ----
+function toggleAdvancedSettings() {
+    const content = document.getElementById('advancedBrandingContent');
+    const arrow = document.getElementById('advancedArrow');
+    if (!content) return;
+    const open = content.style.display === 'none';
+    content.style.display = open ? 'block' : 'none';
+    if (arrow) arrow.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+function toggleAdvancedSections() {
+    const content = document.getElementById('advancedSectionsContent');
+    const arrow = document.getElementById('advancedSectionsArrow');
+    if (!content) return;
+    const open = content.style.display === 'none';
+    content.style.display = open ? 'block' : 'none';
+    if (arrow) arrow.style.transform = open ? 'rotate(180deg)' : '';
+}
+
 function toggleDay(day, checked) {
     const open = document.getElementById(`hours-${day}-open`);
     const close = document.getElementById(`hours-${day}-close`);

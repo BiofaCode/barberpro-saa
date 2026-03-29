@@ -1353,6 +1353,18 @@ ul { list-style: none; }
 .modal-head h2 { font-family: var(--fh); font-size: 22px; font-weight: 700; margin-bottom: 5px; }
 .modal-head p  { font-size: 13px; color: var(--primary); font-weight: 600; }
 
+.sector-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 18px 12px;
+  background: rgba(255,255,255,.04); border: 1.5px solid var(--border);
+  border-radius: 14px; cursor: pointer; transition: all .18s;
+  text-align: center; user-select: none;
+}
+.sector-card:hover { background: rgba(99,102,241,.1); border-color: rgba(99,102,241,.5); transform: translateY(-2px); }
+.sector-card.selected { background: rgba(99,102,241,.15); border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.2); }
+.sector-icon { font-size: 2rem; line-height: 1; }
+.sector-label { font-size: 13px; font-weight: 600; color: var(--txt); }
+
 .mform-group { margin-bottom: 14px; }
 .mform-group label {
   display: block;
