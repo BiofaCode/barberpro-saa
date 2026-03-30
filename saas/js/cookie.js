@@ -4,7 +4,7 @@
  * Un seul fichier JS à inclure sur toutes les pages
  */
 (function () {
-  const KEY = 'salonpro_cookie_consent';
+  const KEY = 'kreno_cookie_consent';
   const consent = localStorage.getItem(KEY);
 
   // Si déjà répondu, on ne montre rien

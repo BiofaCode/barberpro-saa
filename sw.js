@@ -2,7 +2,7 @@
    Kreno — Service Worker (Push Notifications)
    ============================================ */
 
-const CACHE_NAME = 'salonpro-v1';
+const CACHE_NAME = 'kreno-v1';
 
 // Install
 self.addEventListener('install', (event) => {
@@ -30,7 +30,7 @@ self.addEventListener('push', (event) => {
         body: data.body,
         icon: data.icon || '/favicon.ico',
         badge: '/favicon.ico',
-        tag: data.tag || 'salonpro-notif',
+        tag: data.tag || 'kreno-notif',
         data: { url: data.url || '/pro' },
         vibrate: [200, 100, 200],
         requireInteraction: false,

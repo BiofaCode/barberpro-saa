@@ -887,8 +887,8 @@ async function submitBooking() {
     const endpoint = slug ? `/api/salon/${slug}/book` : '/api/bookings';
     await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(booking) });
   } catch (e) {
-    const b = JSON.parse(localStorage.getItem('salonpro_bookings') || '[]');
-    b.push(booking); localStorage.setItem('salonpro_bookings', JSON.stringify(b));
+    const b = JSON.parse(localStorage.getItem('kreno_bookings') || '[]');
+    b.push(booking); localStorage.setItem('kreno_bookings', JSON.stringify(b));
   }
 
   showBookingSuccess();
