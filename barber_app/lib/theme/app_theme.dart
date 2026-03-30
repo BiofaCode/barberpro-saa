@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Color Palette
-  static const Color primary = Color(0xFF6366F1);
-  static const Color primaryLight = Color(0xFF818CF8);
-  static const Color primaryDark = Color(0xFF4F46E5);
+  // Color Palette — aligned with Kreno landing page
+  static const Color primary = Color(0xFF5850E8);
+  static const Color primaryLight = Color(0xFF8B85F4);
+  static const Color primaryDark = Color(0xFF4740D4);
   static const Color bgDark = Color(0xFF0D0D0D);
   static const Color bgCard = Color(0xFF1A1A1A);
   static const Color bgElevated = Color(0xFF252525);
@@ -27,7 +27,7 @@ class AppTheme {
         surface: bgCard,
         error: error,
       ),
-      textTheme: GoogleFonts.outfitTextTheme(
+      textTheme: GoogleFonts.dmSansTextTheme(
         const TextTheme(
           displayLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w700),
           displayMedium: TextStyle(color: textPrimary, fontWeight: FontWeight.w600),
@@ -49,7 +49,7 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 1,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: GoogleFonts.playfairDisplay(
+        titleTextStyle: GoogleFonts.bricolageGrotesque(
           color: textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
@@ -98,7 +98,7 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 15),
+          textStyle: GoogleFonts.dmSans(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -107,7 +107,7 @@ class AppTheme {
           side: const BorderSide(color: primary, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 15),
+          textStyle: GoogleFonts.dmSans(fontWeight: FontWeight.w600, fontSize: 15),
         ),
       ),
       dividerTheme: DividerThemeData(
@@ -117,8 +117,8 @@ class AppTheme {
       chipTheme: ChipThemeData(
         backgroundColor: bgElevated,
         selectedColor: primary,
-        labelStyle: GoogleFonts.outfit(color: textSecondary, fontSize: 13),
-        secondaryLabelStyle: GoogleFonts.outfit(color: bgDark, fontSize: 13, fontWeight: FontWeight.w600),
+        labelStyle: GoogleFonts.dmSans(color: textSecondary, fontSize: 13),
+        secondaryLabelStyle: GoogleFonts.dmSans(color: bgDark, fontSize: 13, fontWeight: FontWeight.w600),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         side: BorderSide(color: primary.withAlpha(51)),
       ),

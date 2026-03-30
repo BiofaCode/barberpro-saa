@@ -597,6 +597,7 @@ h1, h2, h3, h4 {
 .feat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: dense;
   gap: 16px;
 }
 .feat-card {
