@@ -923,10 +923,22 @@
         </div>
         <input type="hidden" id="signupPlan" value="pro">
         <input type="hidden" id="signupSector" value="coiffure">
+        <!-- Code de parrainage (optionnel) -->
+        <div class="mform-group" id="refCodeWrap" style="margin-top:4px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-muted)" onclick="toggleRefCode()">
+            <span id="refCodeToggleIcon">▶</span> J'ai un code de parrainage
+          </label>
+          <div id="refCodeField" style="display:none;margin-top:8px">
+            <input type="text" id="signupReferralCode" placeholder="ex : AB3X9K" maxlength="8"
+              style="text-transform:uppercase;letter-spacing:2px;font-weight:600"
+              oninput="this.value=this.value.toUpperCase();validateRefCode(this.value)">
+            <div id="refCodeStatus" style="font-size:12px;margin-top:4px;min-height:16px"></div>
+          </div>
+        </div>
         <button type="submit" id="signupSubmitBtn" class="btn btn-primary btn-full btn-lg">
           Continuer vers le paiement →
         </button>
-        <p class="modal-note">Essai gratuit 14 jours · Annulation à tout moment · Aucun engagement</p>
+        <p class="modal-note" id="signupTrialNote">Essai gratuit 14 jours · Annulation à tout moment · Aucun engagement</p>
         <div id="signupError" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#ef4444;font-size:13px;"></div>
       </form>
     </div>
@@ -1020,6 +1032,44 @@
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSignupModal(); });
 
+  /* ── Referral code toggle & validation ── */
+  function toggleRefCode() {
+    const field = document.getElementById('refCodeField');
+    const icon  = document.getElementById('refCodeToggleIcon');
+    const open  = field.style.display === 'none';
+    field.style.display = open ? 'block' : 'none';
+    icon.textContent = open ? '▼' : '▶';
+    if (!open) {
+      document.getElementById('signupReferralCode').value = '';
+      document.getElementById('refCodeStatus').textContent = '';
+      document.getElementById('signupTrialNote').textContent = 'Essai gratuit 14 jours · Annulation à tout moment · Aucun engagement';
+    }
+  }
+
+  let refValidateTimer;
+  async function validateRefCode(code) {
+    const status = document.getElementById('refCodeStatus');
+    const note   = document.getElementById('signupTrialNote');
+    clearTimeout(refValidateTimer);
+    if (code.length < 6) { status.textContent = ''; return; }
+    status.style.color = '#9ca3af'; status.textContent = 'Vérification…';
+    refValidateTimer = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/referral/validate?code=${code}`);
+        const d = await r.json();
+        if (d.success) {
+          status.style.color = '#059669';
+          status.textContent = `✅ Code valide — parrainé par ${d.data.parrainName}`;
+          note.textContent = '🎁 Essai gratuit 30 jours (au lieu de 14) · Annulation à tout moment';
+        } else {
+          status.style.color = '#ef4444';
+          status.textContent = '❌ Code invalide';
+          note.textContent = 'Essai gratuit 14 jours · Annulation à tout moment · Aucun engagement';
+        }
+      } catch { status.textContent = ''; }
+    }, 500);
+  }
+
   async function submitSignup() {
     const btn = document.getElementById('signupSubmitBtn');
     const errEl = document.getElementById('signupError');
@@ -1027,25 +1077,30 @@
     btn.textContent = 'Création en cours…';
     btn.disabled = true;
 
+    const refCode = document.getElementById('signupReferralCode')?.value?.trim().toUpperCase() || '';
     const payload = {
-      salonName: document.getElementById('signupSalonName').value.trim(),
-      ownerName: document.getElementById('signupOwnerName').value.trim(),
-      phone:     document.getElementById('signupPhone').value.trim(),
-      email:     document.getElementById('signupEmail').value.trim(),
-      password:  document.getElementById('signupPassword').value,
-      plan:      document.getElementById('signupPlan').value,
-      sector:    document.getElementById('signupSector').value
+      salonName:    document.getElementById('signupSalonName').value.trim(),
+      ownerName:    document.getElementById('signupOwnerName').value.trim(),
+      phone:        document.getElementById('signupPhone').value.trim(),
+      email:        document.getElementById('signupEmail').value.trim(),
+      password:     document.getElementById('signupPassword').value,
+      plan:         document.getElementById('signupPlan').value,
+      sector:       document.getElementById('signupSector').value,
+      referralCode: refCode,
     };
 
     try {
-      const res  = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res  = await fetch('/api/stripe/register-and-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur lors de la création');
+      if (!res.ok || !data.success) throw new Error(data.error || 'Erreur lors de la création');
 
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      } else if (data.token) {
-        localStorage.setItem('token', data.token);
+      const checkoutUrl = data.data?.url;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else if (data.data?.sessionData?.token) {
+        localStorage.setItem('token', data.data.sessionData.token);
+        window.location.href = '/pro';
+      } else {
         window.location.href = '/pro';
       }
     } catch (err) {

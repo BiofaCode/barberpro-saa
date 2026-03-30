@@ -201,7 +201,7 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#6366F1 0%,#4F46E5 100%);border-radius:16px 16px 0 0;padding:36px 32px;text-align:center">
       <div style="display:inline-block;background:rgba(255,255,255,.15);border-radius:12px;padding:8px 16px;margin-bottom:16px">
-        <span style="color:#fff;font-size:13px;font-weight:600;letter-spacing:.5px">SALONPRO</span>
+        <span style="color:#fff;font-size:13px;font-weight:600;letter-spacing:.5px">KRENO</span>
       </div>
       <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;line-height:1.3">Votre salon est en ligne 🎉</h1>
       <p style="color:rgba(255,255,255,.8);margin:10px 0 0;font-size:15px">Bienvenue dans la famille Kreno, ${ownerName} !</p>
@@ -645,7 +645,66 @@ async function sendEmployeeBookingNotification(booking, salon, employeeEmail) {
   }
 }
 
-module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification };
+module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail };
+
+// ---- Referral reward email (sent to parrain when filleul pays first month) ----
+async function sendReferralRewardEmail(parrainEmail, parrainName, filleulSalonName) {
+  const firstName = parrainName?.split(' ')[0] || 'cher partenaire';
+  const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bonne nouvelle — Kreno</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+    <div style="background:linear-gradient(135deg,#4F46E5 0%,#7C3AED 100%);padding:36px 32px;text-align:center">
+      <div style="font-size:48px;margin-bottom:12px">🎁</div>
+      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">Votre mois offert est arrivé !</h1>
+      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">Récompense de parrainage Kreno</p>
+    </div>
+    <div style="padding:32px 28px">
+      <p style="margin:0 0 16px;font-size:16px;color:#374151">Bonjour <strong>${firstName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#6b7280;line-height:1.6">
+        Excellente nouvelle ! <strong>${filleulSalonName}</strong> vient de souscrire à un abonnement Kreno grâce à votre code de parrainage.
+      </p>
+      <div style="background:linear-gradient(135deg,rgba(79,70,229,.08),rgba(124,58,237,.08));border:1px solid rgba(79,70,229,.15);border-radius:12px;padding:20px 24px;margin-bottom:24px;text-align:center">
+        <div style="font-size:13px;color:#6b7280;margin-bottom:4px;font-weight:500">VOTRE RÉCOMPENSE</div>
+        <div style="font-size:28px;font-weight:700;color:#4F46E5">1 mois offert</div>
+        <div style="font-size:13px;color:#9ca3af;margin-top:4px">Crédit automatiquement appliqué à votre prochaine facture</div>
+      </div>
+      <p style="margin:0 0 24px;font-size:14px;color:#6b7280;line-height:1.6">
+        Le crédit a été ajouté directement à votre compte Kreno et sera déduit automatiquement de votre prochaine facturation. Aucune action de votre part n'est nécessaire.
+      </p>
+      <div style="background:#f9fafb;border-radius:10px;padding:16px 20px;margin-bottom:20px">
+        <p style="margin:0;font-size:13px;color:#6b7280;line-height:1.6">
+          💡 <strong>Continuez à parrainer !</strong> Partagez votre code de parrainage depuis votre espace Pro → Paramètres → Parrainage. Chaque filleul qui souscrit vous rapporte 1 mois offert.
+        </p>
+      </div>
+    </div>
+    <div style="background:#f9fafb;padding:16px 28px;text-align:center;border-top:1px solid #e5e7eb">
+      <p style="margin:0;color:#9ca3af;font-size:12px">Kreno — Notification automatique</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  try {
+    await resend.emails.send({
+      from: `${fromName} <noreply@kreno.ch>`,
+      to: parrainEmail,
+      subject: `🎁 Votre mois offert est arrivé — Parrainage Kreno`,
+      html,
+    });
+    console.log(`  🎁 Email récompense parrainage envoyé à ${parrainEmail}`);
+  } catch (e) {
+    console.error('Referral reward email error:', e.message);
+  }
+}
 
 // ---- Review request email (sent ~2h after appointment) ----
 async function sendReviewRequestEmail(booking, salon, reviewUrl) {

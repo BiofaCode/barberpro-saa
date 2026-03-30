@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
 const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
@@ -158,7 +158,7 @@ async function uploadImageBuffer(buffer, ext, folder = 'barbershop') {
         // Cloudinary upload
         try {
             const uploadStream = cloudinary.uploader.upload_stream(
-                { folder: `salonpro/${folder}` },
+                { folder: `kreno/${folder}` },
                 (error, result) => {
                     if (error) {
                         console.error('Cloudinary upload error:', error);
@@ -1601,70 +1601,118 @@ route('POST', '/api/stripe/portal/session', async (req, res) => {
     }
 });
 
-// ---- Sector templates ----
+// ---- Referral code generator ----
 const genId = () => require('crypto').randomBytes(12).toString('hex');
+
+async function generateUniqueReferralCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/I/1 for clarity
+    for (let attempt = 0; attempt < 10; attempt++) {
+        let code = '';
+        const bytes = require('crypto').randomBytes(6);
+        for (let i = 0; i < 6; i++) code += chars[bytes[i] % chars.length];
+        const existing = await db.findSalons({ 'referral.code': code });
+        if (!existing || existing.length === 0) return code;
+    }
+    // Fallback: timestamp-based
+    return Date.now().toString(36).toUpperCase().slice(-6);
+}
+
+// ---- Sector templates ----
+
+// Each template defines a complete visual theme for the client-facing booking site.
+// Dark themes: coiffure, massage — Light themes: beaute, ongles, epilation, autre
 const SECTOR_TEMPLATES = {
     coiffure: {
-        primaryColor: '#4F46E5', accentColor: '#818CF8',
-        heroSubtitle: 'Coiffure professionnelle sur mesure',
+        // Dark urban — barber/coiffure vibe
+        primaryColor: '#4F46E5',   // Indigo vif
+        accentColor:  '#818CF8',   // Indigo clair
+        backgroundColor: '#09090e',// Noir quasi-total
+        textColor:    '#F3F4F6',   // Blanc doux
+        icon: '✂️',
+        heroSubtitle: 'Coiffure & Barber — Excellence et style sur mesure',
         services: [
-            { name: 'Coupe homme', icon: '✂️', price: 25, duration: 30 },
-            { name: 'Coupe femme', icon: '💇‍♀️', price: 45, duration: 45 },
-            { name: 'Barbe', icon: '🪒', price: 20, duration: 20 },
-            { name: 'Coloration', icon: '🎨', price: 80, duration: 90 },
-            { name: 'Brushing', icon: '💨', price: 30, duration: 30 },
+            { name: 'Coupe homme',    icon: '✂️',  price: 25, duration: 30 },
+            { name: 'Coupe femme',    icon: '💇‍♀️', price: 45, duration: 45 },
+            { name: 'Barbe',          icon: '🪒',  price: 20, duration: 20 },
+            { name: 'Coloration',     icon: '🎨',  price: 80, duration: 90 },
+            { name: 'Brushing',       icon: '💨',  price: 30, duration: 30 },
         ],
     },
     beaute: {
-        primaryColor: '#DB2777', accentColor: '#F472B6',
-        heroSubtitle: 'Prenez soin de vous',
+        // Light elegant — institut beauté / spa
+        primaryColor: '#BE185D',   // Rose profond
+        accentColor:  '#EC4899',   // Rose vif
+        backgroundColor: '#FFFBFE',// Blanc crème pur
+        textColor:    '#1C0D19',   // Presque noir, nuance rose
+        icon: '✨',
+        heroSubtitle: 'Institut beauté & Spa — Prenez soin de vous',
         services: [
-            { name: 'Soin visage', icon: '✨', price: 65, duration: 60 },
-            { name: 'Gommage corps', icon: '🌸', price: 55, duration: 45 },
-            { name: 'Massage relaxant', icon: '💆‍♀️', price: 70, duration: 60 },
-            { name: 'Maquillage', icon: '💄', price: 50, duration: 45 },
-            { name: 'Épilation sourcils', icon: '👁️', price: 15, duration: 15 },
+            { name: 'Soin visage',       icon: '✨', price: 65, duration: 60 },
+            { name: 'Gommage corps',     icon: '🌸', price: 55, duration: 45 },
+            { name: 'Massage relaxant',  icon: '💆‍♀️', price: 70, duration: 60 },
+            { name: 'Maquillage',        icon: '💄', price: 50, duration: 45 },
+            { name: 'Épilation sourcils',icon: '👁️', price: 15, duration: 15 },
         ],
     },
     epilation: {
-        primaryColor: '#7C3AED', accentColor: '#A78BFA',
+        // Light soft lavender — épilation
+        primaryColor: '#7C3AED',   // Violet
+        accentColor:  '#A78BFA',   // Lavande
+        backgroundColor: '#FAF7FF',// Blanc lavande très doux
+        textColor:    '#1e0a2e',   // Presque noir, nuance violette
+        icon: '🌿',
         heroSubtitle: 'Épilation douce et professionnelle',
         services: [
             { name: 'Jambes complètes', icon: '🦵', price: 40, duration: 45 },
-            { name: 'Maillot', icon: '🌿', price: 25, duration: 20 },
-            { name: 'Aisselles', icon: '✨', price: 15, duration: 15 },
-            { name: 'Sourcils', icon: '👁️', price: 12, duration: 15 },
+            { name: 'Maillot intégral', icon: '🌿', price: 30, duration: 25 },
+            { name: 'Aisselles',        icon: '✨', price: 15, duration: 15 },
+            { name: 'Sourcils',         icon: '👁️', price: 12, duration: 15 },
             { name: 'Lèvre supérieure', icon: '💋', price: 10, duration: 10 },
         ],
     },
     ongles: {
-        primaryColor: '#EA580C', accentColor: '#FB923C',
-        heroSubtitle: 'Manucure et nail art professionnel',
+        // Light rose blush — nail art / manucure
+        primaryColor: '#E11D6B',   // Rose vif / fuchsia
+        accentColor:  '#FB7185',   // Rose clair
+        backgroundColor: '#FFF0F5',// Blanc rosé nacré
+        textColor:    '#1a0510',   // Presque noir, nuance rose
+        icon: '💅',
+        heroSubtitle: 'Manucure & Nail Art — L\'art à portée de main',
         services: [
             { name: 'Manucure classique', icon: '💅', price: 35, duration: 45 },
-            { name: 'Pédicure', icon: '🦶', price: 40, duration: 45 },
-            { name: 'Pose gel', icon: '✨', price: 55, duration: 60 },
-            { name: 'Nail art', icon: '🎨', price: 70, duration: 75 },
-            { name: 'Dépose gel', icon: '🌟', price: 20, duration: 20 },
+            { name: 'Pédicure',           icon: '🦶', price: 40, duration: 45 },
+            { name: 'Pose gel',           icon: '✨', price: 55, duration: 60 },
+            { name: 'Nail art',           icon: '🎨', price: 70, duration: 75 },
+            { name: 'Dépose gel',         icon: '🌟', price: 20, duration: 20 },
         ],
     },
     massage: {
-        primaryColor: '#059669', accentColor: '#34D399',
-        heroSubtitle: 'Détente et bien-être au naturel',
+        // Dark forest / zen — massage & bien-être
+        primaryColor: '#059669',   // Emeraude
+        accentColor:  '#34D399',   // Vert menthe
+        backgroundColor: '#080f0b',// Vert nuit très sombre
+        textColor:    '#ECFDF5',   // Blanc verdâtre doux
+        icon: '💆',
+        heroSubtitle: 'Massage & Bien-être — Votre sanctuaire de détente',
         services: [
             { name: 'Massage relaxant', icon: '💆', price: 75, duration: 60 },
-            { name: 'Massage sportif', icon: '💪', price: 85, duration: 60 },
-            { name: 'Shiatsu', icon: '☯️', price: 80, duration: 60 },
-            { name: 'Réflexologie', icon: '🦶', price: 65, duration: 45 },
-            { name: 'Hot stones', icon: '🪨', price: 90, duration: 75 },
+            { name: 'Massage sportif',  icon: '💪', price: 85, duration: 60 },
+            { name: 'Shiatsu',          icon: '☯️', price: 80, duration: 60 },
+            { name: 'Réflexologie',     icon: '🦶', price: 65, duration: 45 },
+            { name: 'Hot stones',       icon: '🪨', price: 90, duration: 75 },
         ],
     },
     autre: {
-        primaryColor: '#6366F1', accentColor: '#818CF8',
-        heroSubtitle: 'Réservation en ligne simplifiée',
+        // Light neutral — universel
+        primaryColor: '#6366F1',   // Indigo Kreno
+        accentColor:  '#818CF8',   // Indigo clair
+        backgroundColor: '#F8FAFC',// Blanc gris très doux
+        textColor:    '#1e293b',   // Slate foncé
+        icon: '🏪',
+        heroSubtitle: 'Réservez votre rendez-vous en quelques secondes',
         services: [
             { name: 'Consultation', icon: '📋', price: 50, duration: 30 },
-            { name: 'Séance', icon: '⏱️', price: 80, duration: 60 },
+            { name: 'Séance',       icon: '⏱️', price: 80, duration: 60 },
         ],
     },
 };
@@ -1677,7 +1725,7 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
     }
 
     const body = await parseBody(req);
-    const { salonName, ownerName, email, password, phone, plan, sector } = body;
+    const { salonName, ownerName, email, password, phone, plan, sector, referralCode } = body;
 
     // Validation
     if (!salonName || !ownerName || !email || !password) {
@@ -1696,15 +1744,32 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
         return json(res, 400, { success: false, error: 'Un compte avec cet email existe déjà. Connectez-vous sur l\'Espace Pro.' });
     }
 
+    // Validate referral code if provided
+    let referrerSalon = null;
+    const refCode = referralCode ? referralCode.trim().toUpperCase() : '';
+    if (refCode) {
+        const salons = await db.findSalons({ 'referral.code': refCode });
+        if (salons.length > 0) {
+            referrerSalon = salons[0];
+        }
+        // If code not found, we ignore it silently (don't block registration)
+    }
+
+    // Referral bonus: filleul gets 30-day trial instead of 14
+    const trialDays = referrerSalon ? 30 : 14;
+
+    // Generate unique referral code for the new salon (6 chars, uppercase alphanumeric)
+    const newReferralCode = await generateUniqueReferralCode();
+
     // Generate slug from salon name (clean, with collision detection)
     const slug = await makeUniqueSlug(salonName);
 
-    // Apply sector template
+    // Apply sector template (full theme)
     const tpl = SECTOR_TEMPLATES[sector] || SECTOR_TEMPLATES.autre;
     const sectorServices = tpl.services.map(s => ({ _id: genId(), ...s, description: '', active: true }));
 
     try {
-        // Create salon
+        // Create salon with full theme + referral info
         const salon = await db.createSalon({
             slug,
             name: salonName,
@@ -1718,8 +1783,16 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
             branding: {
                 primaryColor: tpl.primaryColor,
                 accentColor: tpl.accentColor,
+                backgroundColor: tpl.backgroundColor,
+                textColor: tpl.textColor,
+                icon: tpl.icon || '✂️',
                 heroTitle: `Bienvenue chez ${salonName}`,
                 heroSubtitle: tpl.heroSubtitle,
+            },
+            referral: {
+                code: newReferralCode,
+                referredBy: refCode || '',
+                rewardGranted: false,
             },
             services: sectorServices,
             hours: {
@@ -1749,7 +1822,8 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
 
         // Welcome email will be sent after Stripe payment confirmation (via webhook)
 
-        console.log(`✅ Nouveau salon créé: ${salonName} (${plan}) par ${ownerName}`);
+        const refLog = referrerSalon ? ` (parrainé par ${referrerSalon.name}, +${trialDays}j essai)` : '';
+        console.log(`✅ Nouveau salon créé: ${salonName} (${plan}) par ${ownerName}${refLog}`);
 
         const token = createToken({ ownerId: owner._id, salonId: salon._id, role: 'owner' });
         const sessionData = {
@@ -1776,10 +1850,18 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
                     },
                     quantity: 1
                 }],
-                metadata: { plan: plan || 'pro', salonId: salon._id, salonName, ownerEmail: email, ownerName: ownerName || '' },
+                metadata: {
+                    plan: plan || 'pro',
+                    salonId: salon._id,
+                    salonName,
+                    ownerEmail: email,
+                    ownerName: ownerName || '',
+                    referralCode: refCode || '',
+                    referrerSalonId: referrerSalon ? String(referrerSalon._id) : '',
+                },
                 customer_email: email,
-                subscription_data: { trial_period_days: 14 },
-                success_url: `${baseUrl}/saas/success.html?plan=${plan || 'pro'}&salon=${encodeURIComponent(salonName)}`,
+                subscription_data: { trial_period_days: trialDays },
+                success_url: `${baseUrl}/saas/success.html?plan=${plan || 'pro'}&salon=${encodeURIComponent(salonName)}${refCode ? '&ref=1' : ''}`,
                 cancel_url: `${baseUrl}/saas/index.html?checkout=cancel`
             });
 
@@ -1876,9 +1958,13 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
         const plan = session.metadata?.plan || 'pro';
         const ownerEmail = session.metadata?.ownerEmail;
         const salonName = session.metadata?.salonName;
+        const refCode = session.metadata?.referralCode || '';
+        const referrerSalonId = session.metadata?.referrerSalonId || '';
 
         if (salonId) {
-            const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+            // Determine trial length (30j if referred, 14j otherwise)
+            const trialDays = refCode ? 30 : 14;
+            const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString();
             await db.updateSalon(salonId, {
                 active: true,
                 'subscription.status': 'trial',
@@ -1886,14 +1972,14 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
                 'subscription.stripeCustomerId': session.customer,
                 'subscription.stripeSubscriptionId': session.subscription,
             });
-            console.log(`✅ Salon ${salonId} activé (plan: ${plan}, trial jusqu'au ${trialEnd})`);
-            await db.addSalonLog(salonId, 'subscription_activated', { plan, trialEnd, stripeCustomerId: session.customer });
+            console.log(`✅ Salon ${salonId} activé (plan: ${plan}, trial ${trialDays}j jusqu'au ${trialEnd})`);
+            await db.addSalonLog(salonId, 'subscription_activated', { plan, trialEnd, stripeCustomerId: session.customer, referredBy: refCode || null });
 
             // Send welcome email (non-blocking)
             const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
             if (ownerEmail) {
                 const ownerNameMeta = session.metadata?.ownerName || '';
-                sendWelcomeEmail(ownerEmail, ownerNameMeta || salonName, salonName || 'Votre salon', plan, baseUrl);
+                sendWelcomeEmail(ownerEmail, ownerNameMeta || salonName, salonName || 'Votre salon', plan, baseUrl, trialDays);
             }
             // Notify admin of new paying subscription
             if (process.env.ADMIN_EMAIL) {
@@ -1904,6 +1990,52 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
                     salonId,
                     baseUrl,
                 });
+            }
+        }
+    } else if (event.type === 'invoice.payment_succeeded') {
+        // ---- Parrainage: récompense parrain au 1er vrai paiement du filleul ----
+        const invoice = event.data.object;
+        // Only on first real payment (billing_reason = 'subscription_create' means end of trial / first charge)
+        if (invoice.billing_reason === 'subscription_create' && invoice.amount_paid > 0) {
+            const stripeCustomerId = invoice.customer;
+            const salons = await db.findSalons({ 'subscription.stripeCustomerId': stripeCustomerId });
+            if (salons.length > 0) {
+                const filleulSalon = salons[0];
+                const refBy = filleulSalon.referral?.referredBy;
+                const alreadyGranted = filleulSalon.referral?.rewardGranted;
+
+                if (refBy && !alreadyGranted) {
+                    // Find parrain salon
+                    const parrainSalons = await db.findSalons({ 'referral.code': refBy });
+                    if (parrainSalons.length > 0) {
+                        const parrainSalon = parrainSalons[0];
+                        // Mark reward as granted on filleul
+                        await db.updateSalon(filleulSalon._id, { 'referral.rewardGranted': true });
+
+                        // Add 1 month credit on parrain's Stripe customer balance
+                        const parrainStripeId = parrainSalon.subscription?.stripeCustomerId;
+                        if (stripe && parrainStripeId) {
+                            try {
+                                await stripe.customers.createBalanceTransaction(parrainStripeId, {
+                                    amount: -invoice.amount_paid, // negative = credit
+                                    currency: invoice.currency || 'chf',
+                                    description: `Parrainage Kreno — ${filleulSalon.name} a rejoint la plateforme`,
+                                });
+                                console.log(`🎁 Parrain ${parrainSalon.name} (${parrainStripeId}) : crédit 1 mois accordé pour parrainage de ${filleulSalon.name}`);
+                            } catch (stripeErr) {
+                                console.error('Erreur crédit Stripe parrain:', stripeErr.message);
+                            }
+                        }
+
+                        // Notify parrain by email
+                        const parrainOwners = await db.findOwners({ salon: parrainSalon._id });
+                        if (parrainOwners.length > 0 && parrainOwners[0].email) {
+                            sendReferralRewardEmail(parrainOwners[0].email, parrainOwners[0].name, filleulSalon.name);
+                        }
+
+                        await db.addSalonLog(parrainSalon._id, 'referral_reward_granted', { filleulSalonId: String(filleulSalon._id), filleulName: filleulSalon.name });
+                    }
+                }
             }
         }
     } else if (event.type === 'customer.subscription.deleted') {
@@ -2187,7 +2319,7 @@ route('GET', '/api/pro/salon/:salonId/bookings/ical', async (req, res, params) =
         const endDt = `${String(endDate.getFullYear())}${String(endDate.getMonth()+1).padStart(2,'0')}${String(endDate.getDate()).padStart(2,'0')}T${String(endDate.getHours()).padStart(2,'0')}${String(endDate.getMinutes()).padStart(2,'0')}00`;
         lines.push(
             'BEGIN:VEVENT',
-            `UID:booking-${b._id}@salonpro`,
+            `UID:booking-${b._id}@kreno`,
             `DTSTAMP:${now}`,
             `DTSTART:${startDt}`,
             `DTEND:${endDt}`,
@@ -2205,6 +2337,43 @@ route('GET', '/api/pro/salon/:salonId/bookings/ical', async (req, res, params) =
         'Access-Control-Allow-Origin': '*',
     });
     res.end(lines.join('\r\n'));
+});
+
+// ---- Parrainage ----
+
+// Public: validate a referral code (used in signup form)
+route('GET', '/api/referral/validate', async (req, res) => {
+    const url = new URL(req.url, 'http://localhost');
+    const code = (url.searchParams.get('code') || '').trim().toUpperCase();
+    if (!code) return json(res, 400, { success: false, error: 'Code manquant.' });
+    const salons = await db.findSalons({ 'referral.code': code });
+    if (!salons || salons.length === 0) {
+        return json(res, 404, { success: false, error: 'Code de parrainage invalide.' });
+    }
+    return json(res, 200, { success: true, data: { parrainName: salons[0].name } });
+});
+
+// Protected: get own referral info + stats
+route('GET', '/api/pro/salon/:salonId/referral', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role !== 'owner') return json(res, 401, { success: false, error: 'Non autorisé' });
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    // Count how many salons used this code
+    const filleuls = await db.findSalons({ 'referral.referredBy': salon.referral?.code || '' });
+    const rewardedCount = filleuls.filter(f => f.referral?.rewardGranted).length;
+
+    return json(res, 200, {
+        success: true,
+        data: {
+            code: salon.referral?.code || '',
+            referredBy: salon.referral?.referredBy || '',
+            totalReferrals: filleuls.length,
+            rewardedReferrals: rewardedCount,
+            pendingRewards: filleuls.length - rewardedCount,
+        }
+    });
 });
 
 // ---- Webhooks ----

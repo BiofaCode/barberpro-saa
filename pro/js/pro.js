@@ -2489,6 +2489,7 @@ async function loadSettings() {
         const salon = data.data || {};
         currentSalon = salon;
         loadSMSStatus(); // load SMS credits alongside settings
+        setTimeout(loadReferral, 0); // load referral stats
 
         const logoHtml = salon.logo
             ? `<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px"><img src="${salon.logo}" style="width:80px;height:80px;object-fit:cover;border-radius:14px;border:2px solid var(--border)"><div><div style="font-weight:600;margin-bottom:4px">Logo actuel</div><button class="btn btn-danger btn-sm" onclick="deleteLogo()">🗑 Supprimer</button></div></div>`
@@ -2653,6 +2654,14 @@ async function loadSettings() {
                     </div>
                     </div><!-- end advancedBrandingContent -->
                     <button class="btn btn-primary" onclick="saveBranding()" style="margin-top:12px">🎨 Enregistrer le branding</button>
+                </div>
+            </div>
+
+            <!-- PARRAINAGE -->
+            <div class="card" style="margin-bottom:20px" id="referralCard">
+                <div class="card-header"><h3>🎁 Parrainage</h3></div>
+                <div class="card-body" id="referralBody">
+                    <div style="color:var(--text-muted);font-size:.85rem">Chargement…</div>
                 </div>
             </div>
 
@@ -2915,6 +2924,67 @@ async function saveBranding() {
             showToast('Erreur', 'error');
         }
     } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+// ---- Referral / Parrainage ----
+async function loadReferral() {
+    const body = document.getElementById('referralBody');
+    if (!body) return;
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/referral`);
+        const data = await res.json();
+        if (!data.success) { body.innerHTML = '<p style="color:var(--error);font-size:.85rem">Erreur de chargement.</p>'; return; }
+        const { code, totalReferrals, rewardedReferrals, pendingRewards } = data.data;
+        const refLink = `${window.location.origin}/?ref=${code}`;
+
+        body.innerHTML = `
+            <p style="font-size:.88rem;color:var(--text-sec);margin-bottom:16px;line-height:1.5">
+                Partagez votre code à d'autres pros de la beauté. <strong>Votre filleul bénéficie de 30 jours d'essai gratuit</strong> (au lieu de 14) et <strong>vous recevez 1 mois offert</strong> dès qu'il souscrit à un abonnement.
+            </p>
+            <!-- Code -->
+            <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:16px 20px;margin-bottom:16px">
+                <div style="font-size:.75rem;color:var(--text-muted);font-weight:600;letter-spacing:.5px;margin-bottom:4px">VOTRE CODE DE PARRAINAGE</div>
+                <div style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:1.6rem;font-weight:800;letter-spacing:4px;color:var(--primary);font-family:monospace">${code}</span>
+                    <button class="btn btn-sm btn-outline" onclick="copyToClipboard('${code}','code')">📋 Copier</button>
+                </div>
+            </div>
+            <!-- Link -->
+            <div style="margin-bottom:16px">
+                <label class="form-label">Lien de parrainage</label>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <input class="form-input" style="flex:1;font-size:.8rem;color:var(--text-sec)" value="${refLink}" readonly id="refLinkInput">
+                    <button class="btn btn-sm btn-outline" onclick="copyToClipboard('${refLink}','lien')">📋 Copier</button>
+                </div>
+            </div>
+            <!-- Stats -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:4px">
+                <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+                    <div style="font-size:1.4rem;font-weight:700;color:var(--primary)">${totalReferrals}</div>
+                    <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px">Filleuls</div>
+                </div>
+                <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+                    <div style="font-size:1.4rem;font-weight:700;color:#10b981">${rewardedReferrals}</div>
+                    <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px">Mois offerts</div>
+                </div>
+                <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center">
+                    <div style="font-size:1.4rem;font-weight:700;color:#f59e0b">${pendingRewards}</div>
+                    <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px">En attente</div>
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        body.innerHTML = '<p style="color:var(--error);font-size:.85rem">Erreur de chargement.</p>';
+    }
+}
+
+function copyToClipboard(text, label) {
+    navigator.clipboard.writeText(text).then(() => showToast(`${label === 'code' ? 'Code' : 'Lien'} copié ✅`)).catch(() => {
+        const el = document.createElement('textarea');
+        el.value = text; document.body.appendChild(el); el.select();
+        document.execCommand('copy'); document.body.removeChild(el);
+        showToast(`${label === 'code' ? 'Code' : 'Lien'} copié ✅`);
+    });
 }
 
 async function manageSubscription() {

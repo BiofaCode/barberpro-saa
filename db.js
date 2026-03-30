@@ -45,6 +45,7 @@ async function connectDB() {
         await dbInstance.collection('employees').createIndex({ email: 1 });
         await dbInstance.collection('employees').createIndex({ salon: 1 });
         await dbInstance.collection('salons').createIndex({ slug: 1 }, { unique: true });
+        await dbInstance.collection('salons').createIndex({ 'referral.code': 1 }, { sparse: true });
         await dbInstance.collection('clients').createIndex({ salon: 1 });
         await dbInstance.collection('bookings').createIndex({ salon: 1, date: -1 });
         console.log('📇 Indexes created');
