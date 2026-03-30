@@ -424,7 +424,7 @@ function openCreateSalonModal() {
             </div>
             <div class="form-group">
                 <label class="form-label">Aperçu</label>
-                <div id="colorPreview" style="height:42px;border-radius:8px;background:#6366F1;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem">SalonPro</div>
+                <div id="colorPreview" style="height:42px;border-radius:8px;background:#6366F1;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem">Kreno</div>
             </div>
         </div>
     `, async () => {

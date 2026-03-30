@@ -1,5 +1,5 @@
 /* ============================================
-   SalonPro — Service Worker (Push Notifications)
+   Kreno — Service Worker (Push Notifications)
    ============================================ */
 
 const CACHE_NAME = 'salonpro-v1';
@@ -16,7 +16,7 @@ self.addEventListener('activate', (event) => {
 
 // Push event — show notification
 self.addEventListener('push', (event) => {
-    let data = { title: 'SalonPro', body: 'Nouveau message', icon: '/saas/img/icon-192.png' };
+    let data = { title: 'Kreno', body: 'Nouveau message', icon: '/saas/img/icon-192.png' };
 
     try {
         if (event.data) {

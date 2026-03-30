@@ -1,6 +1,6 @@
 {
-  "name": "SalonPro — Espace Pro",
-  "short_name": "SalonPro",
+  "name": "Kreno — Espace Pro",
+  "short_name": "Kreno",
   "description": "Gérez votre salon depuis votre téléphone",
   "start_url": "/pro",
   "display": "standalone",
