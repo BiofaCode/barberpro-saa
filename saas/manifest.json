@@ -1,11 +1,11 @@
 {
-  "name": "SalonPro — Logiciel de salon",
-  "short_name": "SalonPro",
-  "description": "Gérez votre salon de coiffure, barber shop ou institut avec SalonPro.",
+  "name": "Kreno — Logiciel de salon",
+  "short_name": "Kreno",
+  "description": "Gérez votre salon de coiffure, barber shop ou institut avec Kreno. 0% de commission.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#09090c",
-  "theme_color": "#6366f1",
+  "background_color": "#ffffff",
+  "theme_color": "#5850E8",
   "lang": "fr",
   "icons": [
     {

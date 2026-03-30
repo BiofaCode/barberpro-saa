@@ -1,5 +1,5 @@
 /* ============================================
-   SalonPro — SMS Module (Twilio)
+   Kreno — SMS Module (Twilio)
    Système de crédits prépayés
    ============================================ */
 
@@ -65,7 +65,7 @@ function formatDateFR(dateStr) {
 // ---- SMS Confirmation de RDV ----
 async function sendSMSConfirmation(booking, salon) {
     if (!booking.clientPhone) return { success: false, reason: 'no_phone' };
-    const salonName = salon.name || 'SalonPro';
+    const salonName = salon.name || 'Kreno';
     const body =
         `✅ RDV confirmé chez ${salonName}\n` +
         `📅 ${formatDateFR(booking.date)} à ${booking.time}\n` +
@@ -78,7 +78,7 @@ async function sendSMSConfirmation(booking, salon) {
 // ---- SMS Rappel J-1 ----
 async function sendSMSReminder(booking, salon) {
     if (!booking.clientPhone) return { success: false, reason: 'no_phone' };
-    const salonName = salon.name || 'SalonPro';
+    const salonName = salon.name || 'Kreno';
     const body =
         `⏰ Rappel — Votre RDV demain chez ${salonName}\n` +
         `🕐 ${booking.time} · ${booking.serviceName}` +
@@ -90,7 +90,7 @@ async function sendSMSReminder(booking, salon) {
 // ---- SMS Annulation ----
 async function sendSMSCancellation(booking, salon) {
     if (!booking.clientPhone) return { success: false, reason: 'no_phone' };
-    const salonName = salon.name || 'SalonPro';
+    const salonName = salon.name || 'Kreno';
     const body =
         `❌ Votre RDV du ${formatDateFR(booking.date)} à ${booking.time} ` +
         `chez ${salonName} a été annulé.\n` +
@@ -102,7 +102,7 @@ async function sendSMSCancellation(booking, salon) {
 async function sendSMSOwnerNotification(booking, salon, ownerPhone) {
     if (!ownerPhone) return { success: false, reason: 'no_phone' };
     const body =
-        `📅 Nouveau RDV — ${salon.name || 'SalonPro'}\n` +
+        `📅 Nouveau RDV — ${salon.name || 'Kreno'}\n` +
         `👤 ${booking.clientName}\n` +
         `✂️ ${booking.serviceName} · ${formatDateFR(booking.date)} à ${booking.time}` +
         (booking.clientPhone ? `\n📞 ${booking.clientPhone}` : '');

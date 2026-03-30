@@ -13,7 +13,7 @@ console.log(`📧 Email configuré via API Resend`);
 // Beautiful HTML email template
 function buildConfirmationEmail(booking, salon, cancelUrl, receiptUrl) {
   const primaryColor = salon.branding?.primaryColor || '#6366F1';
-  const salonName = salon.name || 'SalonPro';
+  const salonName = salon.name || 'Kreno';
 
   return `
 <!DOCTYPE html>
@@ -90,7 +90,7 @@ function buildConfirmationEmail(booking, salon, cancelUrl, receiptUrl) {
 
     <!-- Footer -->
     <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par SalonPro</p>
+      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par Kreno</p>
     </div>
   </div>
 </body>
@@ -115,7 +115,7 @@ async function sendBookingConfirmation(booking, salon, cancelUrl, receiptUrl) {
     return;
   }
 
-  const salonName = salon.name || 'SalonPro';
+  const salonName = salon.name || 'Kreno';
   const fromName = process.env.SMTP_FROM_NAME || salonName;
   // Resend requires verified domains or the default testing domain for "from"
   // For testing without a verified domain, we can use onboarding@resend.dev
@@ -141,7 +141,7 @@ async function sendBookingConfirmation(booking, salon, cancelUrl, receiptUrl) {
 }
 
 // Send OTP Email for "Mes RDV" access
-async function sendOTPEmail(email, code, salonName = 'SalonPro') {
+async function sendOTPEmail(email, code, salonName = 'Kreno') {
   const fromName = process.env.SMTP_FROM_NAME || salonName;
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
@@ -177,7 +177,7 @@ async function sendOTPEmail(email, code, salonName = 'SalonPro') {
 // Send welcome email after signup
 async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
   baseUrl = baseUrl || process.env.BASE_URL || 'https://barberpro-saa.onrender.com';
-  const fromName = process.env.SMTP_FROM_NAME || 'SalonPro';
+  const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const planLabel = { starter: 'Starter', pro: 'Pro ⭐', premium: 'Premium 🚀' }[plan] || plan;
   const trialDays = plan === 'starter' ? null : 14;
@@ -186,14 +186,14 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
     const { data, error } = await resend.emails.send({
       from: `${fromName} <${fromEmail}>`,
       to: [email],
-      subject: `Bienvenue sur SalonPro, ${ownerName} — votre espace est prêt`,
+      subject: `Bienvenue sur Kreno, ${ownerName} — votre espace est prêt`,
       html: `
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bienvenue sur SalonPro</title>
+  <title>Bienvenue sur Kreno</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
   <div style="max-width:580px;margin:32px auto;padding:0 12px">
@@ -204,7 +204,7 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
         <span style="color:#fff;font-size:13px;font-weight:600;letter-spacing:.5px">SALONPRO</span>
       </div>
       <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;line-height:1.3">Votre salon est en ligne 🎉</h1>
-      <p style="color:rgba(255,255,255,.8);margin:10px 0 0;font-size:15px">Bienvenue dans la famille SalonPro, ${ownerName} !</p>
+      <p style="color:rgba(255,255,255,.8);margin:10px 0 0;font-size:15px">Bienvenue dans la famille Kreno, ${ownerName} !</p>
     </div>
 
     <!-- Body -->
@@ -212,7 +212,7 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
 
       <p style="font-size:15px;color:#27272a;margin:0 0 24px;line-height:1.7">
         Bonjour <strong>${ownerName}</strong>,<br>
-        <strong>${salonName}</strong> est désormais sur SalonPro avec le plan <strong>${planLabel}</strong>${trialDays ? ` — vous bénéficiez de <strong>${trialDays} jours d'essai gratuit</strong>` : ''}.
+        <strong>${salonName}</strong> est désormais sur Kreno avec le plan <strong>${planLabel}</strong>${trialDays ? ` — vous bénéficiez de <strong>${trialDays} jours d'essai gratuit</strong>` : ''}.
         Voici tout ce dont vous avez besoin pour démarrer.
       </p>
 
@@ -285,7 +285,7 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
     <!-- Footer -->
     <div style="background:#fafafa;border-radius:0 0 16px 16px;padding:18px 32px;text-align:center;border:1px solid #e4e4e7;border-top:none">
       <p style="font-size:12px;color:#a1a1aa;margin:0">
-        SalonPro — La solution de réservation pour les professionnels de la beauté<br>
+        Kreno — La solution de réservation pour les professionnels de la beauté<br>
         <a href="${baseUrl}/saas/cgu.html" style="color:#a1a1aa">CGU</a> · <a href="${baseUrl}/saas/index.html" style="color:#a1a1aa">Site</a>
       </p>
     </div>
@@ -307,14 +307,14 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
 
 // Send password reset email
 async function sendPasswordResetEmail(email, ownerName, resetUrl) {
-  const fromName = process.env.SMTP_FROM_NAME || 'SalonPro';
+  const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
   try {
     const { data, error } = await resend.emails.send({
       from: `${fromName} <${fromEmail}>`,
       to: [email],
-      subject: `🔐 Réinitialisation de votre mot de passe — SalonPro`,
+      subject: `🔐 Réinitialisation de votre mot de passe — Kreno`,
       html: `
 <!DOCTYPE html>
 <html>
@@ -323,14 +323,14 @@ async function sendPasswordResetEmail(email, ownerName, resetUrl) {
   <div style="max-width:520px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
     <div style="background:#6366F1;padding:28px;text-align:center">
       <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700">🔐 Réinitialisation du mot de passe</h1>
-      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:13px">SalonPro — Espace Pro</p>
+      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:13px">Kreno — Espace Pro</p>
     </div>
     <div style="padding:28px">
       <p style="font-size:15px;color:#27272a;margin:0 0 16px">
         Bonjour <strong>${ownerName || 'cher utilisateur'}</strong>,
       </p>
       <p style="font-size:14px;color:#52525b;margin:0 0 24px;line-height:1.7">
-        Nous avons reçu une demande de réinitialisation du mot de passe pour votre compte SalonPro.<br>
+        Nous avons reçu une demande de réinitialisation du mot de passe pour votre compte Kreno.<br>
         Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe. Ce lien est valable <strong>1 heure</strong>.
       </p>
       <div style="text-align:center;margin:28px 0">
@@ -347,7 +347,7 @@ async function sendPasswordResetEmail(email, ownerName, resetUrl) {
       </p>
     </div>
     <div style="background:#fafafa;padding:14px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">SalonPro — Propulsé par Osmo Digital</p>
+      <p style="font-size:12px;color:#a1a1aa;margin:0">Kreno — Propulsé par Osmo Digital</p>
     </div>
   </div>
 </body>
@@ -364,10 +364,10 @@ async function sendPasswordResetEmail(email, ownerName, resetUrl) {
 }
 
 async function sendReminderEmail(booking, salon) {
-  const fromName = process.env.SMTP_FROM_NAME || salon.name || 'SalonPro';
+  const fromName = process.env.SMTP_FROM_NAME || salon.name || 'Kreno';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const primaryColor = salon.branding?.primaryColor || '#6366F1';
-  const salonName = salon.name || 'SalonPro';
+  const salonName = salon.name || 'Kreno';
   const cancelUrl = booking.cancelToken ? `${process.env.BASE_URL || 'https://barberpro-saa.onrender.com'}/cancel/${booking.cancelToken}` : null;
   try {
     const { data, error } = await resend.emails.send({
@@ -421,7 +421,7 @@ async function sendReminderEmail(booking, salon) {
       </div>` : ''}
     </div>
     <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par SalonPro</p>
+      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par Kreno</p>
     </div>
   </div>
 </body>
@@ -433,10 +433,10 @@ async function sendReminderEmail(booking, salon) {
 }
 
 async function sendCancellationConfirmation(booking, salon) {
-  const fromName = process.env.SMTP_FROM_NAME || salon.name || 'SalonPro';
+  const fromName = process.env.SMTP_FROM_NAME || salon.name || 'Kreno';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const primaryColor = salon.branding?.primaryColor || '#6366F1';
-  const salonName = salon.name || 'SalonPro';
+  const salonName = salon.name || 'Kreno';
   if (!booking.clientEmail) return;
   try {
     const { data, error } = await resend.emails.send({
@@ -478,7 +478,7 @@ async function sendCancellationConfirmation(booking, salon) {
       </p>
     </div>
     <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par SalonPro</p>
+      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par Kreno</p>
     </div>
   </div>
 </body>
@@ -491,10 +491,10 @@ async function sendCancellationConfirmation(booking, salon) {
 
 async function sendCancellationAlertToOwner(booking, salon, ownerEmail) {
   if (!ownerEmail) return;
-  const fromName = process.env.SMTP_FROM_NAME || 'SalonPro';
+  const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const primaryColor = salon.branding?.primaryColor || '#6366F1';
-  const salonName = salon.name || 'SalonPro';
+  const salonName = salon.name || 'Kreno';
   try {
     const { data, error } = await resend.emails.send({
       from: `${fromName} <${fromEmail}>`,
@@ -546,7 +546,7 @@ async function sendCancellationAlertToOwner(booking, salon, ownerEmail) {
       </p>
     </div>
     <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par SalonPro</p>
+      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par Kreno</p>
     </div>
   </div>
 </body>
@@ -559,7 +559,7 @@ async function sendCancellationAlertToOwner(booking, salon, ownerEmail) {
 
 // Send admin notification when a new paying salon subscribes
 async function sendAdminNewSubscriptionEmail(adminEmail, { salonName, ownerEmail, plan, salonId, baseUrl }) {
-  const fromName = process.env.SMTP_FROM_NAME || 'SalonPro';
+  const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const planLabel = { starter: 'Starter', pro: 'Pro ⭐', premium: 'Premium 🚀' }[plan] || plan;
   const adminUrl = (baseUrl || process.env.BASE_URL || 'https://barberpro-saa.onrender.com') + '/admin';
@@ -593,7 +593,7 @@ async function sendAdminNewSubscriptionEmail(adminEmail, { salonName, ownerEmail
       </div>
     </div>
     <div style="background:#f9fafb;border:1px solid #e4e4e7;border-top:none;border-radius:0 0 16px 16px;padding:14px 28px;text-align:center">
-      <p style="margin:0;color:#9ca3af;font-size:12px">SalonPro — Notification automatique</p>
+      <p style="margin:0;color:#9ca3af;font-size:12px">Kreno — Notification automatique</p>
     </div>
   </div>
 </body>
@@ -608,10 +608,10 @@ async function sendAdminNewSubscriptionEmail(adminEmail, { salonName, ownerEmail
 // Notify the assigned employee when a booking is created
 async function sendEmployeeBookingNotification(booking, salon, employeeEmail) {
   if (!employeeEmail || !employeeEmail.includes('@')) return;
-  const fromName = process.env.SMTP_FROM_NAME || salon.name || 'SalonPro';
+  const fromName = process.env.SMTP_FROM_NAME || salon.name || 'Kreno';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const primaryColor = salon.branding?.primaryColor || '#6366F1';
-  const salonName = salon.name || 'SalonPro';
+  const salonName = salon.name || 'Kreno';
   try {
     await resend.emails.send({
       from: `${fromName} <${fromEmail}>`,
@@ -650,7 +650,7 @@ module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, send
 // ---- Review request email (sent ~2h after appointment) ----
 async function sendReviewRequestEmail(booking, salon, reviewUrl) {
   const primaryColor = salon.branding?.primaryColor || '#6366F1';
-  const salonName = salon.name || 'SalonPro';
+  const salonName = salon.name || 'Kreno';
   const clientName = booking.clientName?.split(' ')[0] || 'cher client';
 
   const html = `

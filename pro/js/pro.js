@@ -3680,11 +3680,11 @@ function renderIntegrations(webhooks) {
             <div class="card-header"><h3>🏷 Marque blanche</h3></div>
             <div class="card-body">
                 <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px">
-                    Masquez le badge "Propulsé par SalonPro" sur votre site public.
+                    Masquez le badge "Propulsé par Kreno" sur votre site public.
                 </p>
                 <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:14px">
                     <input type="checkbox" id="wlEnabled" ${currentSalon?.whiteLabel?.enabled ? 'checked' : ''} style="accent-color:var(--primary);width:16px;height:16px">
-                    <span style="font-size:.9rem">Masquer le badge SalonPro sur mon site</span>
+                    <span style="font-size:.9rem">Masquer le badge Kreno sur mon site</span>
                 </label>
                 <button class="btn btn-primary btn-sm" onclick="saveWhiteLabel()">Enregistrer</button>
             </div>
@@ -3755,7 +3755,7 @@ async function saveWhiteLabel() {
         const data = await res.json();
         if (data.success) {
             currentSalon = { ...currentSalon, whiteLabel: data.data.whiteLabel };
-            showToast(enabled ? 'Badge SalonPro masqué ✅' : 'Badge SalonPro rétabli');
+            showToast(enabled ? 'Badge Kreno masqué ✅' : 'Badge Kreno rétabli');
         } else {
             showToast(data.error || 'Erreur', 'error');
         }

@@ -1503,7 +1503,7 @@ route('POST', '/api/pro/sms/buy', async (req, res) => {
                 currency: 'chf',
                 unit_amount: pack.priceChf * 100,
                 product_data: {
-                    name: `SalonPro — ${pack.label} (${pack.credits} SMS)`,
+                    name: `Kreno — ${pack.label} (${pack.credits} SMS)`,
                     description: `${pack.credits} crédits SMS pour ${salon.name}`,
                 },
             },
@@ -1551,7 +1551,7 @@ route('POST', '/api/stripe/create-checkout', async (req, res) => {
             line_items: [{
                 price_data: {
                     currency: 'chf',
-                    product_data: { name: planInfo.name, description: `SalonPro ${planInfo.name} — jusqu'à ${planInfo.employees === 999 ? 'illimité' : planInfo.employees} employés` },
+                    product_data: { name: planInfo.name, description: `Kreno ${planInfo.name} — jusqu'à ${planInfo.employees === 999 ? 'illimité' : planInfo.employees} employés` },
                     unit_amount: planInfo.amount,
                     recurring: { interval: 'month' }
                 },
@@ -1769,7 +1769,7 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
                         currency: 'chf',
                         product_data: {
                             name: planInfo.name,
-                            description: `SalonPro ${planInfo.name} — ${planInfo.employees === 999 ? 'employés illimités' : `jusqu'à ${planInfo.employees} employés`}`
+                            description: `Kreno ${planInfo.name} — ${planInfo.employees === 999 ? 'employés illimités' : `jusqu'à ${planInfo.employees} employés`}`
                         },
                         unit_amount: planInfo.amount,
                         recurring: { interval: 'month' }
@@ -2041,7 +2041,7 @@ async function triggerWebhooks(salon, event, payload) {
         try {
             await fetch(wh.url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-SalonPro-Event': event },
+                headers: { 'Content-Type': 'application/json', 'X-Kreno-Event': event },
                 body,
                 signal: AbortSignal.timeout(5000),
             });
@@ -2173,7 +2173,7 @@ route('GET', '/api/pro/salon/:salonId/bookings/ical', async (req, res, params) =
 
     const lines = [
         'BEGIN:VCALENDAR', 'VERSION:2.0',
-        'PRODID:-//SalonPro//SalonPro//FR',
+        'PRODID:-//Kreno//Kreno//FR',
         `X-WR-CALNAME:${salon.name} - Rendez-vous`,
         'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
     ];
@@ -2427,7 +2427,7 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
     }
     const amountCents = Math.round(amountCHF * 100);
 
-    // Frais plateforme SalonPro (2.5% du prix total du service)
+    // Frais plateforme Kreno (2.5% du prix total du service)
     const platformFeeCents = Math.round(service.price * 100 * 2.5 / 100);
 
     // Crée le booking en statut pending_payment
@@ -2653,9 +2653,9 @@ route('POST', '/api/cancel-token/:token', async (req, res, params) => {
     const salon = await db.findSalonById(booking.salon);
 
     // Send cancellation emails (non-blocking)
-    if (booking.clientEmail) sendCancellationConfirmation(booking, salon || { name: 'SalonPro' });
+    if (booking.clientEmail) sendCancellationConfirmation(booking, salon || { name: 'Kreno' });
     const owner = await db.findOwnerBySalon(booking.salon);
-    if (owner && owner.email) sendCancellationAlertToOwner(booking, salon || { name: 'SalonPro' }, owner.email);
+    if (owner && owner.email) sendCancellationAlertToOwner(booking, salon || { name: 'Kreno' }, owner.email);
 
     json(res, 200, { success: true });
 });
@@ -2792,7 +2792,7 @@ const server = http.createServer(async (req, res) => {
             return res.end('<!DOCTYPE html><html><body style="font-family:system-ui;text-align:center;padding:60px;color:#6b7280"><h2>Reçu introuvable</h2><p>Ce lien est invalide ou a expiré.</p></body></html>');
         }
         const salon = await db.findSalonById(booking.salon).catch(() => null);
-        const salonName = salon?.name || 'SalonPro';
+        const salonName = salon?.name || 'Kreno';
         const primaryColor = salon?.branding?.primaryColor || '#6366F1';
 
         const payStatusLabel = {
@@ -2926,7 +2926,7 @@ tr+tr td{border-top:1px solid #f0f0f0}
                 // Async: fetch salon for server-side SEO injection
                 db.findSalonBySlug(salonSlug).then(salon => {
                     if (salon) {
-                        const name = salon.name || 'SalonPro';
+                        const name = salon.name || 'Kreno';
                         const city = salon.city || (salon.address ? salon.address.split(',')[0] : '');
                         const desc = `Prenez rendez-vous en ligne chez ${name}${city ? ' à ' + city : ''}. Réservation rapide, disponible 24h/24. Confirmez votre RDV en quelques clics.`;
                         const safeDesc = desc.replace(/"/g, '&quot;');

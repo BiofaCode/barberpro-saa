@@ -1,5 +1,5 @@
 /**
- * SalonPro — Cookie Consent Banner
+ * Kreno — Cookie Consent Banner
  * Conforme nLPD (Suisse) + RGPD
  * Un seul fichier JS à inclure sur toutes les pages
  */

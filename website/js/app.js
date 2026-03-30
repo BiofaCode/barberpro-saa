@@ -182,10 +182,10 @@ function applySalonBranding(salon) {
   document.title = `${salon.name} | Réservation en ligne`;
   updateMetaTags(salon);
 
-  // Footer: nom du salon + badge "Propulsé par SalonPro" (masqué si marque blanche Premium)
+  // Footer: nom du salon + badge "Propulsé par Kreno" (masqué si marque blanche Premium)
   const footerNameEl = document.getElementById('footerSalonName');
   if (footerNameEl) footerNameEl.textContent = `© ${new Date().getFullYear()} ${salon.name}. Tous droits réservés.`;
-  const poweredEl = document.getElementById('poweredBySalonPro');
+  const poweredEl = document.getElementById('poweredByKreno');
   if (poweredEl && salon.subscription?.plan === 'premium' && salon.whiteLabel?.enabled) {
     poweredEl.style.display = 'none';
   }
