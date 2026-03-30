@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
+import 'employees_screen.dart';
+import 'services_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -48,12 +50,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppTheme.bgCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Se déconnecter ?', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-        content: Text('Voulez-vous vraiment vous déconnecter ?', style: GoogleFonts.outfit(color: AppTheme.textSecondary)),
+        title: Text('Se déconnecter ?', style: GoogleFonts.dmSans(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+        content: Text('Voulez-vous vraiment vous déconnecter ?', style: GoogleFonts.dmSans(color: AppTheme.textSecondary)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler', style: GoogleFonts.outfit(color: AppTheme.textMuted)),
+            child: Text('Annuler', style: GoogleFonts.dmSans(color: AppTheme.textMuted)),
           ),
           TextButton(
             onPressed: () {
@@ -63,7 +65,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 (_) => false,
               );
             },
-            child: Text('Déconnexion', style: GoogleFonts.outfit(color: AppTheme.error, fontWeight: FontWeight.w600)),
+            child: Text('Déconnexion', style: GoogleFonts.dmSans(color: AppTheme.error, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -90,7 +92,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Text(
                             'Mon Salon',
-                            style: GoogleFonts.playfairDisplay(
+                            style: GoogleFonts.bricolageGrotesque(
                               fontSize: 28,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.textPrimary,
@@ -143,18 +145,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // Employees
-                      _buildSectionTitle('Mon équipe (${_employees.length})'),
+                      _buildNavCard(
+                        icon: Icons.people_rounded,
+                        title: 'Mon équipe',
+                        subtitle: '${_employees.length} employé${_employees.length > 1 ? 's' : ''}',
+                        onTap: () async {
+                          await Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => const EmployeesScreen()));
+                          _loadSalonData();
+                        },
+                      ),
                       const SizedBox(height: 12),
-                      if (_employees.isEmpty)
-                        _buildEmptyCard('Aucun employé', 'Ajoutez des membres à votre équipe')
-                      else
-                        ..._employees.map((e) => _buildEmployeeTile(e)),
-                      const SizedBox(height: 24),
 
                       // Services
-                      _buildSectionTitle('Prestations (${_services.length})'),
-                      const SizedBox(height: 12),
-                      ..._services.map((s) => _buildServiceTile(s)),
+                      _buildNavCard(
+                        icon: Icons.spa_rounded,
+                        title: 'Mes prestations',
+                        subtitle: '${_services.length} prestation${_services.length > 1 ? 's' : ''}',
+                        onTap: () async {
+                          await Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => const ServicesScreen()));
+                          _loadSalonData();
+                        },
+                      ),
                       const SizedBox(height: 24),
 
                       // Gallery
@@ -163,7 +176,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Text(
                             'Galerie Photos',
-                            style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                            style: GoogleFonts.bricolageGrotesque(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                           ),
                           IconButton(
                             icon: const Icon(Icons.add_photo_alternate_outlined, color: AppTheme.primary),
@@ -181,7 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Text(
                             'Avis & Témoignages',
-                            style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
+                            style: GoogleFonts.bricolageGrotesque(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                           ),
                           IconButton(
                             icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
@@ -217,9 +230,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // Version
                       Center(
                         child: Text(
-                          'SalonPro v2.0.0\nPlateforme SaaS pour professionnels',
+                          'Kreno v1.0.0\nPlateforme SaaS pour professionnels',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted, height: 1.6),
+                          style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted, height: 1.6),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -258,7 +271,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Center(
               child: Text(
                 ownerName.isNotEmpty ? ownerName[0].toUpperCase() : '?',
-                style: GoogleFonts.outfit(fontSize: 26, fontWeight: FontWeight.w700, color: AppTheme.bgDark),
+                style: GoogleFonts.dmSans(fontSize: 26, fontWeight: FontWeight.w700, color: AppTheme.bgDark),
               ),
             ),
           ),
@@ -267,15 +280,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(ownerName, style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                Text(ownerName, style: GoogleFonts.bricolageGrotesque(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                 const SizedBox(height: 4),
-                Text(salonName, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textSecondary)),
+                Text(salonName, style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textSecondary)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
                     const Icon(Icons.star_rounded, color: AppTheme.warning, size: 16),
                     const SizedBox(width: 4),
-                    Text('$rating ($reviews avis)', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w500)),
+                    Text('$rating ($reviews avis)', style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.primary, fontWeight: FontWeight.w500)),
                   ],
                 ),
               ],
@@ -310,9 +323,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('/s/$slug', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+                Text('/s/$slug', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.primary)),
                 const SizedBox(height: 2),
-                Text('Site de réservation de vos clients', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+                Text('Site de réservation de vos clients', style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
               ],
             ),
           ),
@@ -333,66 +346,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       child: Column(
         children: [
-          Text(title, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textMuted)),
+          Text(title, style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textMuted)),
           const SizedBox(height: 4),
-          Text(subtitle, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+          Text(subtitle, style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
         ],
       ),
     );
   }
 
-  Widget _buildEmployeeTile(Map<String, dynamic> emp) {
-    final name = emp['name'] as String? ?? '';
-    final specialties = (emp['specialties'] as List?)?.join(', ') ?? '';
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.bgCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withAlpha(10)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withAlpha(26),
-              borderRadius: BorderRadius.circular(12),
+  Widget _buildNavCard({required IconData icon, required String title, required String subtitle, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.bgCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.primary.withAlpha(31)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withAlpha(26),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: AppTheme.primary, size: 22),
             ),
-            child: Center(
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primary),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: GoogleFonts.bricolageGrotesque(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted)),
+                ],
               ),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-                if (specialties.isNotEmpty)
-                  Text(specialties, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppTheme.success.withAlpha(26),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text('Actif', style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.w600)),
-          ),
-        ],
+            const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 22),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSectionTitle(String title) {
-    return Text(title, style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary));
+    return Text(title, style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary));
   }
 
   Widget _buildInfoTile(IconData icon, String label, String value) {
@@ -411,9 +412,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+                Text(label, style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
                 const SizedBox(height: 2),
-                Text(value, style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
+                Text(value, style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textPrimary, fontWeight: FontWeight.w500)),
               ],
             ),
           ),
@@ -442,42 +443,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(entry.value, style: GoogleFonts.outfit(fontSize: 14, color: isClosed ? AppTheme.textMuted : AppTheme.textPrimary)),
-                Text(timeStr, style: GoogleFonts.outfit(fontSize: 14, color: isClosed ? AppTheme.error : AppTheme.primary, fontWeight: FontWeight.w500)),
+                Text(entry.value, style: GoogleFonts.dmSans(fontSize: 14, color: isClosed ? AppTheme.textMuted : AppTheme.textPrimary)),
+                Text(timeStr, style: GoogleFonts.dmSans(fontSize: 14, color: isClosed ? AppTheme.error : AppTheme.primary, fontWeight: FontWeight.w500)),
               ],
             ),
           );
         }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildServiceTile(Map<String, dynamic> service) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.bgCard, borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withAlpha(10)),
-      ),
-      child: Row(
-        children: [
-          Text(service['icon'] as String? ?? '✂️', style: const TextStyle(fontSize: 20)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(service['name'] as String? ?? '', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-                Text('${service['duration'] ?? 30} min', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
-              ],
-            ),
-          ),
-          Text(
-            '${service['price'] ?? 0} CHF',
-            style: GoogleFonts.playfairDisplay(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.primary),
-          ),
-        ],
       ),
     );
   }
@@ -498,8 +469,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-                Text(subtitle, style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+                Text(title, style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+                Text(subtitle, style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
               ],
             ),
           ),
@@ -532,23 +503,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Plan professionnel', style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textMuted)),
+              Text('Plan professionnel', style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textMuted)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppTheme.success.withAlpha(26),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(status.toString().toUpperCase(), style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.w600)),
+                child: Text(status.toString().toUpperCase(), style: GoogleFonts.dmSans(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             'Pack ${plan.toString().toUpperCase()}',
-            style: GoogleFonts.playfairDisplay(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.primary),
+            style: GoogleFonts.bricolageGrotesque(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.primary),
           ),
-          Text('$price CHF / mois', style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary)),
+          Text('$price CHF / mois', style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textPrimary)),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () {
@@ -594,8 +565,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Couleurs et Textes', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                    Text('Personnalisez votre site public', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+                    Text('Couleurs et Textes', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                    Text('Personnalisez votre site public', style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
                   ],
                 ),
               ),
@@ -649,7 +620,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Personnalisation', style: GoogleFonts.playfairDisplay(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+              Text('Personnalisation', style: GoogleFonts.bricolageGrotesque(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
               const SizedBox(height: 20),
               _buildTextField('Titre principal', titleCtrl),
               const SizedBox(height: 16),
@@ -659,11 +630,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 16),
               _buildTextField('Couleur Accent (HEX)', accentColorCtrl),
               const SizedBox(height: 24),
-              Text("Statistiques d'accroche (Hero)", style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+              Text("Statistiques d'accroche (Hero)", style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
               const SizedBox(height: 12),
               StatefulBuilder(
                 builder: (ctx, setStateSheet) => SwitchListTile(
-                  title: Text('Masquer ces statistiques', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 14)),
+                  title: Text('Masquer ces statistiques', style: GoogleFonts.dmSans(color: AppTheme.textPrimary, fontSize: 14)),
                   value: hideStats,
                   activeColor: AppTheme.primary,
                   onChanged: (val) => setStateSheet(() => hideStats = val),
@@ -713,7 +684,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text('Enregistrer', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.bgDark)),
+                  child: Text('Enregistrer', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.bgDark)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -728,11 +699,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMuted)),
+        Text(label, style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted)),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
-          style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+          style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
           decoration: InputDecoration(
             filled: true,
             fillColor: AppTheme.bgDark,
@@ -769,7 +740,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(t['name'] ?? '', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+              Text(t['name'] ?? '', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
               Row(
                 children: [
                   IconButton(
@@ -790,9 +761,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 4),
-          Text(t['role'] ?? 'Client', style: GoogleFonts.outfit(fontSize: 12, color: AppTheme.textMuted)),
+          Text(t['role'] ?? 'Client', style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
           const SizedBox(height: 8),
-          Text(t['text'] ?? '', style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textPrimary)),
+          Text(t['text'] ?? '', style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textPrimary)),
           const SizedBox(height: 8),
           Row(
             children: List.generate(5, (i) => Icon(
@@ -836,13 +807,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(isEdit ? 'Modifier l\'avis' : 'Ajouter un avis', style: GoogleFonts.playfairDisplay(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  Text(isEdit ? 'Modifier l\'avis' : 'Ajouter un avis', style: GoogleFonts.bricolageGrotesque(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                   const SizedBox(height: 20),
                   _buildTextField('Nom du client', nameCtrl),
                   const SizedBox(height: 16),
                   _buildTextField('Rôle / Description', roleCtrl),
                   const SizedBox(height: 16),
-                  Text('Étoiles ($stars)', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMuted)),
+                  Text('Étoiles ($stars)', style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted)),
                   Slider(
                     value: stars.toDouble(),
                     min: 1, max: 5, divisions: 4,
@@ -882,7 +853,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: Text('Enregistrer', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.bgDark)),
+                      child: Text('Enregistrer', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.bgDark)),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -975,7 +946,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               bottom: 12, left: 12, right: 12,
               child: Text(
                 photo['title'],
-                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+                style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
                 maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -1004,7 +975,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Titre de la photo', style: TextStyle(color: AppTheme.textPrimary)),
         content: TextField(
           controller: titleCtrl,
-          style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+          style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
           decoration: InputDecoration(
             hintText: 'Ex: Taper Fade',
             hintStyle: TextStyle(color: AppTheme.textMuted),

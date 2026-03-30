@@ -2875,6 +2875,11 @@ const server = http.createServer(async (req, res) => {
 
     // API
     if (pathname.startsWith('/api/')) {
+        // Alias /api/barber/ → /api/pro/ for Flutter mobile app compatibility
+        if (pathname.startsWith('/api/barber/')) {
+            pathname = pathname.replace('/api/barber/', '/api/pro/');
+        }
+
         // Protect Admin routes
         if (pathname.startsWith('/api/admin') && pathname !== '/api/admin/login') {
             const tokenPayload = verifyToken(req);
