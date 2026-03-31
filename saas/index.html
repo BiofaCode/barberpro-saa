@@ -266,60 +266,155 @@
     </div>
 
     <div class="feat-grid">
-      <div class="feat-card feat-large reveal">
-        <div class="feat-icon-wrap" style="--c:#5850E8">🗓️</div>
+
+      <!-- 1. Réservation en ligne (LARGE — span 2) -->
+      <div class="feat-card feat-large feat-accent-purple reveal">
+        <div class="feat-card-top">
+          <div class="feat-icon-wrap" style="--c:#5850E8">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <span class="feat-badge">Fonctionnalité phare</span>
+        </div>
         <h3>Réservation en ligne 24h/24</h3>
-        <p>Vos clients réservent eux-mêmes sur votre page personnalisée, en 3 clics, depuis leur téléphone. Vous recevez une notification instantanée.</p>
-        <div class="feat-visual-cal">
-          <div class="mini-cal">
-            <div class="mini-cal-head"><span>Mars 2026</span></div>
-            <div class="mini-cal-grid">
-              <div class="mc-day"></div><div class="mc-day"></div><div class="mc-day dot"></div>
-              <div class="mc-day sel"></div><div class="mc-day"></div><div class="mc-day dot"></div>
-              <div class="mc-day"></div><div class="mc-day dot"></div><div class="mc-day"></div>
-              <div class="mc-day"></div><div class="mc-day sel"></div><div class="mc-day"></div>
+        <p>Vos clients réservent eux-mêmes sur votre page en 3 clics, depuis leur téléphone. Vous recevez une notification instantanée — même la nuit.</p>
+        <div class="feat-booking-ui">
+          <div class="fbu-label">Choisissez un service</div>
+          <div class="fbu-services">
+            <div class="fbu-service fbu-active">
+              <span>Coupe homme</span>
+              <span class="fbu-price">25 CHF · 30 min</span>
+            </div>
+            <div class="fbu-service">
+              <span>Barbe &amp; Contour</span>
+              <span class="fbu-price">18 CHF · 20 min</span>
+            </div>
+          </div>
+          <div class="fbu-label" style="margin-top:14px">Créneaux disponibles</div>
+          <div class="fbu-slots">
+            <div class="fbu-slot">09:00</div>
+            <div class="fbu-slot fbu-slot-active">10:30</div>
+            <div class="fbu-slot">11:00</div>
+            <div class="fbu-slot fbu-slot-taken">12:00</div>
+            <div class="fbu-slot">14:30</div>
+            <div class="fbu-slot">16:00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. SMS rappels (SMALL) -->
+      <div class="feat-card feat-accent-amber reveal" style="transition-delay:.1s">
+        <div class="feat-icon-wrap" style="--c:#f59e0b">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h3>SMS de rappel automatiques</h3>
+        <p>Rappels envoyés automatiquement 24h avant chaque rendez-vous. Moins d'absences, plus de revenus.</p>
+        <div class="feat-metric feat-metric-amber">
+          <span class="feat-metric-value">−70%</span>
+          <span class="feat-metric-label">de no-shows</span>
+        </div>
+        <div class="feat-sms-bubble">
+          <div class="fsb-sender">Kreno SMS</div>
+          <div class="fsb-text">Rappel : RDV demain à 10h30 chez Studio K. Répondez STOP pour annuler.</div>
+        </div>
+      </div>
+
+      <!-- 3. Paiements (SMALL) -->
+      <div class="feat-card feat-accent-green reveal" style="transition-delay:.15s">
+        <div class="feat-icon-wrap" style="--c:#00C48C">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+        <h3>Paiements &amp; acomptes en ligne</h3>
+        <p>Acceptez des acomptes ou paiements complets. L'argent arrive directement sur votre compte bancaire.</p>
+        <div class="feat-metric feat-metric-green">
+          <span class="feat-metric-value">0%</span>
+          <span class="feat-metric-label">de commission Kreno</span>
+        </div>
+        <div class="feat-stripe-badge">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="#635BFF" aria-hidden="true"><path d="M13.9 7.2c0-.9.7-1.3 1.9-1.3 1.7 0 3.8.5 5.3 1.4V2.6C19.6 1.4 17.8 1 16 1c-4.1 0-6.9 2.2-6.9 5.8 0 5.7 7.8 4.8 7.8 7.2 0 1.1-.9 1.4-2.2 1.4-1.9 0-4.3-.8-6.2-1.9v4.8c1.7.7 3.5 1.1 5.2 1.1 4.2 0 7.1-2.1 7.1-5.8 0-6.1-7.9-5-7.9-7.4z"/></svg>
+          Powered by Stripe
+        </div>
+      </div>
+
+      <!-- 4. Statistiques (LARGE — span 2) -->
+      <div class="feat-card feat-large feat-accent-pink reveal" style="transition-delay:.2s">
+        <div class="feat-icon-wrap" style="--c:#ec4899">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        </div>
+        <h3>Statistiques &amp; tableau de bord</h3>
+        <p>Chiffre d'affaires, taux d'occupation, services phares, fidélisation — tout en un coup d'œil pour piloter votre activité.</p>
+        <div class="feat-stats-ui">
+          <div class="fsu-numbers">
+            <div class="fsu-kpi">
+              <div class="fsu-val">4 820 <span>CHF</span></div>
+              <div class="fsu-lbl">Ce mois-ci</div>
+            </div>
+            <div class="fsu-kpi fsu-kpi-up">
+              <div class="fsu-val">↑ 23%</div>
+              <div class="fsu-lbl">vs mois dernier</div>
+            </div>
+            <div class="fsu-kpi">
+              <div class="fsu-val">87<span>%</span></div>
+              <div class="fsu-lbl">Taux d'occupation</div>
+            </div>
+          </div>
+          <div class="fsu-chart">
+            <div class="fsu-bar" style="--h:40%"></div>
+            <div class="fsu-bar" style="--h:65%"></div>
+            <div class="fsu-bar" style="--h:52%"></div>
+            <div class="fsu-bar" style="--h:78%"></div>
+            <div class="fsu-bar" style="--h:48%"></div>
+            <div class="fsu-bar fsu-bar-hi" style="--h:92%"></div>
+            <div class="fsu-bar fsu-bar-hi" style="--h:72%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Gestion d'équipe (SMALL) -->
+      <div class="feat-card feat-accent-violet reveal" style="transition-delay:.25s">
+        <div class="feat-icon-wrap" style="--c:#8b5cf6">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Gestion d'équipe complète</h3>
+        <p>Profils collaborateurs, planning partagé, assignation des prestations et suivi des performances.</p>
+        <div class="feat-team-ui">
+          <div class="ftu-avatars">
+            <div class="ftu-av" style="--av:#5850E8">A</div>
+            <div class="ftu-av" style="--av:#ec4899">S</div>
+            <div class="ftu-av" style="--av:#00C48C">M</div>
+            <div class="ftu-av ftu-av-more">+2</div>
+          </div>
+          <div class="ftu-badge">Planning synchronisé en temps réel</div>
+        </div>
+      </div>
+
+      <!-- 6. Site vitrine (LARGE — span 2) -->
+      <div class="feat-card feat-large feat-accent-cyan reveal" style="transition-delay:.3s">
+        <div class="feat-icon-wrap" style="--c:#06b6d4">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <h3>Site vitrine personnalisé</h3>
+        <p>Chaque salon a sa propre page avec vos couleurs, logo, galerie et bouton de réservation. Partageable en 1 lien, sans aucune connaissance technique.</p>
+        <div class="feat-site-preview">
+          <div class="fsp-browser">
+            <div class="fsp-chrome">
+              <div class="fsp-dots"><span></span><span></span><span></span></div>
+              <div class="fsp-url">kreno.ch/<strong>studio-k</strong></div>
+            </div>
+            <div class="fsp-body">
+              <div class="fsp-hero">
+                <div class="fsp-salon-name">Studio K</div>
+                <div class="fsp-cta-btn">Réserver →</div>
+              </div>
+              <div class="fsp-svcs">
+                <div class="fsp-svc"><span>Coupe</span><span>35 CHF</span></div>
+                <div class="fsp-svc"><span>Barbe</span><span>25 CHF</span></div>
+                <div class="fsp-svc"><span>Coloration</span><span>65 CHF</span></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="feat-card reveal" style="transition-delay:.1s">
-        <div class="feat-icon-wrap" style="--c:#f59e0b">📱</div>
-        <h3>SMS de rappel automatiques</h3>
-        <p>Réduisez les no-shows jusqu'à <strong>70%</strong> avec des rappels SMS envoyés automatiquement 24h avant chaque rendez-vous.</p>
-      </div>
-
-      <div class="feat-card reveal" style="transition-delay:.15s">
-        <div class="feat-icon-wrap" style="--c:#00C48C">💳</div>
-        <h3>Paiements &amp; acomptes en ligne</h3>
-        <p>Acceptez des acomptes ou paiements complets via Stripe. L'argent arrive directement sur votre compte bancaire. Zéro commission Kreno.</p>
-      </div>
-
-      <div class="feat-card reveal" style="transition-delay:.2s">
-        <div class="feat-icon-wrap" style="--c:#8b5cf6">👥</div>
-        <h3>Gestion d'équipe complète</h3>
-        <p>Créez des profils pour chaque collaborateur, assignez des prestations et suivez leurs performances en temps réel.</p>
-      </div>
-
-      <div class="feat-card feat-large reveal" style="transition-delay:.25s">
-        <div class="feat-icon-wrap" style="--c:#ec4899">📊</div>
-        <h3>Statistiques &amp; tableau de bord</h3>
-        <p>Chiffre d'affaires, services les plus demandés, taux d'occupation, fidélisation client — tout en un coup d'œil pour piloter votre activité.</p>
-        <div class="feat-chart-mini">
-          <div class="fcm-bar" style="height:40%"></div>
-          <div class="fcm-bar" style="height:70%"></div>
-          <div class="fcm-bar" style="height:55%"></div>
-          <div class="fcm-bar" style="height:85%"></div>
-          <div class="fcm-bar" style="height:45%"></div>
-          <div class="fcm-bar fcm-active" style="height:95%"></div>
-        </div>
-      </div>
-
-      <div class="feat-card reveal" style="transition-delay:.3s">
-        <div class="feat-icon-wrap" style="--c:#06b6d4">🎨</div>
-        <h3>Site vitrine personnalisé</h3>
-        <p>Chaque salon a sa propre page avec vos couleurs, logo, galerie photos et bouton de réservation. Partageable en 1 lien.</p>
-      </div>
     </div>
   </div>
 </section>

@@ -110,16 +110,47 @@ function applySalonBranding(salon) {
     document.documentElement.style.setProperty('--color-primary-light', b.accentColor || '#818CF8');
     const hex = b.primaryColor || '#6366F1';
     const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), bl = parseInt(hex.slice(5, 7), 16);
-    document.documentElement.style.setProperty('--color-primary-glow', `rgba(${r},${g},${bl},0.3)`);
+    document.documentElement.style.setProperty('--color-primary-glow', `rgba(${r},${g},${bl},0.25)`);
     document.documentElement.style.setProperty('--color-primary-dark', b.accentColor || '#A88B52');
     if (b.textColor) {
       document.documentElement.style.setProperty('--color-text-primary', b.textColor);
+      document.documentElement.style.setProperty('--color-text-secondary', b.textColor.startsWith('#') ?
+        b.textColor + '99' : b.textColor);
     }
     if (b.backgroundColor) {
       document.documentElement.style.setProperty('--color-bg', b.backgroundColor);
       document.documentElement.style.setProperty('--color-bg-secondary', b.backgroundColor);
       document.body.style.background = b.backgroundColor;
+
+      // Detect light vs dark theme and adapt CSS variables
+      const isLight = _isLightColor(b.backgroundColor);
+      if (isLight) {
+        document.documentElement.style.setProperty('--color-bg-dark', b.backgroundColor);
+        document.documentElement.style.setProperty('--color-bg-card', 'rgba(255,255,255,0.85)');
+        document.documentElement.style.setProperty('--color-bg-card-hover', '#FFFFFF');
+        document.documentElement.style.setProperty('--color-bg-elevated', `rgba(${r},${g},${bl},0.06)`);
+        document.documentElement.style.setProperty('--color-bg-glass', 'rgba(255,255,255,0.7)');
+        document.documentElement.style.setProperty('--hero-overlay',
+          `linear-gradient(135deg, rgba(${r},${g},${bl},0.12) 0%, rgba(${r},${g},${bl},0.04) 60%, rgba(${r},${g},${bl},0.08) 100%)`);
+        document.documentElement.style.setProperty('--navbar-scrolled-bg', 'rgba(255,255,255,0.92)');
+        document.documentElement.style.setProperty('--navbar-scrolled-border', `rgba(${r},${g},${bl},0.15)`);
+        document.documentElement.style.setProperty('--badge-bg', `rgba(${r},${g},${bl},0.10)`);
+        document.documentElement.style.setProperty('--badge-border', `rgba(${r},${g},${bl},0.20)`);
+        document.documentElement.style.setProperty('--map-filter', 'grayscale(0.1)');
+        // Slightly tinted text for secondary elements
+        if (!b.textColor) {
+          document.documentElement.style.setProperty('--color-text-secondary', 'rgba(0,0,0,0.5)');
+          document.documentElement.style.setProperty('--color-text-muted', 'rgba(0,0,0,0.35)');
+        }
+      }
     }
+  }
+
+  function _isLightColor(hex) {
+    if (!hex || !hex.startsWith('#')) return false;
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    // Perceived luminance
+    return (r*299 + g*587 + b*114) / 1000 > 150;
   }
 
   // Apply hero background image if set
