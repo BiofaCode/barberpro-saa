@@ -7,6 +7,8 @@ import '../services/api_service.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/booking_card.dart';
 import 'booking_detail_screen.dart';
+import 'employees_screen.dart';
+import 'services_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -58,6 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final dateStr = DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(DateTime.now());
 
     return Scaffold(
+      drawer: _buildDrawer(context),
       body: SafeArea(
         child: RefreshIndicator(
           color: AppTheme.primary,
@@ -72,6 +75,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
                   child: Row(
                     children: [
+                      // Menu button top-left
+                      Builder(
+                        builder: (ctx) => GestureDetector(
+                          onTap: () => Scaffold.of(ctx).openDrawer(),
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 14),
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(
+                              color: AppTheme.bgCard,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.menu_rounded,
+                                color: AppTheme.textPrimary, size: 20),
+                          ),
+                        ),
+                      ),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -463,6 +482,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      backgroundColor: AppTheme.bgCard,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Text('K', style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text('Kreno',
+                    style: GoogleFonts.bricolageGrotesque(
+                      fontSize: 22, fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    )),
+                ],
+              ),
+            ),
+            const Divider(height: 24),
+            ListTile(
+              leading: const Icon(Icons.group_rounded, color: AppTheme.textSecondary, size: 22),
+              title: Text('Équipe',
+                style: GoogleFonts.dmSans(
+                    fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const EmployeesScreen()));
+              },
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+            ),
+            ListTile(
+              leading: const Icon(Icons.spa_rounded, color: AppTheme.textSecondary, size: 22),
+              title: Text('Services',
+                style: GoogleFonts.dmSans(
+                    fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ServicesScreen()));
+              },
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+            ),
+            const Spacer(),
+            const Divider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Text('Version 1.0 · Kreno',
+                style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
             ),
           ],
         ),

@@ -22,17 +22,17 @@ void main() async {
   // Checking for persistent login
   final isLoggedIn = await ApiService.loadSession();
 
-  runApp(SalonProApp(isLoggedIn: isLoggedIn));
+  runApp(KrenoApp(isLoggedIn: isLoggedIn));
 }
 
-class SalonProApp extends StatelessWidget {
+class KrenoApp extends StatelessWidget {
   final bool isLoggedIn;
-  const SalonProApp({super.key, this.isLoggedIn = false});
+  const KrenoApp({super.key, this.isLoggedIn = false});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SalonPro',
+      title: 'Kreno',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
       home: isLoggedIn ? const HomeScreen() : const LoginScreen(),

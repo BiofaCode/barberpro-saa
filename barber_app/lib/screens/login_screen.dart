@@ -241,7 +241,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                 const SizedBox(height: 24),
 
-                Text('SalonPro',
+                Text('Kreno',
                   style: GoogleFonts.playfairDisplay(fontSize: 32, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                 const SizedBox(height: 6),
                 Text('Connectez-vous à votre salon',
