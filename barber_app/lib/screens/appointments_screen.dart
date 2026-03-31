@@ -19,6 +19,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
   late TabController _tabController;
   List<BookingModel> _allBookings = [];
   bool _loading = true;
+  bool _isCalendarView = false;
   DateTime _selectedDate = DateTime.now();
 
   @override
@@ -80,17 +81,42 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
                       color: AppTheme.textPrimary,
                     ),
                   ),
-                  GestureDetector(
-                    onTap: _loadBookings,
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.bgCard,
-                        borderRadius: BorderRadius.circular(12),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => setState(() => _isCalendarView = !_isCalendarView),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: _isCalendarView
+                                ? AppTheme.primary.withAlpha(26)
+                                : AppTheme.bgCard,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _isCalendarView
+                                ? Icons.view_list_rounded
+                                : Icons.calendar_view_day_rounded,
+                            color: AppTheme.primary,
+                            size: 20,
+                          ),
+                        ),
                       ),
-                      child: const Icon(Icons.refresh_rounded,
-                          color: AppTheme.primary, size: 20),
-                    ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: _loadBookings,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.bgCard,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.refresh_rounded,
+                              color: AppTheme.primary, size: 20),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -158,45 +184,125 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
               ),
             ),
 
-            // Tabs
-            TabBar(
-              controller: _tabController,
-              indicatorColor: AppTheme.primary,
-              indicatorWeight: 2,
-              labelColor: AppTheme.primary,
-              unselectedLabelColor: AppTheme.textMuted,
-              labelStyle: GoogleFonts.outfit(
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
+            // Tabs (list mode only)
+            if (!_isCalendarView)
+              TabBar(
+                controller: _tabController,
+                indicatorColor: AppTheme.primary,
+                indicatorWeight: 2,
+                labelColor: AppTheme.primary,
+                unselectedLabelColor: AppTheme.textMuted,
+                labelStyle: GoogleFonts.outfit(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+                tabs: [
+                  Tab(text: 'À venir (${_upcomingBookings.length})'),
+                  Tab(text: 'Terminés (${_completedBookings.length})'),
+                  Tab(text: 'Annulés (${_cancelledBookings.length})'),
+                ],
               ),
-              tabs: [
-                Tab(text: 'À venir (${_upcomingBookings.length})'),
-                Tab(text: 'Terminés (${_completedBookings.length})'),
-                Tab(text: 'Annulés (${_cancelledBookings.length})'),
-              ],
-            ),
 
             // Content
             Expanded(
               child: _loading
                   ? const Center(
-                      child:
-                          CircularProgressIndicator(color: AppTheme.primary),
+                      child: CircularProgressIndicator(color: AppTheme.primary),
                     )
-                  : TabBarView(
-                      controller: _tabController,
-                      children: [
-                        _buildBookingList(
-                            _upcomingBookings, 'Aucun rendez-vous à venir'),
-                        _buildBookingList(
-                            _completedBookings, 'Aucun rendez-vous terminé'),
-                        _buildBookingList(
-                            _cancelledBookings, 'Aucune annulation'),
-                      ],
-                    ),
+                  : _isCalendarView
+                      ? _buildDayCalendar()
+                      : TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildBookingList(
+                                _upcomingBookings, 'Aucun rendez-vous à venir'),
+                            _buildBookingList(
+                                _completedBookings, 'Aucun rendez-vous terminé'),
+                            _buildBookingList(
+                                _cancelledBookings, 'Aucune annulation'),
+                          ],
+                        ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDayCalendar() {
+    final dayBookings = _allBookings
+        .where((b) =>
+            b.dateTime.day == _selectedDate.day &&
+            b.dateTime.month == _selectedDate.month &&
+            b.dateTime.year == _selectedDate.year)
+        .toList()
+      ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+
+    return RefreshIndicator(
+      color: AppTheme.primary,
+      onRefresh: _loadBookings,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+        itemCount: 13, // 8:00 to 20:00
+        itemBuilder: (context, index) {
+          final hour = 8 + index;
+          final slotBookings =
+              dayBookings.where((b) => b.dateTime.hour == hour).toList();
+          final isCurrentHour = DateTime.now().hour == hour &&
+              _selectedDate.day == DateTime.now().day &&
+              _selectedDate.month == DateTime.now().month &&
+              _selectedDate.year == DateTime.now().year;
+
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Time label
+              SizedBox(
+                width: 48,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 14, right: 10),
+                  child: Text(
+                    '${hour.toString().padLeft(2, '0')}:00',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: isCurrentHour
+                          ? AppTheme.primary
+                          : AppTheme.textMuted,
+                      fontWeight: isCurrentHour
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ),
+              ),
+              // Divider line + content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 1,
+                      color: isCurrentHour
+                          ? AppTheme.primary.withAlpha(80)
+                          : AppTheme.primary.withAlpha(15),
+                    ),
+                    if (slotBookings.isEmpty)
+                      const SizedBox(height: 52)
+                    else
+                      ...slotBookings.map((b) => Padding(
+                            padding: const EdgeInsets.only(top: 6, bottom: 2),
+                            child: BookingCard(
+                              booking: b,
+                              onTap: () => _openBookingDetail(b),
+                            ),
+                          )),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

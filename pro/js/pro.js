@@ -455,16 +455,13 @@ async function loadDashboard(_retry = 0) {
                 trialInfo = ` — ${daysLeft} jour${daysLeft > 1 ? 's' : ''} restant${daysLeft > 1 ? 's' : ''}`;
             }
             subBanner = `
-                <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:15px">
-                    <div style="display:flex;flex-direction:column;gap:6px">
-                        <span style="font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Abonnement</span>
-                        <div style="display:flex;align-items:center;gap:12px">
-                            <span style="font-weight:700;font-size:18px;color:var(--text)">${planNames[sub.plan] || sub.plan}</span>
-                            <span style="font-size:13px;background:rgba(88,80,232,0.08);padding:4px 10px;border-radius:20px;color:var(--primary)">
-                                ${statusLabels[sub.status] || sub.status}${trialInfo}
-                            </span>
-                        </div>
+                <div style="grid-column:1/-1;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px">
+                    <div style="width:38px;height:38px;background:rgba(99,102,241,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">⭐</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:2px">Abonnement</div>
+                        <div style="font-weight:700;font-size:15px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${planNames[sub.plan] || sub.plan}</div>
                     </div>
+                    <span style="font-size:12px;background:rgba(88,80,232,0.12);padding:5px 12px;border-radius:20px;color:var(--primary);font-weight:600;white-space:nowrap;flex-shrink:0">${statusLabels[sub.status] || sub.status}${trialInfo}</span>
                 </div>
             `;
         }
