@@ -275,6 +275,15 @@
                     <h2>👥 Mes Clients</h2>
                     <button class="btn btn-ghost btn-sm" onclick="exportClientsCSV()" title="Export CSV">⬇️ CSV</button>
                 </div>
+                <div style="margin-bottom:16px;position:relative">
+                    <input
+                        type="text"
+                        id="clientSearch"
+                        class="form-input"
+                        placeholder="🔍  Rechercher un client..."
+                        oninput="filterClients()"
+                        style="font-size:.9rem;width:100%">
+                </div>
                 <div id="clientsList"></div>
             </div>
 

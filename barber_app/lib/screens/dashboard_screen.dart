@@ -69,7 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 // Header
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
                   child: Row(
                     children: [
                       Expanded(
@@ -78,42 +78,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Text(
                               'Bonjour ${ApiService.currentUser?['name']?.split(' ').first ?? ''} 👋',
-                              style: GoogleFonts.outfit(
-                                fontSize: 15,
+                              style: GoogleFonts.dmSans(
+                                fontSize: 14,
                                 color: AppTheme.textSecondary,
                               ),
                             ),
+                            const SizedBox(height: 2),
                             Text(
                               ApiService.currentSalon?['name'] ?? 'Mon Salon',
-                              style: GoogleFonts.playfairDisplay(
-                                fontSize: 28,
+                              style: GoogleFonts.bricolageGrotesque(
+                                fontSize: 26,
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.textPrimary,
+                                letterSpacing: -0.5,
                               ),
                             ),
+                            const SizedBox(height: 2),
                             Text(
                               dateStr,
-                              style: GoogleFonts.outfit(
-                                fontSize: 13,
+                              style: GoogleFonts.dmSans(
+                                fontSize: 12,
                                 color: AppTheme.textMuted,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppTheme.primary, AppTheme.primaryDark],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: const Center(
-                          child: Text('✂️', style: TextStyle(fontSize: 22)),
-                        ),
-                      ),
+                      _buildLogoAvatar(),
                     ],
                   ),
                 ),
@@ -220,14 +211,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   // Today's schedule
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-                    child: Text(
-                      '📋 Planning du jour',
-                      style: GoogleFonts.outfit(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary,
-                      ),
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Planning du jour',
+                          style: GoogleFonts.bricolageGrotesque(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.textPrimary,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryLight,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${_todayBookings.length} RDV',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   if (_todayBookings.isEmpty)
@@ -282,6 +295,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildLogoAvatar() {
+    final logoUrl = ApiService.currentSalon?['logo'] as String?;
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      return Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: AppTheme.border, width: 1.5),
+          boxShadow: AppTheme.shadowSm,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            logoUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _defaultAvatar(),
+          ),
+        ),
+      );
+    }
+    return _defaultAvatar();
+  }
+
+  Widget _defaultAvatar() {
+    final name = ApiService.currentSalon?['name'] as String? ?? 'S';
+    return Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppTheme.primary, AppTheme.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(13),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x335850E8),
+            blurRadius: 8,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          name[0].toUpperCase(),
+          style: GoogleFonts.bricolageGrotesque(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildNextAppointment() {
     final now = DateTime.now();
     final upcoming = _todayBookings
@@ -301,33 +371,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.primary.withAlpha(31),
-              AppTheme.primary.withAlpha(8),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: AppTheme.primary,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.primary.withAlpha(51)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x405850E8),
+              blurRadius: 20,
+              offset: Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '⏰ Prochain rendez-vous',
-              style: GoogleFonts.outfit(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Prochain rendez-vous',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white.withAlpha(180),
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(30),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    timeStr,
+                    style: GoogleFonts.bricolageGrotesque(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             Row(
               children: [
-                Text(next.serviceIcon,
-                    style: const TextStyle(fontSize: 30)),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(30),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: Text(next.serviceIcon,
+                        style: const TextStyle(fontSize: 22)),
+                  ),
+                ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -335,17 +436,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     children: [
                       Text(
                         next.clientName,
-                        style: GoogleFonts.outfit(
+                        style: GoogleFonts.bricolageGrotesque(
                           fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: -0.3,
                         ),
                       ),
                       Text(
-                        '${next.serviceName} · $timeStr',
-                        style: GoogleFonts.outfit(
+                        next.serviceName,
+                        style: GoogleFonts.dmSans(
                           fontSize: 13,
-                          color: AppTheme.textSecondary,
+                          color: Colors.white.withAlpha(180),
                         ),
                       ),
                     ],
@@ -353,10 +455,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 Text(
                   '${next.price.toInt()} CHF',
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.bricolageGrotesque(
                     fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primary,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
                   ),
                 ),
               ],

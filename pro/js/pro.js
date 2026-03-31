@@ -1600,11 +1600,50 @@ async function addManualBooking() {
 }
 
 // ---- Clients ----
+let _allClientsCache = [];
+
+function _renderClientsList(clients) {
+    const container = document.getElementById('clientsList');
+    if (!container) return;
+    if (clients.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><div class="empty-state-text">Aucun client trouvé</div></div>';
+        return;
+    }
+    container.innerHTML = '<div class="data-grid">' + clients.map(c => {
+        const visits = c.totalBookings ?? 0;
+        const loyalty = visits >= 20 ? '🥇' : visits >= 10 ? '🥈' : visits >= 5 ? '🥉' : '';
+        return `
+        <div class="data-card" style="cursor:pointer" onclick="showClientProfile('${c._id}')">
+            <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),var(--primary-mid));color:#fff;font-weight:700;font-size:16px">${(c.name || '?')[0].toUpperCase()}</div>
+            <div class="data-card-info">
+                <div class="data-card-name">${c.name} ${loyalty}</div>
+                <div class="data-card-sub">${c.email || ''} ${c.phone ? '· ' + c.phone : ''}</div>
+            </div>
+            <div class="data-card-right">
+                <div class="data-card-value">${visits}</div>
+                <div class="data-card-label">visites</div>
+            </div>
+        </div>`;
+    }).join('') + '</div>';
+}
+
+function filterClients() {
+    const q = (document.getElementById('clientSearch')?.value || '').toLowerCase().trim();
+    if (!q) { _renderClientsList(_allClientsCache); return; }
+    const filtered = _allClientsCache.filter(c =>
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.phone || '').includes(q)
+    );
+    _renderClientsList(filtered);
+}
+
 async function loadClients() {
     try {
         const res = await apiFetch(`${API}/api/pro/salon/${salonId}/clients`);
         const data = await res.json();
         const clients = data.data || [];
+        _allClientsCache = clients;
 
         const container = document.getElementById('clientsList');
         if (clients.length === 0) {
