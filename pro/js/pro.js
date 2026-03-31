@@ -127,6 +127,15 @@ function initApp() {
         const words = name.split(' ');
         document.getElementById('sidebarSalonName').innerHTML = words[0] + (words.length > 1 ? ' <span>' + words.slice(1).join(' ') + '</span>' : '');
 
+        // Show salon logo in sidebar if available
+        if (currentSalon.logo) {
+            const logoIconEl = document.getElementById('sidebarLogoIcon');
+            if (logoIconEl) {
+                logoIconEl.innerHTML = `<img src="${currentSalon.logo}" style="width:28px;height:28px;border-radius:7px;object-fit:cover;display:block">`;
+                logoIconEl.style.fontSize = '0';
+            }
+        }
+
         // Apply salon colors to admin panel
         if (currentSalon.branding?.primaryColor) {
             const hex = currentSalon.branding.primaryColor;
@@ -313,7 +322,7 @@ function renderRevenueChart(months) {
         <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0">
             <div style="font-size:10px;color:var(--text-muted);font-weight:600">${m.revenue > 0 ? m.revenue + ' CHF' : ''}</div>
             <div style="width:100%;background:rgba(255,255,255,.05);border-radius:6px;height:100px;position:relative;display:flex;align-items:flex-end">
-                <div style="width:100%;background:linear-gradient(180deg,#C8973A,#A07D4A);border-radius:6px;height:${Math.max(pct, 2)}%;transition:height .4s ease"></div>
+                <div style="width:100%;background:linear-gradient(180deg,var(--primary),var(--primary-mid));border-radius:6px;height:${Math.max(pct, 2)}%;transition:height .4s ease"></div>
             </div>
             <div style="font-size:11px;color:var(--text-sec);text-align:center">${m.label}</div>
             <div style="font-size:10px;color:var(--text-muted)">${m.bookings} RDV</div>
@@ -338,7 +347,7 @@ function renderTopServices(services) {
                     <span style="color:var(--text-muted)">${s.count}× · ${s.revenue} CHF</span>
                 </div>
                 <div style="height:6px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden">
-                    <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#C8973A,#A07D4A);border-radius:4px;transition:width .4s ease"></div>
+                    <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--primary),var(--primary-mid));border-radius:4px;transition:width .4s ease"></div>
                 </div>
             </div>
         </div>`;
@@ -450,8 +459,8 @@ async function loadDashboard(_retry = 0) {
                     <div style="display:flex;flex-direction:column;gap:6px">
                         <span style="font-size:13px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:600">Abonnement</span>
                         <div style="display:flex;align-items:center;gap:12px">
-                            <span style="font-weight:700;font-size:18px;color:#fff">${planNames[sub.plan] || sub.plan}</span>
-                            <span style="font-size:13px;background:rgba(255,255,255,0.05);padding:4px 10px;border-radius:20px;color:var(--text-muted)">
+                            <span style="font-weight:700;font-size:18px;color:var(--text)">${planNames[sub.plan] || sub.plan}</span>
+                            <span style="font-size:13px;background:rgba(88,80,232,0.08);padding:4px 10px;border-radius:20px;color:var(--primary)">
                                 ${statusLabels[sub.status] || sub.status}${trialInfo}
                             </span>
                         </div>
@@ -1036,7 +1045,7 @@ function renderCalendarWeek(bookings) {
         return `<div class="cal-day-header${iso === todayISO ? ' cal-today' : ''}"><div class="cal-day-name">${dayNames[i]}</div><div class="cal-day-num">${d.getDate()}</div></div>`;
     }).join('');
 
-    container.innerHTML = navRow + `<div class="cal-wrap"><div class="cal-grid">${headers}${gridRows}</div></div>`;
+    container.innerHTML = navRow + `<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px"><div class="cal-wrap"><div class="cal-grid">${headers}${gridRows}</div></div></div>`;
 }
 
 // --- MONTH VIEW ---
@@ -1591,11 +1600,50 @@ async function addManualBooking() {
 }
 
 // ---- Clients ----
+let _allClientsCache = [];
+
+function _renderClientsList(clients) {
+    const container = document.getElementById('clientsList');
+    if (!container) return;
+    if (clients.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><div class="empty-state-text">Aucun client trouvé</div></div>';
+        return;
+    }
+    container.innerHTML = '<div class="data-grid">' + clients.map(c => {
+        const visits = c.totalBookings ?? 0;
+        const loyalty = visits >= 20 ? '🥇' : visits >= 10 ? '🥈' : visits >= 5 ? '🥉' : '';
+        return `
+        <div class="data-card" style="cursor:pointer" onclick="showClientProfile('${c._id}')">
+            <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),var(--primary-mid));color:#fff;font-weight:700;font-size:16px">${(c.name || '?')[0].toUpperCase()}</div>
+            <div class="data-card-info">
+                <div class="data-card-name">${c.name} ${loyalty}</div>
+                <div class="data-card-sub">${c.email || ''} ${c.phone ? '· ' + c.phone : ''}</div>
+            </div>
+            <div class="data-card-right">
+                <div class="data-card-value">${visits}</div>
+                <div class="data-card-label">visites</div>
+            </div>
+        </div>`;
+    }).join('') + '</div>';
+}
+
+function filterClients() {
+    const q = (document.getElementById('clientSearch')?.value || '').toLowerCase().trim();
+    if (!q) { _renderClientsList(_allClientsCache); return; }
+    const filtered = _allClientsCache.filter(c =>
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
+        (c.phone || '').includes(q)
+    );
+    _renderClientsList(filtered);
+}
+
 async function loadClients() {
     try {
         const res = await apiFetch(`${API}/api/pro/salon/${salonId}/clients`);
         const data = await res.json();
         const clients = data.data || [];
+        _allClientsCache = clients;
 
         const container = document.getElementById('clientsList');
         if (clients.length === 0) {
@@ -1606,7 +1654,7 @@ async function loadClients() {
                 const loyalty = visits >= 20 ? '🥇' : visits >= 10 ? '🥈' : visits >= 5 ? '🥉' : '';
                 return `
                 <div class="data-card" style="cursor:pointer" onclick="showClientProfile('${c._id}')">
-                    <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),#A07D4A);color:var(--bg);font-weight:700;font-size:16px">${(c.name || '?')[0].toUpperCase()}</div>
+                    <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),var(--primary-mid));color:#fff;font-weight:700;font-size:16px">${(c.name || '?')[0].toUpperCase()}</div>
                     <div class="data-card-info">
                         <div class="data-card-name">${c.name} ${loyalty}</div>
                         <div class="data-card-sub">${c.email || ''} ${c.phone ? '· ' + c.phone : ''}</div>
@@ -1745,7 +1793,7 @@ async function loadEmployees() {
         } else {
             container.innerHTML = '<div class="data-grid">' + emps.map(e => `
                 <div class="data-card">
-                    <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),#A07D4A);color:var(--bg);font-weight:700;font-size:16px;flex-shrink:0">${(e.name || '?')[0].toUpperCase()}</div>
+                    <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),var(--primary-mid));color:#fff;font-weight:700;font-size:16px;flex-shrink:0">${(e.name || '?')[0].toUpperCase()}</div>
                     <div class="data-card-info" style="min-width:0;flex:1">
                         <div class="data-card-name">${e.name}</div>
                         <div class="data-card-sub">${e.role === 'owner' ? 'Propriétaire' : 'Employé'}${(e.specialties || []).length ? ' · ' + e.specialties.join(', ') : ''}</div>

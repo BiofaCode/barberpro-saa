@@ -135,7 +135,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen>
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
                               color: isSelected
-                                  ? AppTheme.bgDark
+                                  ? Colors.white
                                   : AppTheme.textMuted,
                             ),
                           ),

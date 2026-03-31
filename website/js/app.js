@@ -252,10 +252,11 @@ function applySalonBranding(salon) {
   const gallerySection = document.getElementById('gallery');
   if (gallerySection) {
     const isStarter = salon.subscription?.plan === 'starter' || salon.plan === 'starter';
-    if (isStarter) {
+    if (isStarter || !salon.gallery?.length) {
       gallerySection.style.display = 'none';
       document.querySelectorAll('a[href="#gallery"]').forEach(el => el.style.display = 'none');
-    } else if (salon.gallery?.length > 0) {
+    } else {
+      gallerySection.style.display = '';
       const galleryGrid = gallerySection.querySelector('.gallery-grid');
       if (galleryGrid) {
         galleryGrid.innerHTML = salon.gallery.map(p => `

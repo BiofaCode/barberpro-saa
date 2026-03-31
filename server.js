@@ -2360,14 +2360,27 @@ route('GET', '/api/pro/salon/:salonId/referral', async (req, res, params) => {
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
+    // Auto-generate referral code if the salon doesn't have one yet
+    let code = salon.referral?.code;
+    if (!code) {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let candidate = '';
+        for (let i = 0; i < 6; i++) candidate += chars[Math.floor(Math.random() * chars.length)];
+        // Ensure uniqueness
+        const existing = await db.findSalons({ 'referral.code': candidate });
+        if (existing.length > 0) candidate += Math.floor(Math.random() * 9 + 1);
+        code = candidate;
+        await db.updateSalon(salon._id, { 'referral.code': code });
+    }
+
     // Count how many salons used this code
-    const filleuls = await db.findSalons({ 'referral.referredBy': salon.referral?.code || '' });
+    const filleuls = await db.findSalons({ 'referral.referredBy': code });
     const rewardedCount = filleuls.filter(f => f.referral?.rewardGranted).length;
 
     return json(res, 200, {
         success: true,
         data: {
-            code: salon.referral?.code || '',
+            code: code,
             referredBy: salon.referral?.referredBy || '',
             totalReferrals: filleuls.length,
             rewardedReferrals: rewardedCount,
