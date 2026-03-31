@@ -19,6 +19,12 @@
   --color-bg-card-hover: #222222;
   --color-bg-elevated: #252525;
   --color-bg-glass: rgba(26, 26, 26, 0.7);
+  /* Hero & Navbar (overridable by JS for light themes) */
+  --hero-overlay: linear-gradient(135deg, rgba(13,13,13,0.96) 0%, rgba(13,13,13,0.72) 55%, rgba(13,13,13,0.88) 100%);
+  --navbar-scrolled-bg: rgba(13,13,13,0.92);
+  --navbar-scrolled-border: rgba(201,169,110,0.1);
+  --badge-bg: rgba(201,169,110,0.10);
+  --badge-border: rgba(201,169,110,0.20);
 
   /* Text Palette */
   --color-text-primary: #F5F0E8;
@@ -153,10 +159,10 @@ h3 {
   text-transform: uppercase;
   letter-spacing: 3px;
   color: var(--color-primary);
-  background: rgba(201, 169, 110, 0.1);
+  background: var(--badge-bg);
   padding: 0.5rem 1.2rem;
   border-radius: var(--radius-full);
-  border: 1px solid rgba(201, 169, 110, 0.2);
+  border: 1px solid var(--badge-border);
   margin-bottom: var(--space-lg);
 }
 
@@ -240,13 +246,13 @@ h3 {
 }
 
 .btn-ghost {
-  background: rgba(201, 169, 110, 0.1);
+  background: var(--badge-bg);
   color: var(--color-primary);
-  border: 1px solid rgba(201, 169, 110, 0.2);
+  border: 1px solid var(--badge-border);
 }
 
 .btn-ghost:hover {
-  background: rgba(201, 169, 110, 0.2);
+  background: var(--color-primary-glow);
 }
 
 /* ---- Navigation ---- */
@@ -265,11 +271,11 @@ h3 {
 }
 
 .navbar.scrolled {
-  background: rgba(13, 13, 13, 0.9);
+  background: var(--navbar-scrolled-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   padding: var(--space-md) var(--space-2xl);
-  border-bottom: 1px solid rgba(201, 169, 110, 0.1);
+  border-bottom: 1px solid var(--navbar-scrolled-border);
 }
 
 .nav-logo {
@@ -394,10 +400,7 @@ h3 {
 .hero-bg-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg,
-      rgba(13, 13, 13, 0.95) 0%,
-      rgba(13, 13, 13, 0.7) 50%,
-      rgba(13, 13, 13, 0.85) 100%);
+  background: var(--hero-overlay);
 }
 
 .hero-particles {
@@ -449,10 +452,10 @@ h3 {
   font-size: 0.85rem;
   font-weight: 500;
   color: var(--color-primary);
-  background: rgba(201, 169, 110, 0.1);
+  background: var(--badge-bg);
   padding: 0.6rem 1.2rem;
   border-radius: var(--radius-full);
-  border: 1px solid rgba(201, 169, 110, 0.2);
+  border: 1px solid var(--badge-border);
   margin-bottom: var(--space-xl);
   animation: fadeInUp 0.8s ease-out 0.2s both;
 }
@@ -571,7 +574,7 @@ h3 {
   border-radius: var(--radius-lg);
   padding: var(--space-2xl);
   text-align: left;
-  border: 1px solid rgba(201, 169, 110, 0.08);
+  border: 1px solid var(--badge-border);
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
@@ -591,7 +594,7 @@ h3 {
 
 .service-card:hover {
   transform: translateY(-8px);
-  border-color: rgba(201, 169, 110, 0.2);
+  border-color: var(--color-primary-glow);
   box-shadow: var(--shadow-lg);
 }
 
@@ -602,7 +605,7 @@ h3 {
 .service-icon {
   width: 60px;
   height: 60px;
-  background: rgba(201, 169, 110, 0.1);
+  background: var(--badge-bg);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -634,7 +637,7 @@ h3 {
   justify-content: space-between;
   align-items: center;
   padding-top: var(--space-md);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--badge-border);
 }
 
 .service-price {
@@ -661,8 +664,8 @@ h3 {
 .booking-cta-card {
   max-width: 550px;
   margin: 0 auto;
-  background: linear-gradient(135deg, rgba(201, 169, 110, 0.1), rgba(201, 169, 110, 0.03));
-  border: 1px solid rgba(201, 169, 110, 0.15);
+  background: linear-gradient(135deg, var(--badge-bg), transparent);
+  border: 1px solid var(--badge-border);
   border-radius: var(--radius-xl);
   padding: var(--space-3xl) var(--space-2xl);
   cursor: pointer;
@@ -672,7 +675,7 @@ h3 {
 
 .booking-cta-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(201, 169, 110, 0.3);
+  border-color: var(--color-primary-glow);
   box-shadow: var(--shadow-glow);
 }
 
@@ -720,7 +723,7 @@ h3 {
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(201, 169, 110, 0.15);
+  border: 1px solid var(--badge-border);
   box-shadow: var(--shadow-lg);
   transform: translateY(20px) scale(0.95);
   transition: transform 0.3s ease;
@@ -736,8 +739,8 @@ h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: linear-gradient(135deg, rgba(201, 169, 110, 0.08), transparent);
+  border-bottom: 1px solid var(--badge-border);
+  background: linear-gradient(135deg, var(--badge-bg), transparent);
   flex-shrink: 0;
 }
 
@@ -751,8 +754,8 @@ h3 {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--badge-border);
+  background: var(--badge-bg);
   color: var(--color-text-secondary);
   font-size: 1rem;
   cursor: pointer;
@@ -824,7 +827,7 @@ h3 {
 .bm-step-line {
   width: 24px;
   height: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--badge-border);
   flex-shrink: 0;
 }
 
@@ -870,12 +873,12 @@ h3 {
 }
 
 .bm-service-card:hover {
-  border-color: rgba(201, 169, 110, 0.25);
+  border-color: var(--color-primary-glow);
 }
 
 .bm-service-card.selected {
   border-color: var(--color-primary);
-  background: rgba(201, 169, 110, 0.1);
+  background: var(--badge-bg);
 }
 
 .bm-service-icon {
@@ -921,7 +924,7 @@ h3 {
 
 .bm-cal-nav {
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--badge-border);
   color: var(--color-primary);
   width: 32px;
   height: 32px;
@@ -935,7 +938,7 @@ h3 {
 }
 
 .bm-cal-nav:hover {
-  background: rgba(201, 169, 110, 0.1);
+  background: var(--badge-bg);
 }
 
 .bm-cal-grid {
@@ -970,7 +973,7 @@ h3 {
 }
 
 .bm-cal-day:hover:not(.disabled):not(.empty) {
-  background: rgba(201, 169, 110, 0.15);
+  background: var(--badge-bg);
 }
 
 .bm-cal-day.selected {
@@ -1013,7 +1016,7 @@ h3 {
   padding: 0.65rem 0.3rem;
   min-height: 44px;
   background: var(--color-bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--badge-border);
   border-radius: var(--radius-sm);
   text-align: center;
   font-size: 0.82rem;
@@ -1082,7 +1085,7 @@ h3 {
   width: 100%;
   padding: 0.7rem 0.9rem;
   background: var(--color-bg-elevated);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--badge-border);
   border-radius: var(--radius-sm);
   color: var(--color-text-primary);
   font-family: var(--font-body);
@@ -1110,7 +1113,7 @@ h3 {
   display: flex;
   justify-content: space-between;
   padding: 0.6rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--badge-border);
   font-size: 0.88rem;
 }
 
@@ -1149,7 +1152,7 @@ h3 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--badge-border);
   flex-shrink: 0;
 }
 
@@ -1248,7 +1251,7 @@ h3 {
 .testimonials {
   padding: var(--space-4xl) var(--space-2xl);
   text-align: center;
-  background: linear-gradient(135deg, rgba(201, 169, 110, 0.03), transparent);
+  background: linear-gradient(135deg, var(--badge-bg), transparent);
 }
 
 .testimonials-grid {
@@ -1274,7 +1277,7 @@ h3 {
   padding: var(--space-2xl);
   border-radius: var(--radius-lg);
   text-align: left;
-  border: 1px solid rgba(201, 169, 110, 0.08);
+  border: 1px solid var(--badge-border);
   transition: all var(--transition-base);
 
   /* Force exactly 3 cards visible with spaces between them */
@@ -1334,7 +1337,7 @@ h3 {
 /* ---- Contact / Footer ---- */
 .footer {
   padding: var(--space-4xl) var(--space-2xl) var(--space-xl);
-  border-top: 1px solid rgba(201, 169, 110, 0.1);
+  border-top: 1px solid var(--badge-border);
 }
 
 .footer-grid {
@@ -1367,7 +1370,7 @@ h3 {
   justify-content: center;
   color: var(--color-text-secondary);
   transition: all var(--transition-fast);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--badge-border);
 }
 
 .footer-social a:hover {
@@ -1401,7 +1404,7 @@ h3 {
 .footer-bottom {
   text-align: center;
   padding-top: var(--space-xl);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--badge-border);
   color: var(--color-text-muted);
   font-size: 0.85rem;
 }
@@ -1433,7 +1436,7 @@ h3 {
   text-align: center;
   max-width: 450px;
   width: 90%;
-  border: 1px solid rgba(201, 169, 110, 0.15);
+  border: 1px solid var(--badge-border);
   transform: scale(0.9);
   transition: transform var(--transition-base);
 }
@@ -1805,7 +1808,7 @@ h3 {
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(201, 169, 110, 0.2);
+  border: 3px solid var(--badge-bg);
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -1826,10 +1829,10 @@ h3 {
 .download-container {
   max-width: 900px;
   margin: 0 auto;
-  background: linear-gradient(135deg, rgba(201, 169, 110, 0.1), rgba(201, 169, 110, 0.02));
+  background: linear-gradient(135deg, var(--badge-bg), transparent);
   border-radius: var(--radius-xl);
   padding: var(--space-3xl);
-  border: 1px solid rgba(201, 169, 110, 0.15);
+  border: 1px solid var(--badge-border);
   display: flex;
   align-items: center;
   gap: var(--space-3xl);
@@ -1861,7 +1864,7 @@ h3 {
   background: var(--color-bg-dark);
   padding: 0.8rem 1.5rem;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--badge-border);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
@@ -1894,7 +1897,7 @@ h3 {
   height: 400px;
   background: var(--color-bg-card);
   border-radius: 30px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
+  border: 3px solid var(--badge-border);
   padding: 12px;
   position: relative;
   box-shadow: var(--shadow-lg);
@@ -1988,7 +1991,7 @@ h3 {
 
 .team-card {
   background: var(--color-bg-card);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--badge-border);
   border-radius: var(--radius-lg);
   padding: var(--space-xl) var(--space-lg);
   text-align: center;
@@ -2064,7 +2067,7 @@ h3 {
   height: 320px;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--badge-border);
   margin-top: var(--space-xl);
 }
 
@@ -2072,7 +2075,7 @@ h3 {
   width: 100%;
   height: 100%;
   border: none;
-  filter: grayscale(0.2) invert(0.9) hue-rotate(180deg);
+  filter: var(--map-filter, grayscale(0.2) invert(0.9) hue-rotate(180deg));
 }
 
 @media (max-width: 768px) {
@@ -2116,8 +2119,8 @@ h3 {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: rgba(26, 26, 26, 0.9);
-  border: 1px solid rgba(255,255,255,0.1);
+  background: var(--color-bg-card);
+  border: 1px solid var(--badge-border);
   color: var(--color-text-secondary);
   font-size: 1.1rem;
   cursor: pointer;
