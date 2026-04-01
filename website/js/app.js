@@ -580,13 +580,9 @@ function populateServices() {
   grid.innerHTML = services.map((s, idx) => {
     const pm = s.paymentMode || 'none';
     window._bmServices[idx] = s;
-    let payBadge = '';
-    if (pm === 'deposit') {
-      const amt = s.depositType === 'percent' ? `${s.depositAmount || 30}%` : `${s.depositAmount || 20} CHF`;
-      payBadge = `<div style="font-size:.7rem;color:var(--color-primary);margin-top:3px;font-weight:500">💳 Acompte ${amt}</div>`;
-    } else if (pm === 'full_online') {
-      payBadge = `<div style="font-size:.7rem;color:var(--color-primary);margin-top:3px;font-weight:500">💳 Paiement en ligne</div>`;
-    }
+    const payBadge = pm === 'full_online'
+      ? `<div style="font-size:.7rem;color:var(--color-primary);margin-top:3px;font-weight:500">💳 Paiement en ligne</div>`
+      : '';
     return `
     <div class="bm-service-card" onclick="selectService(${idx},this)">
       <div class="bm-service-icon">${s.icon || '✂️'}</div>
@@ -855,14 +851,7 @@ function populateConfirmation() {
   // Affiche le bon montant selon le mode de paiement
   const pm = bmState.service?.paymentMode || 'none';
   const price = bmState.service?.price || 0;
-  let totalLabel = price + ' CHF';
-  if (pm === 'deposit') {
-    const s = bmState.service;
-    const amt = s.depositType === 'percent' ? Math.ceil(price * (s.depositAmount || 30) / 100) : (s.depositAmount || 20);
-    totalLabel = `${price} CHF (acompte ${amt} CHF en ligne, reste sur place)`;
-  } else if (pm === 'full_online') {
-    totalLabel = `${price} CHF (paiement en ligne)`;
-  }
+  const totalLabel = pm === 'full_online' ? `${price} CHF (paiement en ligne)` : `${price} CHF`;
   document.getElementById('bmConfTotal').textContent = totalLabel;
 
   if (bmState.date) document.getElementById('bmConfDate').textContent = bmState.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -874,7 +863,7 @@ function populateConfirmation() {
 
   // Change le bouton si paiement requis
   const nextBtn = document.getElementById('bmNext');
-  if (nextBtn && (pm === 'deposit' || pm === 'full_online')) {
+  if (nextBtn && pm === 'full_online') {
     nextBtn.textContent = '💳 Payer maintenant';
   }
 }
@@ -900,7 +889,7 @@ async function submitBooking() {
   const paymentMode = bmState.service?.paymentMode || 'none';
 
   // Si paiement en ligne requis → Stripe Checkout
-  if (slug && (paymentMode === 'deposit' || paymentMode === 'full_online')) {
+  if (slug && paymentMode === 'full_online') {
     try {
       const res = await fetch(`/api/salon/${slug}/payment/checkout`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(booking)

@@ -75,24 +75,33 @@ async function doLogin() {
             // Check subscription status
             const sub = data.subscription || data.salon?.subscription;
             if (sub && sub.status === 'pending_payment') {
-                // Show payment required screen
                 document.getElementById('loginScreen').innerHTML = `
                     <div class="login-card" style="max-width:480px;text-align:center">
                         <div style="font-size:48px;margin-bottom:16px">⚠️</div>
                         <h2 style="margin-bottom:8px;font-size:22px">Paiement en attente</h2>
                         <p style="color:var(--text-muted);margin-bottom:24px;line-height:1.6;font-size:14px">
                             Votre salon <strong>${currentSalon?.name || 'Mon Salon'}</strong> a été créé, mais votre abonnement n'est pas encore actif.
-                            <br><br>Veuillez compléter votre paiement pour accéder à l'Espace Pro.
+                            Veuillez compléter votre paiement pour accéder à l'Espace Pro.
                         </p>
-                        <a href="/" class="btn btn-primary" style="width:100%;text-decoration:none;display:block;padding:14px;text-align:center">
-                            Compléter le paiement →
+                        <a href="/saas/index.html#pricing" class="btn btn-primary" style="width:100%;text-decoration:none;display:block;padding:14px;text-align:center">
+                            Choisir un abonnement →
                         </a>
-                        <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="location.reload()">
-                            Réessayer
-                        </button>
+                        <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="location.reload()">Réessayer</button>
                     </div>
                 `;
                 return;
+            }
+            if (sub && sub.status === 'past_due') {
+                // Let them in but show a sticky alert — Stripe will cancel eventually
+                setTimeout(() => {
+                    const existing = document.getElementById('pastDueBanner');
+                    if (existing) return;
+                    const banner = document.createElement('div');
+                    banner.id = 'pastDueBanner';
+                    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;font-weight:600;';
+                    banner.innerHTML = `<span>⚠️ Échec du paiement de votre abonnement. Mettez à jour votre moyen de paiement pour éviter toute interruption.</span><button onclick="manageSubscription()" style="background:#fff;color:#dc2626;border:none;padding:6px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:12px;white-space:nowrap">Mettre à jour →</button>`;
+                    document.body.prepend(banner);
+                }, 1000);
             }
 
             document.getElementById('loginScreen').style.display = 'none';
@@ -443,25 +452,38 @@ async function loadDashboard(_retry = 0) {
         const sub = currentSalon?.subscription;
         if (sub) {
             const planNames = { starter: 'Starter', pro: 'Pro', premium: 'Premium' };
-            const statusLabels = {
-                trial: '🟢 Essai gratuit',
-                active: '🟢 Actif',
-                pending_payment: '🟠 En attente de paiement',
-                cancelled: '🔴 Annulé'
+            const statusColors = {
+                trial: 'rgba(99,102,241,0.15)',
+                active: 'rgba(34,197,94,0.12)',
+                pending_payment: 'rgba(245,158,11,0.12)',
+                past_due: 'rgba(239,68,68,0.12)',
+                cancelled: 'rgba(239,68,68,0.12)'
             };
-            let trialInfo = '';
+            const statusTextColors = {
+                trial: 'var(--primary)',
+                active: '#4ade80',
+                pending_payment: '#f59e0b',
+                past_due: '#ef4444',
+                cancelled: '#ef4444'
+            };
+            let statusLabel = '';
             if (sub.status === 'trial' && sub.trialEnd) {
                 const daysLeft = Math.max(0, Math.ceil((new Date(sub.trialEnd) - Date.now()) / (1000 * 60 * 60 * 24)));
-                trialInfo = ` — ${daysLeft} jour${daysLeft > 1 ? 's' : ''} restant${daysLeft > 1 ? 's' : ''}`;
+                statusLabel = `Essai — ${daysLeft}j restant${daysLeft > 1 ? 's' : ''}`;
+            } else {
+                const labels = { active: 'Actif', pending_payment: 'En attente', past_due: '⚠️ Paiement échoué', cancelled: 'Annulé' };
+                statusLabel = labels[sub.status] || sub.status;
             }
+            const bgColor = statusColors[sub.status] || 'rgba(99,102,241,0.12)';
+            const textColor = statusTextColors[sub.status] || 'var(--primary)';
             subBanner = `
-                <div style="grid-column:1/-1;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px">
+                <div style="grid-column:1/-1;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
                     <div style="width:38px;height:38px;background:rgba(99,102,241,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">⭐</div>
-                    <div style="flex:1;min-width:0">
+                    <div style="flex:1;min-width:80px">
                         <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin-bottom:2px">Abonnement</div>
-                        <div style="font-weight:700;font-size:15px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${planNames[sub.plan] || sub.plan}</div>
+                        <div style="font-weight:700;font-size:15px;color:var(--text)">${planNames[sub.plan] || sub.plan}</div>
                     </div>
-                    <span style="font-size:12px;background:rgba(88,80,232,0.12);padding:5px 12px;border-radius:20px;color:var(--primary);font-weight:600;white-space:nowrap;flex-shrink:0">${statusLabels[sub.status] || sub.status}${trialInfo}</span>
+                    <span style="font-size:12px;background:${bgColor};padding:5px 12px;border-radius:20px;color:${textColor};font-weight:600;white-space:nowrap;flex-shrink:0">${statusLabel}</span>
                 </div>
             `;
         }
@@ -534,7 +556,7 @@ async function loadDashboard(_retry = 0) {
                         <div class="booking-detail">${b.serviceName} · ${b.time} · ${b.duration || 30}min</div>
                     </div>
                     <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
-                    <div style="font-family:'Playfair Display',serif;font-weight:700;color:var(--primary)">${b.price || 0} CHF</div>
+                    <div style="font-weight:700;color:var(--primary)">${b.price || 0} CHF</div>
                 </div>
             `).join('');
         }
@@ -574,7 +596,7 @@ async function loadDashboard(_retry = 0) {
                                 <div class="booking-detail">${b.serviceName} · ${fmt(b.date)} ${b.time}${b.employeeName ? ' · ' + b.employeeName : ''}</div>
                             </div>
                             <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
-                            <div style="font-family:'Playfair Display',serif;font-weight:700;color:var(--primary)">${b.price || 0} CHF</div>
+                            <div style="font-weight:700;color:var(--primary)">${b.price || 0} CHF</div>
                         </div>
                     `).join('');
                 }
@@ -2052,21 +2074,9 @@ async function showAddService() {
         </div>
         <div class="form-group" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
             <label class="form-label">💳 Paiement en ligne</label>
-            <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px" id="svcPaymentModeGroup">
-                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="none" checked onchange="toggleDepositFields()"> Paiement sur place uniquement</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="deposit" onchange="toggleDepositFields()"> Acompte requis à la réservation</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="full_online" onchange="toggleDepositFields()"> Paiement complet en ligne</label>
-            </div>
-            <div id="svcDepositFields" style="display:none;margin-top:12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:12px">
-                <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px">Montant de l'acompte</div>
-                <div style="display:flex;gap:10px;align-items:center">
-                    <select id="svcDepositType" class="form-input" style="width:140px" onchange="toggleDepositFields()">
-                        <option value="fixed">Montant fixe (CHF)</option>
-                        <option value="percent">Pourcentage (%)</option>
-                    </select>
-                    <input type="number" id="svcDepositAmount" class="form-input" style="flex:1" placeholder="20" min="1">
-                    <span id="svcDepositUnit" style="font-size:.9rem;color:var(--text-muted);white-space:nowrap">CHF</span>
-                </div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="none" checked> Paiement sur place uniquement</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="full_online"> Paiement complet en ligne</label>
             </div>
         </div>
     `;
@@ -2097,21 +2107,7 @@ async function showAddService() {
 function getPaymentFields() {
     const modeEl = document.querySelector('input[name="svcPayMode"]:checked');
     const paymentMode = modeEl ? modeEl.value : 'none';
-    const depositType = document.getElementById('svcDepositType')?.value || 'fixed';
-    const depositAmount = parseFloat(document.getElementById('svcDepositAmount')?.value) || 0;
-    return { paymentMode, depositType, depositAmount };
-}
-
-function toggleDepositFields() {
-    const modeEl = document.querySelector('input[name="svcPayMode"]:checked');
-    const mode = modeEl ? modeEl.value : 'none';
-    const fields = document.getElementById('svcDepositFields');
-    if (fields) fields.style.display = mode === 'deposit' ? 'block' : 'none';
-    const unitEl = document.getElementById('svcDepositUnit');
-    if (unitEl) {
-        const type = document.getElementById('svcDepositType')?.value;
-        unitEl.textContent = type === 'percent' ? '%' : 'CHF';
-    }
+    return { paymentMode };
 }
 
 async function addService() {
@@ -2121,14 +2117,14 @@ async function addService() {
     const icon = document.getElementById('svcIcon').value.trim() || '✂️';
     const description = document.getElementById('svcDesc').value.trim();
     const assignedEmployees = Array.from(document.querySelectorAll('.svc-emp-cb:checked')).map(cb => cb.value);
-    const { paymentMode, depositType, depositAmount } = getPaymentFields();
+    const { paymentMode } = getPaymentFields();
 
     if (!name) return;
 
     await apiFetch(`${API}/api/pro/salon/${salonId}/services`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees, paymentMode, depositType, depositAmount })
+        body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees, paymentMode })
     });
     closeModal();
     loadServices();
@@ -2161,20 +2157,8 @@ async function showEditService(svc) {
         <div class="form-group" style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
             <label class="form-label">💳 Paiement en ligne</label>
             <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
-                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="none" ${(!svc.paymentMode || svc.paymentMode === 'none') ? 'checked' : ''} onchange="toggleDepositFields()"> Paiement sur place uniquement</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="deposit" ${svc.paymentMode === 'deposit' ? 'checked' : ''} onchange="toggleDepositFields()"> Acompte requis à la réservation</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="full_online" ${svc.paymentMode === 'full_online' ? 'checked' : ''} onchange="toggleDepositFields()"> Paiement complet en ligne</label>
-            </div>
-            <div id="svcDepositFields" style="display:${svc.paymentMode === 'deposit' ? 'block' : 'none'};margin-top:12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:12px">
-                <div style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px">Montant de l'acompte</div>
-                <div style="display:flex;gap:10px;align-items:center">
-                    <select id="svcDepositType" class="form-input" style="width:140px" onchange="toggleDepositFields()">
-                        <option value="fixed" ${svc.depositType !== 'percent' ? 'selected' : ''}>Montant fixe (CHF)</option>
-                        <option value="percent" ${svc.depositType === 'percent' ? 'selected' : ''}>Pourcentage (%)</option>
-                    </select>
-                    <input type="number" id="svcDepositAmount" class="form-input" style="flex:1" value="${svc.depositAmount || ''}" placeholder="20" min="1">
-                    <span id="svcDepositUnit" style="font-size:.9rem;color:var(--text-muted);white-space:nowrap">${svc.depositType === 'percent' ? '%' : 'CHF'}</span>
-                </div>
+                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="none" ${(!svc.paymentMode || svc.paymentMode === 'none' || svc.paymentMode === 'deposit') ? 'checked' : ''}> Paiement sur place uniquement</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer"><input type="radio" name="svcPayMode" value="full_online" ${svc.paymentMode === 'full_online' ? 'checked' : ''}> Paiement complet en ligne</label>
             </div>
         </div>
     `;
@@ -2210,14 +2194,14 @@ async function editService(id) {
     const icon = document.getElementById('svcIcon').value.trim() || '✂️';
     const description = document.getElementById('svcDesc').value.trim();
     const assignedEmployees = Array.from(document.querySelectorAll('.svc-emp-cb:checked')).map(cb => cb.value);
-    const { paymentMode, depositType, depositAmount } = getPaymentFields();
+    const { paymentMode } = getPaymentFields();
 
     if (!name) return;
 
     await apiFetch(`${API}/api/pro/salon/${salonId}/services/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees, paymentMode, depositType, depositAmount })
+        body: JSON.stringify({ name, price, duration, icon, description, assignedEmployees, paymentMode })
     });
     closeModal();
     loadServices();
