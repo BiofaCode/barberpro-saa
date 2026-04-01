@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenue sur Kreno !</title>
     <meta name="robots" content="noindex">
-    <meta name="theme-color" content="#6366f1">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;1,400&display=swap"
-        rel="stylesheet">
+    <meta name="theme-color" content="#5850E8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -18,220 +18,268 @@
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            background: #0a0a0f;
-            color: #e4e4e7;
+            font-family: 'DM Sans', sans-serif;
+            background: #06060F;
+            color: #E8E6F0;
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            position: relative;
-            padding: 20px 0;
+            padding: 24px 20px;
             overflow-x: hidden;
         }
 
-        /* Background glow */
         body::before {
             content: '';
-            position: absolute;
-            top: 30%;
+            position: fixed;
+            top: 0;
             left: 50%;
-            transform: translate(-50%, -50%);
-            width: 800px;
-            height: 500px;
-            background: radial-gradient(ellipse, rgba(34, 197, 94, 0.12) 0%, transparent 65%);
+            transform: translateX(-50%);
+            width: 700px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(88, 80, 232, 0.18) 0%, transparent 70%);
             pointer-events: none;
         }
 
-        .success-container {
-            text-align: center;
-            max-width: 560px;
-            padding: 60px 40px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 24px;
-            backdrop-filter: blur(20px);
-            position: relative;
-            z-index: 1;
-            animation: slideUp 0.6s cubic-bezier(.16, 1, .3, 1);
+        /* Logo */
+        .site-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 36px;
+            text-decoration: none;
         }
 
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(40px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .success-icon {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: rgba(34, 197, 94, 0.12);
-            border: 2px solid rgba(34, 197, 94, 0.3);
+        .logo-mark {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #5850E8, #818cf8);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 28px;
-            animation: pop 0.5s cubic-bezier(.16, 1, .3, 1) 0.3s both;
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-weight: 800;
+            font-size: 20px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .logo-name {
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-weight: 700;
+            font-size: 22px;
+            color: #E8E6F0;
+            letter-spacing: -0.3px;
+        }
+
+        /* Card */
+        .card {
+            width: 100%;
+            max-width: 520px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 20px;
+            padding: 40px 36px;
+            position: relative;
+            z-index: 1;
+            animation: slideUp 0.5s cubic-bezier(.16, 1, .3, 1) both;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(32px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Check icon */
+        .check-wrap {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1.5px solid rgba(34, 197, 94, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            animation: pop 0.45s cubic-bezier(.16, 1, .3, 1) 0.25s both;
         }
 
         @keyframes pop {
-            from {
-                transform: scale(0);
-            }
-
-            to {
-                transform: scale(1);
-            }
+            from { transform: scale(0); }
+            to   { transform: scale(1); }
         }
 
-        .success-icon svg {
-            width: 40px;
-            height: 40px;
+        .check-wrap svg {
+            width: 34px;
+            height: 34px;
             color: #22c55e;
         }
 
+        /* Heading */
         h1 {
-            font-size: 32px;
+            font-family: 'Bricolage Grotesque', sans-serif;
+            font-size: 28px;
             font-weight: 800;
-            margin-bottom: 12px;
-            background: linear-gradient(135deg, #22c55e, #4ade80);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: -0.4px;
+            color: #fff;
         }
 
         .subtitle {
-            font-size: 18px;
-            color: #a1a1aa;
-            margin-bottom: 32px;
+            font-size: 15px;
+            color: #8A87A0;
+            text-align: center;
             line-height: 1.6;
+            margin-bottom: 28px;
         }
 
         .salon-name {
-            color: #e4e4e7;
-            font-weight: 700;
+            color: #E8E6F0;
+            font-weight: 600;
         }
 
-        .info-card {
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 28px;
-            text-align: left;
+        /* Info card */
+        .info-block {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 24px;
         }
 
         .info-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
+            padding: 13px 18px;
             font-size: 14px;
         }
 
-        .info-row+.info-row {
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        .info-row + .info-row {
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .info-label {
-            color: #71717a;
+            color: #5A5775;
+            font-weight: 500;
         }
 
         .info-value {
-            color: #e4e4e7;
+            color: #E8E6F0;
             font-weight: 600;
         }
 
-        .info-value.green {
-            color: #22c55e;
+        .badge-green {
+            background: rgba(34, 197, 94, 0.12);
+            color: #4ade80;
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
         }
 
+        .badge-purple {
+            background: rgba(88, 80, 232, 0.15);
+            color: #a5b4fc;
+            border: 1px solid rgba(88, 80, 232, 0.25);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* Steps */
         .steps {
-            display: flex;
-            gap: 16px;
-            margin-bottom: 32px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 24px;
         }
 
         .step {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(255, 255, 255, 0.025);
             border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 14px;
-            padding: 20px 14px;
+            border-radius: 12px;
+            padding: 16px 12px;
             text-align: center;
         }
 
         .step-num {
-            width: 28px;
-            height: 28px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #6366f1, #818cf8);
+            background: linear-gradient(135deg, #5850E8, #818cf8);
             color: #fff;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 10px;
+            margin: 0 auto 8px;
         }
 
         .step-text {
-            font-size: 12px;
-            color: #a1a1aa;
-            line-height: 1.4;
+            font-size: 11.5px;
+            color: #6B6880;
+            line-height: 1.5;
         }
 
-        .btn {
-            display: inline-flex;
+        /* Buttons */
+        .btn-main {
+            display: flex;
             align-items: center;
+            justify-content: center;
             gap: 8px;
-            padding: 16px 32px;
+            width: 100%;
+            padding: 15px 24px;
             border-radius: 12px;
+            background: linear-gradient(135deg, #5850E8, #818cf8);
+            color: #fff;
+            font-family: 'DM Sans', sans-serif;
             font-weight: 600;
             font-size: 16px;
             text-decoration: none;
-            transition: all 0.3s;
-            cursor: pointer;
             border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(88, 80, 232, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #6366f1, #818cf8);
-            color: #fff;
-            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
-        }
-
-        .btn-primary:hover {
+        .btn-main:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 8px 28px rgba(88, 80, 232, 0.4);
         }
 
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #e4e4e7;
-            margin-top: 12px;
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .actions {
+        .btn-sec {
             display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-top: 24px;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 13px 24px;
+            border-radius: 12px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #6B6880;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            font-size: 14px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
         }
 
-        .confetti {
+        .btn-sec:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #E8E6F0;
+        }
+
+        /* Confetti */
+        .confetti-canvas {
             position: fixed;
             top: 0;
             left: 0;
@@ -243,110 +291,113 @@
 
         .confetti-piece {
             position: absolute;
-            width: 10px;
-            height: 10px;
             border-radius: 2px;
-            animation: fall 3s ease-in forwards;
+            animation: fall linear forwards;
         }
 
         @keyframes fall {
-            0% {
-                top: -10%;
-                opacity: 1;
-                transform: rotate(0deg);
-            }
-
-            100% {
-                top: 110%;
-                opacity: 0;
-                transform: rotate(720deg);
-            }
+            0%   { top: -5%; opacity: 1; transform: rotate(0deg) scale(1); }
+            80%  { opacity: 1; }
+            100% { top: 110%; opacity: 0; transform: rotate(540deg) scale(0.7); }
         }
 
-        @media (max-width: 600px) {
-            .success-container {
-                margin: 16px;
-                padding: 40px 24px;
-            }
-
-            h1 {
-                font-size: 24px;
-            }
-
-            .steps {
-                flex-direction: column;
-            }
+        @media (max-width: 480px) {
+            .card { padding: 28px 20px; }
+            h1    { font-size: 22px; }
+            .steps { grid-template-columns: 1fr; gap: 8px; }
         }
     </style>
 </head>
 
 <body>
-    <!-- Confetti -->
-    <div class="confetti" id="confetti"></div>
+    <div class="confetti-canvas" id="confetti"></div>
 
-    <div class="success-container">
-        <div class="success-icon">
-            <svg fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+    <a href="/" class="site-logo">
+        <span class="logo-mark">K</span>
+        <span class="logo-name">kreno</span>
+    </a>
+
+    <div class="card">
+        <div class="check-wrap">
+            <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
             </svg>
         </div>
 
-        <h1>Paiement confirmé !</h1>
+        <h1>Bienvenue sur Kreno !</h1>
         <p class="subtitle">
-            Génial ! Votre salon <span class="salon-name" id="salonNameDisplay"></span> est tout prêt.
-            <br>Vos accès personnels vous ont été envoyés par email.
+            Votre salon <span class="salon-name" id="salonNameDisplay"></span> est actif.<br>
+            Un email avec vos accès vient de vous être envoyé.
         </p>
 
-        <div class="info-card">
+        <div class="info-block">
             <div class="info-row">
-                <span class="info-label">Abonnement</span>
+                <span class="info-label">Plan</span>
                 <span class="info-value" id="planDisplay">Pro</span>
             </div>
             <div class="info-row">
                 <span class="info-label">Essai gratuit</span>
-                <span class="info-value green">14 jours restants</span>
+                <span class="badge-purple" id="trialDisplay">14 jours</span>
             </div>
             <div class="info-row">
-                <span class="info-label">Statut du compte</span>
-                <span class="info-value green">✅ Actif</span>
+                <span class="info-label">Statut</span>
+                <span class="badge-green">✓ Actif</span>
             </div>
         </div>
 
-        <div class="actions">
-            <!-- BIG PROMINENT BUTTON TO PRO DASHBOARD -->
-            <a href="/pro" class="btn btn-primary"
-                style="width: 100%; justify-content: center; font-size: 18px; padding: 18px;">
-                Accéder à mon Espace Pro →
-            </a>
-            <a href="/" class="btn btn-secondary" style="width: 100%; justify-content: center;">Retour au site
-                vitrine</a>
+        <div class="steps">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-text">Ouvrez l'email reçu et connectez-vous</div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-text">Personnalisez votre page de réservation</div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-text">Partagez le lien à vos clients</div>
+            </div>
         </div>
+
+        <a href="/pro" class="btn-main">
+            Accéder à mon Espace Pro
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+        </a>
+        <a href="/" class="btn-sec">Retour au site vitrine</a>
     </div>
 
     <script>
-        // Parse URL params
         const params = new URLSearchParams(window.location.search);
-        const planNames = { starter: 'Starter — 39 CHF/mois', pro: 'Pro — 49 CHF/mois', premium: 'Premium — 89 CHF/mois' };
         const plan = params.get('plan') || 'pro';
         const salonName = params.get('salon') || 'Votre salon';
+        const hasReferral = params.get('ref') === '1';
+        const trialDays = hasReferral ? 30 : 14;
+
+        const planNames = { starter: 'Starter — 39 CHF/mois', pro: 'Pro — 49 CHF/mois', premium: 'Premium — 89 CHF/mois' };
 
         document.getElementById('salonNameDisplay').textContent = decodeURIComponent(salonName);
         document.getElementById('planDisplay').textContent = planNames[plan] || plan;
+        document.getElementById('trialDisplay').textContent = trialDays + ' jours';
 
-        // Confetti animation
-        const colors = ['#22c55e', '#6366f1', '#818cf8', '#a78bfa', '#f59e0b', '#ec4899'];
-        const confettiContainer = document.getElementById('confetti');
-
-        for (let i = 0; i < 50; i++) {
-            const piece = document.createElement('div');
-            piece.className = 'confetti-piece';
-            piece.style.left = Math.random() * 100 + '%';
-            piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-            piece.style.animationDelay = Math.random() * 2 + 's';
-            piece.style.animationDuration = (2 + Math.random() * 2) + 's';
-            piece.style.width = (6 + Math.random() * 8) + 'px';
-            piece.style.height = (6 + Math.random() * 8) + 'px';
-            confettiContainer.appendChild(piece);
+        // Confetti
+        const colors = ['#5850E8', '#818cf8', '#a78bfa', '#22c55e', '#f59e0b', '#ec4899', '#fff'];
+        const container = document.getElementById('confetti');
+        for (let i = 0; i < 60; i++) {
+            const el = document.createElement('div');
+            el.className = 'confetti-piece';
+            const size = 6 + Math.random() * 7;
+            el.style.cssText = `
+                left: ${Math.random() * 100}%;
+                background: ${colors[Math.floor(Math.random() * colors.length)]};
+                width: ${size}px;
+                height: ${size}px;
+                animation-delay: ${Math.random() * 1.5}s;
+                animation-duration: ${2.5 + Math.random() * 2}s;
+            `;
+            container.appendChild(el);
         }
     </script>
     <script src="/saas/js/cookie.js" defer></script>

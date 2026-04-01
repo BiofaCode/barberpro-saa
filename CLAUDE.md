@@ -1,0 +1,80 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+**Kreno** is a multi-tenant SaaS platform for barber shop / salon management. It serves three distinct user roles: super-admin (platform owner), salon owners (pro portal), and end customers (public booking). There is also a Flutter mobile app for staff.
+
+## Commands
+
+### Backend (Node.js)
+```bash
+npm start        # Run server (also used for dev — no nodemon)
+npm install      # Install dependencies
+```
+
+### Flutter Mobile App
+```bash
+cd barber_app
+flutter pub get       # Install dependencies
+flutter run           # Run on connected device/simulator
+flutter build apk     # Build Android APK
+flutter build web     # Build for web
+```
+
+## Architecture
+
+### Backend: `server.js`
+A single large (~3200 line) raw Node.js HTTP server — **no Express**. It handles routing, authentication, and all business logic directly using `http.createServer`. Routes are matched via `if/else` on `req.method` and `req.url`. JWT tokens are verified manually on protected routes. Body parsing is done inline.
+
+### Database: `db.js`
+A thin adapter over MongoDB (mongoose). All DB operations go through helper functions exported from this file. Key collections: `salons`, `owners`, `employees`, `clients`, `bookings`, `blocks`.
+
+### Email & SMS: `email.js`, `sms.js`
+- Email: Resend API, with all templates (confirmation, reminders, OTP, review requests) in `email.js`
+- SMS: Twilio, prepaid credits system per salon
+
+### Frontend (Web): Vanilla HTML/CSS/JS
+Four separate static frontends — no framework, no bundler:
+- `admin/` — Super-admin dashboard (salon CRUD, platform stats, subscription management)
+- `pro/` — Salon owner/manager portal (bookings, staff, analytics, SMS credits)
+- `website/` — Public landing page + customer booking flow
+- `saas/` — SaaS signup/marketing pages
+
+Static files are served by `server.js` itself (reads and pipes files directly).
+
+### Flutter App: `barber_app/`
+Staff-facing mobile app (Dart/Flutter). Locale is `fr_FR`. API calls go through `lib/services/api_service.dart`. Main screens are under `lib/screens/`. App theme is in `lib/theme/app_theme.dart`. Entry point: `lib/main.dart`.
+
+## Key Patterns
+
+### Authentication
+- **Owners/Employees**: JWT stored client-side. Verified by checking `Authorization: Bearer <token>` header in `server.js`.
+- **Super Admin**: Separate `ADMIN_PASSWORD` env variable, returns an admin JWT.
+- **Magic links**: Time-limited tokens for owner onboarding.
+
+### Multi-Tenancy
+Every salon has a unique `slug`. Public booking routes use `/api/salon/:slug/...`. Pro/owner routes use `/api/pro/salon/:salonId/...` where `salonId` is the MongoDB ObjectId.
+
+### Routing in server.js
+Routes follow this pattern — always read carefully when adding/modifying:
+```js
+if (req.method === 'POST' && req.url === '/api/some/route') {
+  // parse body, validate, respond
+}
+```
+All API responses are JSON. Static file serving falls through to a file-read block at the bottom.
+
+### SMS Credits
+Salons purchase SMS credits (Stripe one-time payment). Reminders are queued and sent via cron-like logic in the server. Credits are decremented per SMS sent.
+
+## Environment Variables
+See `.env` for the full list. Required for full functionality:
+- `MONGODB_URI`, `JWT_SECRET`, `ADMIN_PASSWORD`
+- `RESEND_API_KEY`, `RESEND_FROM_EMAIL`
+- `STRIPE_SECRET_KEY`, `STRIPE_PUBLIC_KEY`, `STRIPE_WEBHOOK_SECRET`
+- Optional: `CLOUDINARY_*`, `TWILIO_*`, Stripe Connect vars
+
+## Deployment
+Hosted on Render.com (`render.yaml`). Health check endpoint: `GET /api/health`. Production port: `10000`.

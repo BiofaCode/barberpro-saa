@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
 const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
@@ -1919,7 +1919,7 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             const bookingId = session.metadata.bookingId;
             const amountPaid = parseFloat(session.metadata.amountPaid || '0');
             const paymentMode = session.metadata.paymentMode;
-            const paymentStatus = paymentMode === 'full_online' ? 'fully_paid' : 'deposit_paid';
+            const paymentStatus = 'fully_paid';
             await db.updateBooking(bookingId, {
                 status: 'confirmed',
                 paymentStatus,
@@ -2036,6 +2036,22 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
                         await db.addSalonLog(parrainSalon._id, 'referral_reward_granted', { filleulSalonId: String(filleulSalon._id), filleulName: filleulSalon.name });
                     }
                 }
+            }
+        }
+    } else if (event.type === 'invoice.payment_failed') {
+        const invoice = event.data.object;
+        const stripeCustomerId = invoice.customer;
+        const salons = await db.findSalons({ 'subscription.stripeCustomerId': stripeCustomerId });
+        if (salons.length > 0) {
+            const salon = salons[0];
+            await db.updateSalon(salon._id, { 'subscription.status': 'past_due' });
+            console.log(`⚠️ Paiement échoué pour salon ${salon._id} (${salon.name})`);
+            await db.addSalonLog(salon._id, 'payment_failed', { invoiceId: invoice.id, attemptCount: invoice.attempt_count });
+            // Notify owner
+            const owners = await db.findOwners({ salon: salon._id });
+            if (owners.length > 0 && owners[0].email) {
+                const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+                sendPaymentFailedEmail(owners[0].email, owners[0].name, salon.name, baseUrl + '/pro');
             }
         }
     } else if (event.type === 'customer.subscription.deleted') {
@@ -2600,14 +2616,7 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
     const paymentMode = service.paymentMode || 'none';
     if (paymentMode === 'none') return json(res, 400, { success: false, error: 'Pas de paiement en ligne pour ce service' });
 
-    // Calcule le montant à encaisser
-    let amountCHF = service.price;
-    if (paymentMode === 'deposit') {
-        amountCHF = service.depositType === 'percent'
-            ? Math.ceil(service.price * (service.depositAmount || 30) / 100)
-            : (service.depositAmount || 20);
-    }
-    const amountCents = Math.round(amountCHF * 100);
+    const amountCents = Math.round(service.price * 100);
 
     // Frais plateforme Kreno (2.5% du prix total du service)
     const platformFeeCents = Math.round(service.price * 100 * 2.5 / 100);
@@ -2630,12 +2639,8 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
     });
 
     const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
-    const label = paymentMode === 'deposit'
-        ? `Acompte — ${service.name}`
-        : service.name;
-    const desc = paymentMode === 'deposit'
-        ? `Acompte pour votre RDV du ${body.date} à ${body.time} chez ${salon.name}. Reste à payer sur place.`
-        : `Réservation du ${body.date} à ${body.time} chez ${salon.name}`;
+    const label = service.name;
+    const desc = `Réservation du ${body.date} à ${body.time} chez ${salon.name}`;
 
     try {
         const session = await stripe.checkout.sessions.create({

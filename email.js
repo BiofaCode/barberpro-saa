@@ -645,7 +645,7 @@ async function sendEmployeeBookingNotification(booking, salon, employeeEmail) {
   }
 }
 
-module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail };
+module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail };
 
 // ---- Referral reward email (sent to parrain when filleul pays first month) ----
 async function sendReferralRewardEmail(parrainEmail, parrainName, filleulSalonName) {
@@ -703,6 +703,59 @@ async function sendReferralRewardEmail(parrainEmail, parrainName, filleulSalonNa
     console.log(`  🎁 Email récompense parrainage envoyé à ${parrainEmail}`);
   } catch (e) {
     console.error('Referral reward email error:', e.message);
+  }
+}
+
+// ---- Payment failed email (sent to owner when Stripe can't charge) ----
+async function sendPaymentFailedEmail(ownerEmail, ownerName, salonName, proUrl) {
+  const firstName = ownerName?.split(' ')[0] || 'cher client';
+  const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Roboto,Arial,sans-serif">
+  <div style="max-width:520px;margin:32px auto;padding:0 12px">
+    <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:16px 16px 0 0;padding:28px 28px 24px;text-align:center">
+      <div style="font-size:36px;margin-bottom:8px">⚠️</div>
+      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">Échec du paiement</h1>
+    </div>
+    <div style="background:#fff;padding:28px;border:1px solid #e4e4e7;border-top:none">
+      <p style="margin:0 0 16px;font-size:16px;color:#374151">Bonjour <strong>${firstName}</strong>,</p>
+      <p style="margin:0 0 20px;font-size:15px;color:#6b7280;line-height:1.6">
+        Nous n'avons pas pu prélever votre abonnement <strong>${salonName}</strong> sur Stripe.
+        Votre compte reste actif pour le moment, mais merci de mettre à jour votre moyen de paiement
+        pour éviter toute interruption de service.
+      </p>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin-bottom:24px">
+        <p style="margin:0;font-size:13px;color:#dc2626;font-weight:600">
+          ⏳ Stripe retentera automatiquement le prélèvement dans les prochains jours.
+          Sans mise à jour, votre abonnement sera suspendu.
+        </p>
+      </div>
+      <div style="text-align:center">
+        <a href="${proUrl}/settings" style="display:inline-block;background:#6366F1;color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px">
+          Mettre à jour mon paiement →
+        </a>
+      </div>
+    </div>
+    <div style="background:#f9fafb;border:1px solid #e4e4e7;border-top:none;border-radius:0 0 16px 16px;padding:14px 28px;text-align:center">
+      <p style="margin:0;color:#9ca3af;font-size:12px">Kreno — Si vous avez des questions, répondez à cet email.</p>
+    </div>
+  </div>
+</body>
+</html>`;
+  try {
+    await resend.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: [ownerEmail],
+      subject: `⚠️ Échec de paiement — votre abonnement ${salonName}`,
+      html,
+    });
+    console.log(`  ⚠️ Email échec paiement envoyé à ${ownerEmail} pour ${salonName}`);
+  } catch (e) {
+    console.error('Payment failed email error:', e.message);
   }
 }
 

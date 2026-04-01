@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="barber_app"
+        android:label="Kreno"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

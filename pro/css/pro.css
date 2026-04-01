@@ -309,10 +309,12 @@ body {
     position: absolute; top: 0; left: 0; right: 0;
     height: 3px;
 }
-.stat-card.gold::before  { background: linear-gradient(90deg, var(--primary), #818CF8); }
-.stat-card.blue::before  { background: linear-gradient(90deg, var(--blue), #93C5FD); }
-.stat-card.green::before { background: linear-gradient(90deg, var(--success), #6EE7B7); }
+.stat-card.gold::before   { background: linear-gradient(90deg, var(--primary), #818CF8); }
+.stat-card.blue::before   { background: linear-gradient(90deg, var(--blue), #93C5FD); }
+.stat-card.green::before  { background: linear-gradient(90deg, var(--success), #6EE7B7); }
 .stat-card.orange::before { background: linear-gradient(90deg, var(--warning), #FCD34D); }
+.stat-card.purple::before { background: linear-gradient(90deg, #8B5CF6, #C4B5FD); }
+.stat-card:hover { box-shadow: var(--shadow); }
 
 .stat-icon { font-size: 20px; margin-bottom: 8px; }
 .stat-value {

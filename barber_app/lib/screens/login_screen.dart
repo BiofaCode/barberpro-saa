@@ -225,18 +225,23 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 const SizedBox(height: 60),
 
                 // Logo
-                Container(
-                  width: 80, height: 80,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.primary, AppTheme.primaryDark],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                GestureDetector(
+                  onLongPress: _showServerConfig,
+                  child: Container(
+                    width: 80, height: 80,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppTheme.primary, AppTheme.primaryDark],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [BoxShadow(color: AppTheme.primary.withAlpha(61), blurRadius: 30, offset: const Offset(0, 10))],
                     ),
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [BoxShadow(color: AppTheme.primary.withAlpha(61), blurRadius: 30, offset: const Offset(0, 10))],
+                    child: const Center(
+                      child: Text('K', style: TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: Colors.white)),
+                    ),
                   ),
-                  child: const Center(child: Text('✨', style: TextStyle(fontSize: 36))),
                 ),
 
                 const SizedBox(height: 24),
@@ -311,13 +316,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
                 const SizedBox(height: 40),
 
-                // Server config (discreet)
-                GestureDetector(
-                  onTap: _showServerConfig,
-                  child: Text('⚙️ Configurer le serveur',
-                    style: GoogleFonts.outfit(fontSize: 11, color: AppTheme.textMuted.withAlpha(100))),
-                ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
               ],
             ),
           ),
