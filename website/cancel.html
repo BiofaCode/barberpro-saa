@@ -318,6 +318,37 @@
       color: var(--text-dim);
     }
 
+    /* Rebook CTA button */
+    .btn-rebook {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.1s;
+      box-shadow: 0 4px 20px rgba(99,102,241,0.35);
+    }
+
+    .btn-rebook:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+      color: #fff;
+    }
+
+    .btn-rebook:active {
+      transform: scale(0.98);
+    }
+
     @media (max-width: 480px) {
       .card-header { padding: 24px 20px 20px; }
       .card-body { padding: 20px 20px 24px; }
@@ -438,6 +469,11 @@
           Un email de confirmation vous a été envoyé.<br><br>
           Nous espérons vous revoir bientôt !
         </p>
+        <div id="rebook-cta" style="margin-top:24px;display:none">
+          <a id="rebook-link" href="/" class="btn-rebook">
+            📅 Prendre un nouveau rendez-vous
+          </a>
+        </div>
       </div>
       <div class="card-footer">
         <p class="footer-text">Kreno — Propulsé par Osmo Digital</p>
@@ -509,6 +545,12 @@
         document.getElementById('booking-date').textContent = formatDateFR(booking.date);
         document.getElementById('booking-time').textContent = booking.time || '—';
 
+        // Store salon slug for rebook link
+        if (salon.slug) {
+          const rebookLink = document.getElementById('rebook-link');
+          if (rebookLink) rebookLink.href = '/' + salon.slug;
+        }
+
         showState('confirm');
 
       } catch (err) {
@@ -533,6 +575,11 @@
 
         if (data.success) {
           showState('success');
+          // Show rebook CTA if we have a salon slug
+          const rebookCta = document.getElementById('rebook-cta');
+          if (rebookCta && document.getElementById('rebook-link')?.href !== '/') {
+            rebookCta.style.display = 'block';
+          }
         } else {
           if (data.error && data.error.includes('déjà annulé')) {
             showState('already-cancelled');
