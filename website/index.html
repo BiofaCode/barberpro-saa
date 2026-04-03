@@ -59,7 +59,7 @@
           Nos Services →
         </a>
       </div>
-      <div class="hero-stats" id="heroStatsBlock">
+      <div class="hero-stats" id="heroStatsBlock" style="display:none">
         <div class="hero-stat">
           <div class="hero-stat-number" id="heroStat1Value" data-count="2500">0</div>
           <div class="hero-stat-label" id="heroStat1Label">Clients satisfaits</div>
@@ -207,64 +207,23 @@
       <h3>Prendre Rendez-Vous</h3>
       <p>Choisissez votre prestation, la date et l'heure qui vous conviennent. Confirmation instantanée par email.</p>
       <div class="bcc-features">
-        <span>✓ Confirmation immédiate</span>
-        <span>✓ Rappel SMS</span>
-        <span>✓ Annulation gratuite</span>
+        <span>✓ Confirmation instantanée par email</span>
+        <span>✓ Choix du professionnel</span>
+        <span>✓ Créneaux disponibles en temps réel</span>
       </div>
       <button class="btn btn-primary bcc-btn" type="button">✂️ Réserver Maintenant</button>
     </div>
   </section>
 
   <!-- Testimonials Section -->
-  <section class="testimonials" id="testimonials">
+  <section class="testimonials" id="testimonials" style="display:none">
     <div class="reveal">
       <span class="section-badge">Témoignages</span>
       <h2 class="section-title">Ce Que Disent Nos Clients</h2>
       <p class="section-subtitle">La satisfaction de nos clients est notre plus grande fierté.</p>
     </div>
     <div class="testimonials-grid">
-      <div class="testimonial-card reveal">
-        <div class="testimonial-stars">★★★★★</div>
-        <p class="testimonial-text">"Un service exceptionnel ! La coupe est toujours parfaite et l'ambiance est au top.
-          Mon salon préféré depuis 3 ans."</p>
-        <div class="testimonial-author">
-          <div class="testimonial-avatar"
-            style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">
-            M</div>
-          <div>
-            <div class="testimonial-name">Mehdi A.</div>
-            <div class="testimonial-role">Client régulier</div>
-          </div>
-        </div>
-      </div>
-      <div class="testimonial-card reveal">
-        <div class="testimonial-stars">★★★★★</div>
-        <p class="testimonial-text">"Le Pack Premium est incroyable. On ressort de là complètement transformé. Le soin
-          du visage est un vrai plus !"</p>
-        <div class="testimonial-author">
-          <div class="testimonial-avatar"
-            style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">
-            L</div>
-          <div>
-            <div class="testimonial-name">Lucas D.</div>
-            <div class="testimonial-role">Client Premium</div>
-          </div>
-        </div>
-      </div>
-      <div class="testimonial-card reveal">
-        <div class="testimonial-stars">★★★★★</div>
-        <p class="testimonial-text">"La réservation en ligne est super pratique. Plus besoin d'attendre ! Et la coupe
-          est toujours au rendez-vous."</p>
-        <div class="testimonial-author">
-          <div class="testimonial-avatar"
-            style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)); display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">
-            K</div>
-          <div>
-            <div class="testimonial-name">Karim B.</div>
-            <div class="testimonial-role">Client depuis 2 ans</div>
-          </div>
-        </div>
-      </div>
+      <!-- Populated dynamically by app.js from approvedReviews + salon.testimonials -->
     </div>
   </section>
 
