@@ -316,13 +316,19 @@ function applySalonBranding(salon) {
               </div>
             </div>
           `).join('');
+          // Setup dot indicators for mobile carousel
+          const dotsEl = document.getElementById('testimonialsDots');
+          if (dotsEl) setupTestimonialDots(testimonialsGrid, dotsEl, allCards.length);
+
           if (allCards.length > 3) {
             initTestimonialCarousel(testimonialsGrid);
             return;
           }
-          // ≤3 cards → grid layout
-          const cols = window.innerWidth < 640 ? '1fr' : 'repeat(auto-fit,minmax(260px,1fr))';
-          testimonialsGrid.style.cssText = `display:grid;grid-template-columns:${cols};gap:20px;overflow:visible;scroll-snap-type:none;padding:0`;
+          // ≤3 cards → grid layout on desktop only; carousel CSS handles mobile
+          if (window.innerWidth > 768) {
+            const cols = 'repeat(auto-fit,minmax(260px,1fr))';
+            testimonialsGrid.style.cssText = `display:grid;grid-template-columns:${cols};gap:20px;overflow:visible;scroll-snap-type:none;padding:0`;
+          }
         }
       }
     }
@@ -1317,6 +1323,30 @@ function initMobileStickyBtn() {
 /* ============================================
    GALLERY LIGHTBOX
    ============================================ */
+function setupTestimonialDots(grid, dotsEl, count) {
+  dotsEl.textContent = '';
+  if (count <= 1) return;
+  const dots = Array.from({ length: count }, (_, i) => {
+    const d = document.createElement('span');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => {
+      const card = grid.children[i];
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    });
+    dotsEl.appendChild(d);
+    return d;
+  });
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = Array.from(grid.children).indexOf(e.target);
+        if (idx >= 0) dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { root: grid, threshold: 0.6 });
+  Array.from(grid.children).forEach(c => io.observe(c));
+}
+
 function initGalleryLightbox() {
   // Create lightbox element
   const lb = document.createElement('div');
