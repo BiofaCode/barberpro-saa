@@ -1,10 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../models/booking_model.dart';
 
-class BookingDetailScreen extends StatelessWidget {
+class BookingDetailScreen extends StatefulWidget {
   final BookingModel booking;
   final Function(BookingStatus)? onStatusChanged;
 
@@ -15,7 +16,99 @@ class BookingDetailScreen extends StatelessWidget {
   });
 
   @override
+  State<BookingDetailScreen> createState() => _BookingDetailScreenState();
+}
+
+class _BookingDetailScreenState extends State<BookingDetailScreen> {
+  late BookingStatus _currentStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentStatus = widget.booking.status;
+  }
+
+  void _changeStatus(BookingStatus newStatus) {
+    setState(() => _currentStatus = newStatus);
+    widget.onStatusChanged?.call(newStatus);
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _launchPhone(String phone) async {
+    final uri = Uri.parse('tel:$phone');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(phone)));
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(phone)));
+      }
+    }
+  }
+
+  Future<void> _launchSms(String phone) async {
+    final uri = Uri.parse('sms:$phone');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(phone)));
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(phone)));
+      }
+    }
+  }
+
+  Future<void> _launchEmail(String email) async {
+    final uri = Uri.parse('mailto:$email');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(email)));
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(email)));
+      }
+    }
+  }
+
+  Color get _statusColor {
+    switch (_currentStatus) {
+      case BookingStatus.pending:
+        return AppTheme.warning;
+      case BookingStatus.confirmed:
+        return AppTheme.primary;
+      case BookingStatus.inProgress:
+        return AppTheme.success;
+      case BookingStatus.completed:
+        return AppTheme.success;
+      case BookingStatus.cancelled:
+        return AppTheme.error;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final booking = widget.booking;
     final timeStr = DateFormat('HH:mm').format(booking.dateTime);
     final endTimeStr = DateFormat('HH:mm').format(booking.endTime);
     final dateStr =
@@ -27,22 +120,19 @@ class BookingDetailScreen extends StatelessWidget {
         actions: [
           PopupMenuButton<BookingStatus>(
             icon: const Icon(Icons.more_vert_rounded),
-            onSelected: (status) {
-              onStatusChanged?.call(status);
-              Navigator.of(context).pop();
-            },
+            onSelected: _changeStatus,
             itemBuilder: (context) => [
-              if (booking.status != BookingStatus.inProgress)
+              if (_currentStatus != BookingStatus.inProgress)
                 const PopupMenuItem(
                   value: BookingStatus.inProgress,
                   child: Text('✂️ Commencer'),
                 ),
-              if (booking.status != BookingStatus.completed)
+              if (_currentStatus != BookingStatus.completed)
                 const PopupMenuItem(
                   value: BookingStatus.completed,
                   child: Text('✅ Terminer'),
                 ),
-              if (booking.status != BookingStatus.cancelled)
+              if (_currentStatus != BookingStatus.cancelled)
                 const PopupMenuItem(
                   value: BookingStatus.cancelled,
                   child: Text('❌ Annuler'),
@@ -97,7 +187,7 @@ class BookingDetailScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      '${booking.status.emoji} ${booking.status.label}',
+                      '${_currentStatus.emoji} ${_currentStatus.label}',
                       style: GoogleFonts.outfit(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -165,16 +255,14 @@ class BookingDetailScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Action Buttons
-            if (booking.status == BookingStatus.confirmed ||
-                booking.status == BookingStatus.pending) ...[
+            if (_currentStatus == BookingStatus.confirmed ||
+                _currentStatus == BookingStatus.pending) ...[
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        onStatusChanged?.call(BookingStatus.inProgress);
-                        Navigator.of(context).pop();
-                      },
+                      onPressed: () =>
+                          _changeStatus(BookingStatus.inProgress),
                       icon: const Icon(Icons.play_arrow_rounded),
                       label: const Text('Commencer'),
                     ),
@@ -195,14 +283,11 @@ class BookingDetailScreen extends StatelessWidget {
                   ),
                 ],
               ),
-            ] else if (booking.status == BookingStatus.inProgress) ...[
+            ] else if (_currentStatus == BookingStatus.inProgress) ...[
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    onStatusChanged?.call(BookingStatus.completed);
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: () => _changeStatus(BookingStatus.completed),
                   icon: const Icon(Icons.check_rounded),
                   label: const Text('Terminer le RDV'),
                   style: ElevatedButton.styleFrom(
@@ -222,7 +307,7 @@ class BookingDetailScreen extends StatelessWidget {
                     icon: Icons.phone_rounded,
                     label: 'Appeler',
                     color: AppTheme.success,
-                    onTap: () {},
+                    onTap: () => _launchPhone(booking.clientPhone),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -231,7 +316,7 @@ class BookingDetailScreen extends StatelessWidget {
                     icon: Icons.message_rounded,
                     label: 'SMS',
                     color: AppTheme.primary,
-                    onTap: () {},
+                    onTap: () => _launchSms(booking.clientPhone),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -240,7 +325,7 @@ class BookingDetailScreen extends StatelessWidget {
                     icon: Icons.email_rounded,
                     label: 'Email',
                     color: Colors.blueAccent,
-                    onTap: () {},
+                    onTap: () => _launchEmail(booking.clientEmail),
                   ),
                 ),
               ],
@@ -251,21 +336,6 @@ class BookingDetailScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color get _statusColor {
-    switch (booking.status) {
-      case BookingStatus.pending:
-        return AppTheme.warning;
-      case BookingStatus.confirmed:
-        return AppTheme.primary;
-      case BookingStatus.inProgress:
-        return AppTheme.success;
-      case BookingStatus.completed:
-        return AppTheme.success;
-      case BookingStatus.cancelled:
-        return AppTheme.error;
-    }
   }
 
   Widget _buildSection(String title, List<Widget> children) {
@@ -386,8 +456,7 @@ class BookingDetailScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              onStatusChanged?.call(BookingStatus.cancelled);
-              Navigator.of(context).pop();
+              _changeStatus(BookingStatus.cancelled);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.error,

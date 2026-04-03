@@ -645,7 +645,19 @@ async function sendEmployeeBookingNotification(booking, salon, employeeEmail) {
   }
 }
 
-module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail };
+// Generic email sender — used for transactional/internal emails (e.g. contact form)
+async function sendEmail({ to, subject, html }) {
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'noreply@kreno.ch';
+  const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
+  try {
+    await resend.emails.send({ from: `${fromName} <${fromEmail}>`, to, subject, html });
+  } catch (e) {
+    console.error('sendEmail error:', e.message);
+    throw e;
+  }
+}
+
+module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail, sendEmail };
 
 // ---- Referral reward email (sent to parrain when filleul pays first month) ----
 async function sendReferralRewardEmail(parrainEmail, parrainName, filleulSalonName) {

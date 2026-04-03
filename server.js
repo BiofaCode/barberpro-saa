@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail, sendEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
 const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
@@ -146,6 +146,10 @@ function parseMultipart(req) {
 
 // Upload buffer to Cloudinary (or fallback to local if not configured)
 async function uploadImageBuffer(buffer, ext, folder = 'barbershop') {
+    const allowedExts = ['.jpg', '.jpeg', '.png', '.webp'];
+    if (!allowedExts.includes((ext || '').toLowerCase())) {
+        throw new Error('Type de fichier non autorisé. Formats acceptés : JPG, PNG, WebP.');
+    }
     return new Promise((resolve, reject) => {
         if (!process.env.CLOUDINARY_URL && !process.env.CLOUDINARY_CLOUD_NAME) {
             // Local fallback
@@ -388,6 +392,25 @@ route('POST', '/api/admin/login', async (req, res) => {
 
 route('GET', '/api/health', async (req, res) => {
     json(res, 200, { status: 'ok', ts: Date.now() });
+});
+
+// POST /api/contact — Contact form from landing page
+route('POST', '/api/contact', async (req, res) => {
+    const body = await parseBody(req);
+    const { name, email, salon, message } = body;
+    if (!name || !email || !message) return json(res, 400, { success: false, error: 'Champs requis manquants' });
+
+    // Send email notification
+    try {
+        await sendEmail({
+            to: process.env.CONTACT_EMAIL || process.env.RESEND_FROM_EMAIL || 'info@kreno.ch',
+            subject: `[Kreno Contact] ${name} — ${salon || 'Sans salon'}`,
+            html: `<p><strong>Nom:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Salon:</strong> ${salon || '—'}</p><p><strong>Message:</strong></p><p>${message.replace(/\n/g, '<br>')}</p>`,
+        });
+    } catch (e) {
+        console.error('Contact email error:', e);
+    }
+    json(res, 200, { success: true });
 });
 
 route('GET', '/robots.txt', async (req, res) => {
@@ -745,6 +768,8 @@ route('POST', '/api/pro/reset-password', async (req, res) => {
 });
 
 route('GET', '/api/pro/salon/:salonId', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const employees = await db.findEmployees({ salon: params.salonId });
@@ -936,6 +961,8 @@ route('GET', '/api/pro/salon/:salonId/analytics', async (req, res, params) => {
 
 // Services
 route('GET', '/api/pro/salon/:salonId/services', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     json(res, 200, { success: true, data: salon.services || [] });
@@ -1064,6 +1091,8 @@ route('DELETE', '/api/pro/salon/:salonId/logo_old', async (req, res, params) => 
 // ---- Testimonials ----
 // ---- Reviews (client-submitted, with moderation) ----
 route('GET', '/api/pro/salon/:salonId/reviews', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 403, { success: false, error: 'Accès refusé' });
     const all = await db.findBookings({ salon: params.salonId, reviewed: true });
     const reviews = all.map(b => ({
         _id: b._id, clientName: b.clientName, serviceName: b.serviceName,
@@ -1092,6 +1121,8 @@ route('PUT', '/api/pro/salon/:salonId/reviews/:bookingId/moderate', async (req, 
 });
 
 route('GET', '/api/pro/salon/:salonId/testimonials', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 403, { success: false, error: 'Accès refusé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     json(res, 200, { success: true, data: salon.testimonials || [] });
@@ -1158,6 +1189,8 @@ route('GET', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
 });
 
 route('POST', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const body = await parseBody(req);
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false, error: 'Salon introuvable' });
@@ -1166,8 +1199,8 @@ route('POST', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
     const empCount = await db.countEmployees({ salon: params.salonId });
 
     if (body.role !== 'owner') {
-        if (plan === 'starter' && empCount >= 2) {
-            return json(res, 403, { success: false, error: 'Limite de 2 employés atteinte pour le pack Starter. Veuillez upgrader votre abonnement.' });
+        if (plan === 'starter' && empCount >= 1) {
+            return json(res, 403, { success: false, error: 'Limite de 1 employé atteinte pour le pack Starter. Veuillez upgrader votre abonnement.' });
         }
         if (plan === 'pro' && empCount >= 5) {
             return json(res, 403, { success: false, error: 'Limite de 5 employés atteinte pour le pack Pro. Veuillez upgrader vers Premium.' });
@@ -1198,6 +1231,8 @@ route('POST', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
 });
 
 route('DELETE', '/api/pro/salon/:salonId/employees/:empId', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
     const url = new URL(req.url, `http://localhost`);
     const role = url.searchParams.get('role');
 
@@ -1413,6 +1448,8 @@ route('DELETE', '/api/pro/salon/:salonId/blocks/:blockId', async (req, res, para
 
 // Clients
 route('GET', '/api/pro/salon/:salonId/clients', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 403, { success: false, error: 'Accès refusé' });
     const clients = await db.findClients({ salon: params.salonId });
     json(res, 200, { success: true, data: clients });
 });
@@ -1900,7 +1937,11 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             return json(res, 400, { error: 'Webhook signature invalide' });
         }
     } else {
-        // In dev/test without webhook secret, parse manually
+        if (process.env.NODE_ENV === 'production') {
+            console.error('⚠️ STRIPE_WEBHOOK_SECRET manquant en production — webhook rejeté');
+            return json(res, 400, { error: 'Webhook non vérifié' });
+        }
+        // Dev/test only: parse without signature
         try {
             event = JSON.parse(rawBody);
         } catch (err) {
@@ -1965,14 +2006,17 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             // Determine trial length (30j if referred, 14j otherwise)
             const trialDays = refCode ? 30 : 14;
             const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString();
+            const SMS_CREDITS_BY_PLAN = { starter: 0, pro: 200, premium: 400 };
+            const initialSms = SMS_CREDITS_BY_PLAN[plan] || 0;
             await db.updateSalon(salonId, {
                 active: true,
                 'subscription.status': 'trial',
                 'subscription.trialEnd': trialEnd,
                 'subscription.stripeCustomerId': session.customer,
                 'subscription.stripeSubscriptionId': session.subscription,
+                ...(initialSms > 0 ? { smsCredits: initialSms } : {}),
             });
-            console.log(`✅ Salon ${salonId} activé (plan: ${plan}, trial ${trialDays}j jusqu'au ${trialEnd})`);
+            console.log(`✅ Salon ${salonId} activé (plan: ${plan}, trial ${trialDays}j jusqu'au ${trialEnd}${initialSms > 0 ? `, ${initialSms} SMS crédités` : ''})`);
             await db.addSalonLog(salonId, 'subscription_activated', { plan, trialEnd, stripeCustomerId: session.customer, referredBy: refCode || null });
 
             // Send welcome email (non-blocking)
@@ -1993,8 +2037,28 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             }
         }
     } else if (event.type === 'invoice.payment_succeeded') {
-        // ---- Parrainage: récompense parrain au 1er vrai paiement du filleul ----
         const invoice = event.data.object;
+
+        // ---- Recharge SMS mensuelle (renouvellement) ----
+        if (invoice.billing_reason === 'subscription_cycle' && invoice.amount_paid > 0) {
+            const stripeCustomerId = invoice.customer;
+            const salons = await db.findSalons({ 'subscription.stripeCustomerId': stripeCustomerId });
+            if (salons.length > 0) {
+                const salon = salons[0];
+                const plan = salon.subscription?.plan || 'pro';
+                const SMS_MONTHLY = { starter: 0, pro: 200, premium: 400 };
+                const monthlyCredits = SMS_MONTHLY[plan] || 0;
+                if (monthlyCredits > 0) {
+                    // Top up: give new credits, keep any unused (capped at 2× monthly to avoid infinite accumulation)
+                    const current = salon.smsCredits || 0;
+                    const capped = Math.min(current + monthlyCredits, monthlyCredits * 2);
+                    await db.updateSalon(salon._id, { smsCredits: capped });
+                    console.log(`📱 Recharge SMS mensuelle: salon ${salon._id} → ${capped} crédits (plan ${plan})`);
+                }
+            }
+        }
+
+        // ---- Parrainage: récompense parrain au 1er vrai paiement du filleul ----
         // Only on first real payment (billing_reason = 'subscription_create' means end of trial / first charge)
         if (invoice.billing_reason === 'subscription_create' && invoice.amount_paid > 0) {
             const stripeCustomerId = invoice.customer;
@@ -2432,6 +2496,13 @@ route('POST', '/api/pro/salon/:salonId/webhooks', async (req, res, params) => {
     if (!body.url || !body.url.startsWith('https://')) {
         return json(res, 400, { success: false, error: 'URL HTTPS valide requise' });
     }
+    try {
+        const webhookHost = new URL(body.url).hostname;
+        const privateRanges = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|0\.0\.0\.0)/;
+        if (privateRanges.test(webhookHost)) {
+            return json(res, 400, { success: false, error: 'URL non autorisée' });
+        }
+    } catch { return json(res, 400, { success: false, error: 'URL invalide' }); }
     const webhooks = salon.webhooks || [];
     if (webhooks.length >= 5) return json(res, 400, { success: false, error: 'Maximum 5 webhooks atteint' });
 
@@ -2617,6 +2688,7 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
     if (paymentMode === 'none') return json(res, 400, { success: false, error: 'Pas de paiement en ligne pour ce service' });
 
     const amountCents = Math.round(service.price * 100);
+    const amountCHF = service.price;
 
     // Frais plateforme Kreno (2.5% du prix total du service)
     const platformFeeCents = Math.round(service.price * 100 * 2.5 / 100);
@@ -2704,6 +2776,10 @@ route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
 
 // Client: verify OTP and lookup my bookings
 route('POST', '/api/salon/:slug/my-bookings', async (req, res, params) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+    if (rateLimit(ip, 'otp_verify', 10, 15 * 60 * 1000)) {
+        return json(res, 429, { success: false, error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
+    }
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
@@ -2936,11 +3012,16 @@ const server = http.createServer(async (req, res) => {
     // Uploaded files
     if (pathname.startsWith('/uploads/')) {
         const filePath = path.join(__dirname, pathname);
-        if (fs.existsSync(filePath)) {
-            const ext = path.extname(filePath);
-            const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.svg': 'image/svg+xml' };
-            res.writeHead(200, { 'Content-Type': mimeMap[ext] || 'application/octet-stream', 'Cache-Control': 'public, max-age=86400' });
-            fs.createReadStream(filePath).pipe(res);
+        const resolved = path.resolve(filePath);
+        if (!resolved.startsWith(path.resolve(UPLOAD_DIR) + path.sep) && resolved !== path.resolve(UPLOAD_DIR)) {
+            res.writeHead(403); res.end('Forbidden'); return;
+        }
+        if (fs.existsSync(resolved)) {
+            const ext = path.extname(resolved).toLowerCase();
+            const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' };
+            if (!mimeMap[ext]) { res.writeHead(403); res.end('Forbidden'); return; }
+            res.writeHead(200, { 'Content-Type': mimeMap[ext], 'Cache-Control': 'public, max-age=86400' });
+            fs.createReadStream(resolved).pipe(res);
         } else {
             res.writeHead(404);
             res.end('Not found');
@@ -3055,7 +3136,8 @@ tr+tr td{border-top:1px solid #f0f0f0}
     }
     else if (pathname.startsWith('/cancel/')) {
         const filePath = path.join(__dirname, 'website', 'cancel.html');
-        const cancelToken = pathname.split('/cancel/')[1]?.split('?')[0] || '';
+        const rawToken = pathname.split('/cancel/')[1]?.split('?')[0] || '';
+        const cancelToken = /^[0-9a-f]{32}$/.test(rawToken) ? rawToken : '';
         fs.readFile(filePath, (err, content) => {
             if (err) { res.writeHead(404); return res.end('Not found'); }
             let html = content.toString();
@@ -3068,7 +3150,7 @@ tr+tr td{border-top:1px solid #f0f0f0}
     else if (pathname.startsWith('/s/')) {
         const parts = pathname.split('/').filter(Boolean);
         if (parts.length >= 2) {
-            salonSlug = parts[1];
+            salonSlug = /^[a-z0-9-]+$/.test(parts[1]) ? parts[1] : '';
             const rest = parts.slice(2);
             if (rest.length > 0) {
                 filePath = path.join(__dirname, 'website', rest.join('/'));

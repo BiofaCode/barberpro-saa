@@ -17,7 +17,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   bool _loading = false;
   bool _obscurePassword = true;
   String? _error;
-  String? _success;
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
@@ -42,11 +41,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      setState(() { _error = 'Veuillez remplir tous les champs'; _success = null; });
+      setState(() { _error = 'Veuillez remplir tous les champs'; });
       return;
     }
 
-    setState(() { _loading = true; _error = null; _success = null; });
+    setState(() { _loading = true; _error = null; });
 
     final success = await ApiService.login(email, password);
 

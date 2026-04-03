@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
 import 'employees_screen.dart';
 import 'services_screen.dart';
+import 'blocks_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -72,6 +74,175 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _editSalonInfo() {
+    final nameCtrl = TextEditingController(text: _salon?['name'] ?? '');
+    final addrCtrl = TextEditingController(text: _salon?['address'] ?? '');
+    final phoneCtrl = TextEditingController(text: _salon?['phone'] ?? '');
+    final emailCtrl = TextEditingController(text: _salon?['email'] ?? '');
+    bool saving = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppTheme.bgCard,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // drag handle
+              Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppTheme.textMuted.withAlpha(80), borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 16),
+              Text('Informations du salon', style: GoogleFonts.bricolageGrotesque(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+              const SizedBox(height: 20),
+              _buildTextField(nameCtrl, 'Nom du salon', Icons.storefront_rounded),
+              const SizedBox(height: 12),
+              _buildTextField(addrCtrl, 'Adresse', Icons.location_on_rounded),
+              const SizedBox(height: 12),
+              _buildTextField(phoneCtrl, 'Téléphone', Icons.phone_rounded, keyboardType: TextInputType.phone),
+              const SizedBox(height: 12),
+              _buildTextField(emailCtrl, 'Email', Icons.email_rounded, keyboardType: TextInputType.emailAddress),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: saving ? null : () async {
+                    setModalState(() => saving = true);
+                    final ok = await ApiService.updateMySalon({
+                      'name': nameCtrl.text.trim(),
+                      'address': addrCtrl.text.trim(),
+                      'phone': phoneCtrl.text.trim(),
+                      'email': emailCtrl.text.trim(),
+                    });
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (ok) {
+                      _loadSalonData();
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ Informations mises à jour')));
+                    } else {
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur lors de la sauvegarde')));
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, padding: const EdgeInsets.symmetric(vertical: 16)),
+                  child: saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text('Sauvegarder', style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _editHours() {
+    final days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    final Map<String, Map<String, dynamic>> hours = {};
+    for (final day in days) {
+      final h = (_salon?['hours'] ?? {})[day] ?? {};
+      hours[day] = {
+        'open': h['open'] == true || (h['open'] is String && (h['open'] as String).isNotEmpty),
+        'openTime': h['openTime'] ?? (h['open'] is String ? h['open'] as String : '09:00'),
+        'closeTime': h['closeTime'] ?? (h['close'] is String ? h['close'] as String : '18:00'),
+      };
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppTheme.bgCard,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          bool saving = false;
+          return DraggableScrollableSheet(
+            initialChildSize: 0.85,
+            maxChildSize: 0.95,
+            minChildSize: 0.5,
+            expand: false,
+            builder: (_, scrollCtrl) => Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Column(
+                    children: [
+                      Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppTheme.textMuted.withAlpha(80), borderRadius: BorderRadius.circular(2)))),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Horaires d\'ouverture', style: GoogleFonts.bricolageGrotesque(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                          ElevatedButton(
+                            onPressed: saving ? null : () async {
+                              setModalState(() => saving = true);
+                              final ok = await ApiService.updateMySalon({'hours': hours});
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              if (ok) {
+                                _loadSalonData();
+                                if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ Horaires mis à jour')));
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
+                            child: saving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text('Sauvegarder', style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView(
+                    controller: scrollCtrl,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    children: days.map((day) {
+                      final h = hours[day]!;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(color: AppTheme.bgDark, borderRadius: BorderRadius.circular(12)),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(day[0].toUpperCase() + day.substring(1), style: GoogleFonts.dmSans(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                                Switch(
+                                  value: h['open'] as bool,
+                                  onChanged: (v) => setModalState(() => h['open'] = v),
+                                  activeThumbColor: Colors.white,
+                                  activeTrackColor: AppTheme.primary,
+                                ),
+                              ],
+                            ),
+                            if (h['open'] == true) ...[
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Expanded(child: _buildTimeButton(ctx, 'Ouverture', h['openTime'] as String, (t) => setModalState(() => h['openTime'] = t))),
+                                  const SizedBox(width: 12),
+                                  Expanded(child: _buildTimeButton(ctx, 'Fermeture', h['closeTime'] as String, (t) => setModalState(() => h['closeTime'] = t))),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -118,7 +289,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // Salon info
-                      _buildSectionTitle('Informations du salon'),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Informations du salon', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                          IconButton(
+                            icon: const Icon(Icons.edit_rounded, color: AppTheme.primary, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: _editSalonInfo,
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 12),
                       _buildInfoTile(Icons.store_rounded, 'Nom', _salon?['name'] ?? '—'),
                       _buildInfoTile(Icons.location_on_rounded, 'Adresse', _salon?['address'] ?? '—'),
@@ -168,6 +350,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           _loadSalonData();
                         },
                       ),
+                      const SizedBox(height: 12),
+
+                      // Blocks
+                      _buildNavCard(
+                        icon: Icons.block_rounded,
+                        title: 'Créneaux bloqués',
+                        subtitle: 'Gérez les indisponibilités',
+                        onTap: () {
+                          Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => const BlocksScreen()));
+                        },
+                      ),
                       const SizedBox(height: 24),
 
                       // Gallery
@@ -207,7 +401,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const SizedBox(height: 24),
 
                       // Hours
-                      _buildSectionTitle('Horaires d\'ouverture'),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Horaires d\'ouverture', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                          IconButton(
+                            icon: const Icon(Icons.edit_rounded, color: AppTheme.primary, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: _editHours,
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 12),
                       _buildScheduleCard(),
                       const SizedBox(height: 24),
@@ -301,36 +506,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildWebsiteLink() {
     final slug = _salon?['slug'] ?? '';
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.bgCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.primary.withAlpha(31)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withAlpha(26),
-              borderRadius: BorderRadius.circular(10),
+    return GestureDetector(
+      onTap: () async {
+        if (slug.isNotEmpty) {
+          final serverBase = ApiService.currentServerUrl;
+          final uri = Uri.parse('$serverBase/s/$slug');
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppTheme.bgCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.primary.withAlpha(31)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withAlpha(26),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.language_rounded, color: AppTheme.primary, size: 22),
             ),
-            child: const Icon(Icons.language_rounded, color: AppTheme.primary, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('/s/$slug', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.primary)),
-                const SizedBox(height: 2),
-                Text('Site de réservation de vos clients', style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
-              ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '/s/$slug',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primary,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AppTheme.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text('Site de réservation de vos clients', style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
+                ],
+              ),
             ),
-          ),
-          const Icon(Icons.open_in_new_rounded, color: AppTheme.textMuted, size: 18),
-        ],
+            const Icon(Icons.launch_rounded, color: AppTheme.primary, size: 18),
+          ],
+        ),
       ),
     );
   }
@@ -436,8 +659,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Column(
         children: days.entries.map((entry) {
           final h = hours[entry.key];
-          final isClosed = h == null;
-          final timeStr = isClosed ? 'Fermé' : '${h['open']} - ${h['close']}';
+          final isClosed = h == null || (h['open'] != true && !(h['open'] is String && (h['open'] as String).isNotEmpty));
+          String timeStr;
+          if (isClosed) {
+            timeStr = 'Fermé';
+          } else {
+            final openTime = h['openTime'] ?? h['open'] ?? '';
+            final closeTime = h['closeTime'] ?? h['close'] ?? '';
+            timeStr = '$openTime - $closeTime';
+          }
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: Row(
@@ -622,13 +852,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text('Personnalisation', style: GoogleFonts.bricolageGrotesque(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
               const SizedBox(height: 20),
-              _buildTextField('Titre principal', titleCtrl),
+              _buildSimpleTextField('Titre principal', titleCtrl),
               const SizedBox(height: 16),
-              _buildTextField('Sous-titre', subtitleCtrl),
+              _buildSimpleTextField('Sous-titre', subtitleCtrl),
               const SizedBox(height: 16),
-              _buildTextField('Couleur Primaire (HEX)', primaryColorCtrl),
+              _buildSimpleTextField('Couleur Primaire (HEX)', primaryColorCtrl),
               const SizedBox(height: 16),
-              _buildTextField('Couleur Accent (HEX)', accentColorCtrl),
+              _buildSimpleTextField('Couleur Accent (HEX)', accentColorCtrl),
               const SizedBox(height: 24),
               Text("Statistiques d'accroche (Hero)", style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
               const SizedBox(height: 12),
@@ -636,17 +866,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 builder: (ctx, setStateSheet) => SwitchListTile(
                   title: Text('Masquer ces statistiques', style: GoogleFonts.dmSans(color: AppTheme.textPrimary, fontSize: 14)),
                   value: hideStats,
-                  activeColor: AppTheme.primary,
+                  activeThumbColor: Colors.white,
+                  activeTrackColor: AppTheme.primary,
                   onChanged: (val) => setStateSheet(() => hideStats = val),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
               const SizedBox(height: 12),
-              Row(children: [ Expanded(child: _buildTextField('Valeur 1', stat1ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildTextField('Texte 1', stat1LabCtrl)) ]),
+              Row(children: [ Expanded(child: _buildSimpleTextField('Valeur 1', stat1ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildSimpleTextField('Texte 1', stat1LabCtrl)) ]),
               const SizedBox(height: 12),
-              Row(children: [ Expanded(child: _buildTextField('Valeur 2', stat2ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildTextField('Texte 2', stat2LabCtrl)) ]),
+              Row(children: [ Expanded(child: _buildSimpleTextField('Valeur 2', stat2ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildSimpleTextField('Texte 2', stat2LabCtrl)) ]),
               const SizedBox(height: 12),
-              Row(children: [ Expanded(child: _buildTextField('Valeur 3', stat3ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildTextField('Texte 3', stat3LabCtrl)) ]),
+              Row(children: [ Expanded(child: _buildSimpleTextField('Valeur 3', stat3ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildSimpleTextField('Texte 3', stat3LabCtrl)) ]),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -695,7 +926,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller) {
+  /// Icon-based text field used for salon info and hours editing.
+  Widget _buildTextField(TextEditingController ctrl, String label, IconData icon, {TextInputType? keyboardType}) {
+    return TextField(
+      controller: ctrl,
+      keyboardType: keyboardType,
+      style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: GoogleFonts.dmSans(color: AppTheme.textMuted),
+        prefixIcon: Icon(icon, color: AppTheme.textMuted, size: 20),
+        filled: true,
+        fillColor: AppTheme.bgDark,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primary)),
+      ),
+    );
+  }
+
+  /// Label-above text field used for branding and testimonial sheets.
+  Widget _buildSimpleTextField(String label, TextEditingController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -712,6 +962,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildTimeButton(BuildContext ctx, String label, String time, Function(String) onChanged) {
+    return GestureDetector(
+      onTap: () async {
+        final parts = time.split(':');
+        final initial = TimeOfDay(hour: int.tryParse(parts[0]) ?? 9, minute: int.tryParse(parts[1]) ?? 0);
+        final picked = await showTimePicker(context: ctx, initialTime: initial);
+        if (picked != null) {
+          onChanged('${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(color: AppTheme.bgCard, borderRadius: BorderRadius.circular(8), border: Border.all(color: AppTheme.primary.withAlpha(40))),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: GoogleFonts.dmSans(fontSize: 11, color: AppTheme.textMuted)),
+            const SizedBox(height: 2),
+            Text(time, style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -809,9 +1084,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(isEdit ? 'Modifier l\'avis' : 'Ajouter un avis', style: GoogleFonts.bricolageGrotesque(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                   const SizedBox(height: 20),
-                  _buildTextField('Nom du client', nameCtrl),
+                  _buildSimpleTextField('Nom du client', nameCtrl),
                   const SizedBox(height: 16),
-                  _buildTextField('Rôle / Description', roleCtrl),
+                  _buildSimpleTextField('Rôle / Description', roleCtrl),
                   const SizedBox(height: 16),
                   Text('Étoiles ($stars)', style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted)),
                   Slider(
@@ -821,7 +1096,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (v) => setStateSheet(() => stars = v.toInt()),
                   ),
                   const SizedBox(height: 16),
-                  _buildTextField('Avis / Témoignage', textCtrl),
+                  _buildSimpleTextField('Avis / Témoignage', textCtrl),
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,

@@ -421,4 +421,80 @@ class ApiService {
     }
     return false;
   }
+
+  // ---- Créer un RDV ----
+  static Future<Map<String, dynamic>?> createBooking(Map<String, dynamic> bookingData) async {
+    if (_salonId == null) return null;
+    try {
+      final res = await http.post(
+        Uri.parse('$_url/api/barber/salon/$_salonId/bookings'),
+        headers: _authHeaders,
+        body: jsonEncode(bookingData),
+      );
+      final data = jsonDecode(res.body);
+      if (data['success'] == true) return Map<String, dynamic>.from(data['data']);
+    } catch (e) {
+      debugPrint('API Error (createBooking): $e');
+    }
+    return null;
+  }
+
+  // ---- Recherche clients ----
+  static Future<List<Map<String, dynamic>>> searchClients(String query) async {
+    if (_salonId == null) return [];
+    try {
+      final uri = Uri.parse('$_url/api/barber/salon/$_salonId/clients/search')
+          .replace(queryParameters: {'q': query});
+      final res = await http.get(uri, headers: _authHeaders);
+      final data = jsonDecode(res.body);
+      if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
+    } catch (e) {
+      debugPrint('API Error (searchClients): $e');
+    }
+    return [];
+  }
+
+  // ---- Blocs (indisponibilités) ----
+  static Future<List<Map<String, dynamic>>> getBlocks() async {
+    if (_salonId == null) return [];
+    try {
+      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/blocks'), headers: _authHeaders);
+      final data = jsonDecode(res.body);
+      if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
+    } catch (e) {
+      debugPrint('API Error (getBlocks): $e');
+    }
+    return [];
+  }
+
+  static Future<bool> createBlock(Map<String, dynamic> blockData) async {
+    if (_salonId == null) return false;
+    try {
+      final res = await http.post(
+        Uri.parse('$_url/api/barber/salon/$_salonId/blocks'),
+        headers: _authHeaders,
+        body: jsonEncode(blockData),
+      );
+      final data = jsonDecode(res.body);
+      return data['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (createBlock): $e');
+    }
+    return false;
+  }
+
+  static Future<bool> deleteBlock(String blockId) async {
+    if (_salonId == null) return false;
+    try {
+      final res = await http.delete(
+        Uri.parse('$_url/api/barber/salon/$_salonId/blocks/$blockId'),
+        headers: _authHeaders,
+      );
+      final data = jsonDecode(res.body);
+      return data['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (deleteBlock): $e');
+    }
+    return false;
+  }
 }
