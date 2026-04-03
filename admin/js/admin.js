@@ -6,6 +6,11 @@
 const API = '';
 let state = { salons: [], currentPage: 'dashboard' };
 
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
 async function api(endpoint, method = 'GET', body = null) {
   const token = localStorage.getItem('adminToken');
   const headers = { 'Content-Type': 'application/json' };
@@ -296,8 +301,8 @@ function renderSalonCards(salons) {
         <div class="salon-card">
             <div class="salon-card-header">
                 <div style="min-width:0">
-                    <div class="salon-card-name">${s.name}</div>
-                    <div style="font-size:.78rem;color:var(--text-muted);margin-top:2px;font-family:monospace">/s/${s.slug}</div>
+                    <div class="salon-card-name">${escapeHtml(s.name)}</div>
+                    <div style="font-size:.78rem;color:var(--text-muted);margin-top:2px;font-family:monospace">/s/${escapeHtml(s.slug)}</div>
                 </div>
                 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
                     <select class="plan-selector" onchange="changePlan('${s._id}', this.value)" style="padding:4px 8px;border-radius:4px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-color);font-size:0.82rem;font-weight:600;">
@@ -309,9 +314,9 @@ function renderSalonCards(salons) {
                 </div>
             </div>
             <div class="salon-card-info">
-                <div>👤 <strong>${s.owner?.name || '—'}</strong></div>
-                <div>📧 ${s.owner?.email || '—'}</div>
-                <div>📍 ${s.address || '—'}</div>
+                <div>👤 <strong>${escapeHtml(s.owner?.name) || '—'}</strong></div>
+                <div>📧 ${escapeHtml(s.owner?.email) || '—'}</div>
+                <div>📍 ${escapeHtml(s.address) || '—'}</div>
                 <div>📅 Créé le ${createdDate}</div>
             </div>
             <div class="salon-card-stats">
@@ -332,14 +337,14 @@ function renderSalonCards(salons) {
                     <div class="salon-card-stat-label">Services</div>
                 </div>
             </div>
-            ${s.adminNotes ? `<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:8px 10px;font-size:.8rem;color:#f59e0b;margin-bottom:8px">📌 ${s.adminNotes}</div>` : ''}
+            ${s.adminNotes ? `<div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:8px 10px;font-size:.8rem;color:#f59e0b;margin-bottom:8px">📌 ${escapeHtml(s.adminNotes)}</div>` : ''}
             <div class="salon-card-actions" style="flex-wrap:wrap;gap:8px">
                 <button class="btn btn-sm btn-primary" onclick="quickLogin('${s._id}')">🚀 PRO</button>
                 <a href="/s/${s.slug}" target="_blank" class="btn btn-sm btn-outline">🌐 Site</a>
                 <button class="btn btn-sm btn-outline" onclick="editSalon('${s._id}')">✏️ Edit</button>
                 <button class="btn btn-sm btn-outline" onclick="resetOwnerPassword('${s._id}', '${s.owner?._id}')">🔑 MDP</button>
-                <button class="btn btn-sm btn-ghost" onclick="showSalonLogs('${s._id}', '${s.name.replace(/'/g, "\\'")}')">📜 Logs</button>
-                <button class="btn btn-sm btn-ghost" onclick="editAdminNotes('${s._id}', '${(s.adminNotes || '').replace(/'/g, "\\'")}')">📌 Notes</button>
+                <button class="btn btn-sm btn-ghost" onclick="showSalonLogs('${s._id}', '${escapeHtml(s.name).replace(/'/g, "\\'")}')">📜 Logs</button>
+                <button class="btn btn-sm btn-ghost" onclick="editAdminNotes('${s._id}', '${escapeHtml(s.adminNotes || '').replace(/'/g, "\\'")}')">📌 Notes</button>
                 <button class="btn btn-sm btn-ghost" onclick="copySalonInfo('${s._id}')">📋 Infos</button>
                 <button class="btn btn-sm btn-danger" onclick="deleteSalon('${s._id}')">🗑️</button>
             </div>
@@ -411,7 +416,9 @@ function openCreateSalonModal() {
         <div class="form-group">
             <label class="form-label">Plan</label>
             <select class="form-input form-input-full" id="mPlan">
+                <option value="starter">Starter (29.90 CHF/mois)</option>
                 <option value="pro" selected>Pro (49.90 CHF/mois)</option>
+                <option value="premium">Premium (89.90 CHF/mois)</option>
             </select>
         </div>
 

@@ -572,12 +572,14 @@ h3 {
 .service-card {
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  padding: var(--space-2xl);
+  padding: 1.75rem;
   text-align: left;
   border: 1px solid var(--badge-border);
   transition: all var(--transition-base);
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .service-card::before {
@@ -593,9 +595,9 @@ h3 {
 }
 
 .service-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-4px);
   border-color: var(--color-primary-glow);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), 0 0 20px var(--color-primary-glow);
 }
 
 .service-card:hover::before {
@@ -1407,6 +1409,23 @@ h3 {
   border-top: 1px solid var(--badge-border);
   color: var(--color-text-muted);
   font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.footer-powered {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  transition: opacity 0.2s;
+  text-decoration: none;
+}
+
+.footer-powered:hover {
+  opacity: 1;
+  color: var(--color-primary);
 }
 
 /* ---- Success Modal ---- */
@@ -1955,15 +1974,26 @@ h3 {
   /* pointer-events intentionally removed — inherits none from parent when FAB is hidden */
   font-size: 0.9rem;
   font-weight: 700;
-  padding: 13px 20px;
+  padding: 14px 22px;
+  min-height: 54px;
   border-radius: var(--radius-full);
-  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5), 0 2px 8px rgba(0,0,0,0.3);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  box-shadow: 0 6px 28px rgba(99, 102, 241, 0.55), 0 2px 8px rgba(0,0,0,0.35);
   white-space: nowrap;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .mobile-sticky-btn:active {
   transform: scale(0.95);
+}
+
+@keyframes mobileBtnPulse {
+  0%, 100% { box-shadow: 0 6px 28px rgba(99,102,241,0.55), 0 2px 8px rgba(0,0,0,0.35); }
+  50% { box-shadow: 0 8px 36px rgba(99,102,241,0.75), 0 2px 8px rgba(0,0,0,0.4); }
+}
+
+.mobile-sticky-cta.visible .mobile-sticky-btn {
+  animation: mobileBtnPulse 2.5s ease-in-out 0.5s 3;
 }
 
 @media (max-width: 768px) {
@@ -2092,13 +2122,20 @@ h3 {
    SERVICE CARD — QUICK BOOK BUTTON
    ============================================ */
 .service-book-btn {
-  margin-top: var(--space-md);
-  width: 100%;
-  font-size: 0.85rem;
-  padding: 8px 16px;
+  margin-top: 1rem;
+  padding: 0.5rem 1.1rem;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
   opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(4px);
+  transition: opacity 0.2s, transform 0.2s;
+  align-self: flex-start;
   pointer-events: none;
 }
 
@@ -2106,6 +2143,15 @@ h3 {
   opacity: 1;
   transform: translateY(0);
   pointer-events: all;
+}
+
+/* Always show on touch devices */
+@media (hover: none) {
+  .service-book-btn {
+    opacity: 1;
+    transform: none;
+    pointer-events: all;
+  }
 }
 
 /* ============================================
@@ -2264,4 +2310,267 @@ h3 {
   border-radius: var(--radius-lg) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* ============================================
+   BOOKING CTA CARD — REDESIGNED ELEMENTS
+   ============================================ */
+.bcc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.bcc-icon {
+  font-size: 2.5rem;
+}
+
+.bcc-badge {
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--color-primary);
+  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.bcc-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 1rem 0;
+}
+
+.bcc-features span {
+  font-size: 0.8rem;
+  color: var(--color-success);
+  font-weight: 500;
+}
+
+.bcc-btn {
+  margin-top: 0.5rem;
+  width: 100%;
+  justify-content: center;
+}
+
+/* ============================================
+   2026 POLISH
+   ============================================ */
+
+/* Smooth page load */
+body {
+  animation: pageFadeIn 0.4s ease-out;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Better section spacing on mobile */
+@media (max-width: 640px) {
+  section { padding: 3rem 1.25rem; }
+  .services-grid { grid-template-columns: 1fr; gap: 1rem; }
+  .section-title { font-size: 1.6rem; }
+}
+
+/* Testimonial cards — large decorative quote */
+.testimonial-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.testimonial-card::before {
+  content: '"';
+  position: absolute;
+  top: -0.5rem;
+  left: 0.75rem;
+  font-size: 5rem;
+  font-family: var(--font-heading);
+  color: var(--color-primary);
+  opacity: 0.12;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Better scroll reveal (complements existing .reveal/.active) */
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============================================
+   LIGHTBOX
+   ============================================ */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+  cursor: zoom-out;
+}
+
+.lightbox.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.lightbox img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: 8px;
+  transform: scale(0.95);
+  transition: transform 0.25s;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+}
+
+.lightbox.active img {
+  transform: scale(1);
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.lightbox-close:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* ============================================
+   BOOKING MODAL — STEP TRANSITIONS
+   ============================================ */
+.bm-section.active {
+  animation: stepIn 0.25s ease-out;
+}
+
+@keyframes stepIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Completed step connector line fills with success color */
+.bm-step.completed + .bm-step-line {
+  background: var(--color-success);
+}
+
+/* Time slots — improved visual states */
+.bm-timeslot {
+  position: relative;
+  font-weight: 500;
+}
+
+.bm-timeslot:hover:not(.bm-timeslot-skeleton):not(.bm-timeslot-taken) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.2);
+}
+
+.bm-timeslot.selected {
+  background: var(--color-primary) !important;
+  color: #fff !important;
+  border-color: var(--color-primary) !important;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+  transform: translateY(-1px);
+}
+
+/* Calendar day — today indicator dot */
+.bm-cal-day.today {
+  position: relative;
+  font-weight: 700;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.bm-cal-day.today::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+/* Calendar — selected day */
+.bm-cal-day.selected {
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+}
+
+.bm-cal-day.selected::after {
+  display: none;
+}
+
+/* Calendar — disabled / past days */
+.bm-cal-day.disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+  text-decoration: line-through;
+  filter: grayscale(1);
+}
+
+/* ============================================
+   BOOKING SUCCESS — ANIMATED ICON
+   ============================================ */
+.bm-success-icon {
+  font-size: 3.5rem;
+  display: block;
+  animation: successBounce 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  margin-bottom: 1rem;
+}
+
+@keyframes successBounce {
+  0%   { transform: scale(0); opacity: 0; }
+  50%  { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ============================================
+   SKELETON LOADING
+   ============================================ */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-card) 25%,
+    var(--color-bg-elevated) 50%,
+    var(--color-bg-card) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+  color: transparent !important;
+  pointer-events: none;
+}
+
+@keyframes skeletonShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }

@@ -14,14 +14,15 @@ class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  State<DashboardScreen> createState() => DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class DashboardScreenState extends State<DashboardScreen> {
   List<BookingModel> _todayBookings = [];
   Map<String, dynamic> _stats = {};
   bool _loading = true;
   String? _error;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -29,10 +30,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _loadData();
   }
 
+  void reload() => _loadData();
+
   Future<void> _loadData() async {
     setState(() {
       _loading = true;
       _error = null;
+      _hasError = false;
     });
 
     try {
@@ -50,6 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (e) {
       setState(() {
         _error = 'Impossible de se connecter au serveur';
+        _hasError = true;
         _loading = false;
       });
     }
@@ -169,6 +174,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: CircularProgressIndicator(color: AppTheme.primary),
                     ),
                   )
+                else if (_hasError && _stats.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 80),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.cloud_off_rounded,
+                              size: 56, color: AppTheme.textMuted),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Impossible de charger les données',
+                            style: GoogleFonts.outfit(
+                              fontSize: 15,
+                              color: AppTheme.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadData,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 12),
+                            ),
+                            child: Text('Réessayer',
+                                style: GoogleFonts.dmSans(
+                                    fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
                 else ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -179,7 +221,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             icon: Icons.calendar_today_rounded,
                             label: 'RDV aujourd\'hui',
                             value: '${_stats['todayBookings'] ?? _todayBookings.length}',
-                            subtitle: 'rendez-vous',
+                            subtitle: _todayBookings.isEmpty ? 'aucun pour l\'instant' : 'rendez-vous',
                             color: AppTheme.primary,
                           ),
                         ),
@@ -188,7 +230,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: StatCard(
                             icon: Icons.euro_rounded,
                             label: 'CA du jour',
-                            value: '${_stats['todayRevenue'] ?? 0} CHF',
+                            value: (_stats['todayRevenue'] == null || _stats['todayRevenue'] == 0)
+                                ? '—'
+                                : '${_stats['todayRevenue']} CHF',
                             subtitle: 'chiffre d\'affaires',
                             color: AppTheme.success,
                           ),
@@ -205,7 +249,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             icon: Icons.people_rounded,
                             label: 'Clients',
                             value: '${_stats['totalClients'] ?? 0}',
-                            subtitle: 'total clients',
+                            subtitle: (_stats['totalClients'] == null || _stats['totalClients'] == 0)
+                                ? 'aucun client encore'
+                                : 'clients enregistrés',
                             color: Colors.blueAccent,
                           ),
                         ),
@@ -214,8 +260,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: StatCard(
                             icon: Icons.trending_up_rounded,
                             label: 'CA total',
-                            value: '${_stats['totalRevenue'] ?? 0} CHF',
-                            subtitle: 'total revenus',
+                            value: (_stats['totalRevenue'] == null || _stats['totalRevenue'] == 0)
+                                ? '—'
+                                : '${_stats['totalRevenue']} CHF',
+                            subtitle: 'revenus cumulés',
                             color: AppTheme.warning,
                           ),
                         ),

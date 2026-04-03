@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initBookingModal();
   initMobileStickyBtn();
   initScrollTopBtn();
+  initGalleryLightbox();
 
   // Retour depuis Stripe Checkout (paiement booking)
   const urlP = new URLSearchParams(window.location.search);
@@ -50,10 +51,10 @@ function showPaymentSuccess() {
     successView.style.display = 'flex';
     successView.innerHTML = `
       <div style="text-align:center;padding:2rem 1rem">
-        <div style="font-size:4rem;margin-bottom:1rem;animation:fadeInUp 0.5s ease-out">✅</div>
-        <h3 style="margin-bottom:0.5rem;font-size:1.3rem">Paiement reçu — Rendez-vous confirmé !</h3>
+        <span class="bm-success-icon">💳</span>
+        <h3 style="margin-bottom:0.5rem;font-size:1.3rem;color:var(--color-text-primary)">Paiement reçu — Rendez-vous confirmé !</h3>
         <p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:2rem">Vous recevrez une confirmation par email avec tous les détails.</p>
-        <button class="btn btn-primary" onclick="closeBooking()" style="margin:0 auto">Parfait, merci ! 🎉</button>
+        <button class="btn btn-primary" onclick="closeBooking()" style="margin:0 auto">Super, merci !</button>
       </div>
     `;
   }
@@ -925,16 +926,22 @@ function showBookingSuccess() {
   const clientEmail = document.getElementById('bmEmail')?.value || '';
   successView.innerHTML = `
     <div style="text-align:center;padding:2rem 1rem">
-      <div style="font-size:4rem;margin-bottom:1rem;animation:fadeInUp 0.5s ease-out">✅</div>
-      <h3 style="margin-bottom:0.5rem;font-size:1.3rem">Rendez-vous confirmé !</h3>
-      <p style="color:var(--color-text-secondary);margin-bottom:0.5rem;font-size:0.9rem">
-        ${bmState.service?.name || 'Prestation'} — ${bmState.date ? bmState.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''} à ${bmState.time || ''}
+      <span class="bm-success-icon">🎉</span>
+      <h3 style="margin-bottom:0.5rem;font-size:1.3rem;color:var(--color-text-primary)">Rendez-vous confirmé !</h3>
+      <p style="color:var(--color-text-secondary);margin-bottom:0.25rem;font-size:0.9rem;font-weight:500">
+        ${bmState.service?.name || 'Prestation'}
       </p>
-      ${bmState.employee ? `<p style="color:var(--color-text-muted);font-size:0.85rem;margin-bottom:1rem">avec ${bmState.employee.name}</p>` : '<div style="margin-bottom:0.5rem"></div>'}
-      ${clientEmail ? `<div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:12px 16px;margin-bottom:1.5rem;font-size:0.83rem;color:var(--color-text-secondary)">
-        📧 Un email de confirmation a été envoyé à<br><strong style="color:var(--color-text)">${clientEmail}</strong>
-      </div>` : `<p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:2rem">Vous recevrez une confirmation par email avec tous les détails.</p>`}
-      <button class="btn btn-primary" onclick="closeBooking()" style="margin:0 auto">Parfait, merci ! 🎉</button>
+      <p style="color:var(--color-text-muted);font-size:0.85rem;margin-bottom:0.25rem">
+        ${bmState.date ? bmState.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}${bmState.date && bmState.time ? ' à ' : ''}${bmState.time || ''}
+      </p>
+      ${bmState.employee ? `<p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:1.25rem">avec ${bmState.employee.name}</p>` : '<div style="margin-bottom:1rem"></div>'}
+      ${clientEmail
+        ? `<div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px 16px;margin-bottom:1.5rem;font-size:0.82rem;color:var(--color-text-secondary);line-height:1.6">
+            📧 Confirmation envoyée à<br><strong style="color:var(--color-primary)">${clientEmail}</strong>
+           </div>`
+        : `<p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:2rem">Vous recevrez une confirmation par email.</p>`
+      }
+      <button class="btn btn-primary" onclick="closeBooking()" style="margin:0 auto">Super, merci !</button>
     </div>
   `;
 }
@@ -1297,4 +1304,50 @@ function initMobileStickyBtn() {
     });
     mo.observe(modal, { attributes: true, attributeFilter: ['class'] });
   }
+}
+
+/* ============================================
+   GALLERY LIGHTBOX
+   ============================================ */
+function initGalleryLightbox() {
+  // Create lightbox element
+  const lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.innerHTML = '<img id="lightboxImg" src="" alt="Photo"><button class="lightbox-close" aria-label="Fermer">&#x2715;</button>';
+  document.body.appendChild(lb);
+
+  const lbImg = lb.querySelector('#lightboxImg');
+
+  const open = (src) => {
+    lbImg.src = src;
+    lb.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  };
+  const close = () => {
+    lb.classList.remove('active');
+    document.body.style.overflow = '';
+  };
+
+  lb.addEventListener('click', (e) => {
+    if (e.target === lb || e.target.classList.contains('lightbox-close')) close();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+
+  // Attach to already-present gallery items
+  document.querySelectorAll('.gallery-item img').forEach(img => {
+    img.style.cursor = 'zoom-in';
+    img.dataset.lightbox = '1';
+    img.addEventListener('click', (e) => { e.stopPropagation(); open(img.src); });
+  });
+
+  // Also observe for dynamically loaded gallery images (loaded after applySalonBranding)
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll('.gallery-item img:not([data-lightbox])').forEach(img => {
+      img.dataset.lightbox = '1';
+      img.style.cursor = 'zoom-in';
+      img.addEventListener('click', (e) => { e.stopPropagation(); open(img.src); });
+    });
+  });
+  const grid = document.querySelector('.gallery-grid');
+  if (grid) observer.observe(grid, { childList: true, subtree: true });
 }

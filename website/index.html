@@ -93,6 +93,7 @@
           <span class="service-price">25 CHF</span>
           <span class="service-duration">⏱ 30 min</span>
         </div>
+        <button class="service-book-btn" onclick="openBooking()" type="button">Réserver →</button>
       </div>
       <div class="service-card reveal">
         <div class="service-icon">🪒</div>
@@ -102,6 +103,7 @@
           <span class="service-price">15 CHF</span>
           <span class="service-duration">⏱ 20 min</span>
         </div>
+        <button class="service-book-btn" onclick="openBooking()" type="button">Réserver →</button>
       </div>
       <div class="service-card reveal">
         <div class="service-icon">💎</div>
@@ -111,6 +113,7 @@
           <span class="service-price">55 CHF</span>
           <span class="service-duration">⏱ 60 min</span>
         </div>
+        <button class="service-book-btn" onclick="openBooking()" type="button">Réserver →</button>
       </div>
       <div class="service-card reveal">
         <div class="service-icon">🎨</div>
@@ -120,6 +123,7 @@
           <span class="service-price">40 CHF</span>
           <span class="service-duration">⏱ 45 min</span>
         </div>
+        <button class="service-book-btn" onclick="openBooking()" type="button">Réserver →</button>
       </div>
       <div class="service-card reveal">
         <div class="service-icon">🧴</div>
@@ -129,6 +133,7 @@
           <span class="service-price">30 CHF</span>
           <span class="service-duration">⏱ 35 min</span>
         </div>
+        <button class="service-book-btn" onclick="openBooking()" type="button">Réserver →</button>
       </div>
       <div class="service-card reveal">
         <div class="service-icon">👶</div>
@@ -138,6 +143,7 @@
           <span class="service-price">18 CHF</span>
           <span class="service-duration">⏱ 25 min</span>
         </div>
+        <button class="service-book-btn" onclick="openBooking()" type="button">Réserver →</button>
       </div>
     </div>
   </section>
@@ -194,10 +200,18 @@
       </div>
     </div>
     <div class="booking-cta-card reveal" onclick="openBooking()">
-      <div class="booking-cta-icon">📅</div>
+      <div class="bcc-top">
+        <div class="bcc-icon">📅</div>
+        <div class="bcc-badge">Disponible 24h/24</div>
+      </div>
       <h3>Prendre Rendez-Vous</h3>
-      <p>Choisissez votre prestation, la date et l'heure qui vous conviennent le mieux.</p>
-      <button class="btn btn-primary" type="button">✂️ Réserver Maintenant</button>
+      <p>Choisissez votre prestation, la date et l'heure qui vous conviennent. Confirmation instantanée par email.</p>
+      <div class="bcc-features">
+        <span>✓ Confirmation immédiate</span>
+        <span>✓ Rappel SMS</span>
+        <span>✓ Annulation gratuite</span>
+      </div>
+      <button class="btn btn-primary bcc-btn" type="button">✂️ Réserver Maintenant</button>
     </div>
   </section>
 
@@ -303,8 +317,8 @@
     </div>
     <div class="footer-bottom">
       <p id="footerSalonName">© 2026 Salon. Tous droits réservés.</p>
-      <p id="poweredByKreno" style="font-size:0.75rem;margin-top:6px;opacity:0.4">
-        Propulsé par <a href="https://salonpro.app" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">Kreno</a>
+      <p id="poweredByKreno">
+        <a href="https://kreno.ch" target="_blank" rel="noopener" class="footer-powered">Propulsé par Kreno</a>
       </p>
     </div>
   </footer>

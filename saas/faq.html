@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr" class="dark">
+<html lang="fr">
 
 <head>
     <meta charset="UTF-8">
@@ -8,10 +8,10 @@
     <meta name="description" content="Trouvez les réponses à toutes vos questions sur Kreno : abonnement, fonctionnalités, paiement, annulation et plus encore.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/saas/css/saas.css">
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E✨%3C/text%3E%3C/svg%3E">
-    <meta name="theme-color" content="#6366f1">
+    <link rel="icon" href="/saas/img/favicon.svg" type="image/svg+xml">
+    <meta name="theme-color" content="#5850E8">
     <link rel="manifest" href="/saas/manifest.json">
     <link rel="canonical" href="https://barberpro-saa.onrender.com/saas/faq.html">
     <style>
@@ -48,29 +48,24 @@
 <body>
     <!-- Navbar -->
     <nav class="nav" id="mainNav">
-        <div class="nav-inner">
-            <a href="/" class="nav-logo">
-                <span class="nav-logo-mark">S</span>
-                Salon<strong>Pro</strong>
-            </a>
-            <div class="nav-links" id="navLinks">
-                <a href="/#features">Fonctionnalités</a>
-                <a href="/#pricing">Tarifs</a>
-                <a href="/saas/faq.html">FAQ</a>
-                <a href="/pro" class="nav-login">Connexion</a>
-                <a href="/#pricing" class="btn btn-primary btn-sm">Essai gratuit</a>
-            </div>
-            <button class="nav-burger" id="navBurger" aria-label="Menu">
-                <span></span><span></span><span></span>
-            </button>
+      <div class="nav-inner">
+        <a href="/" class="nav-logo">
+          <span class="logo-mark">K</span>
+          <span class="logo-name">kreno</span>
+        </a>
+        <div class="nav-links" id="navLinks">
+          <a href="/#features">Fonctionnalités</a>
+          <a href="/#pricing">Tarifs</a>
+          <a href="/saas/discover.html">Découvrir</a>
+          <a href="/saas/faq.html" class="active">FAQ</a>
+          <a href="/#contact">Contact</a>
+          <a href="/pro" class="nav-login">Connexion</a>
+          <a href="/saas/" class="btn btn-sm">Essai gratuit</a>
         </div>
-        <div class="nav-mobile" id="navMobile">
-            <a href="/#features">Fonctionnalités</a>
-            <a href="/#pricing">Tarifs</a>
-            <a href="/saas/faq.html">FAQ</a>
-            <a href="/pro">Connexion</a>
-            <a href="/#pricing" class="btn btn-primary">Essai gratuit 14 jours →</a>
-        </div>
+        <button class="nav-hamburger" id="navHamburger" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </nav>
 
     <!-- Hero -->
@@ -197,7 +192,7 @@
         <div class="wrap">
             <div class="footer-inner">
                 <div class="footer-logo">
-                    <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">✨ Kreno</div>
+                    <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">Kreno</div>
                     <p>Le logiciel n°1 pour les professionnels de la beauté en Suisse.</p>
                 </div>
                 <div class="footer-col">
@@ -246,11 +241,11 @@
             else _nav.classList.remove('nav-scrolled');
         });
         // Mobile burger
-        const _burger = document.getElementById('navBurger');
-        const _mobile = document.getElementById('navMobile');
-        if (_burger && _mobile) {
+        const _burger = document.getElementById('navHamburger');
+        const _navLinks = document.getElementById('navLinks');
+        if (_burger && _navLinks) {
             _burger.addEventListener('click', () => {
-                _mobile.classList.toggle('open');
+                _navLinks.classList.toggle('open');
                 _burger.classList.toggle('open');
             });
         }
