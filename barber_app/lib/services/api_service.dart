@@ -212,6 +212,22 @@ class ApiService {
     return false;
   }
 
+  static Future<bool> rescheduleBooking(String bookingId, String date, String time) async {
+    if (_salonId == null) return false;
+    try {
+      final res = await http.put(
+        Uri.parse('$_url/api/barber/salon/$_salonId/bookings/$bookingId'),
+        headers: _authHeaders,
+        body: jsonEncode({'date': date, 'time': time}),
+      );
+      final data = jsonDecode(res.body);
+      return data['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (rescheduleBooking): $e');
+    }
+    return false;
+  }
+
   // ---- Mes clients ----
   static Future<List<Map<String, dynamic>>> getMyClients() async {
     if (_salonId == null) return [];

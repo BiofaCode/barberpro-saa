@@ -271,12 +271,12 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      initialDate: _selectedDate.isAfter(DateTime.now()) ? _selectedDate : DateTime.now(),
+      firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.light(
+          colorScheme: const ColorScheme.light(
             primary: AppTheme.primary,
             onPrimary: Colors.white,
             surface: AppTheme.bgCard,
@@ -290,22 +290,26 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
   }
 
   Future<void> _pickTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.light(
-            primary: AppTheme.primary,
-            onPrimary: Colors.white,
-            surface: AppTheme.bgCard,
-            onSurface: AppTheme.textPrimary,
-          ),
-        ),
-        child: child!,
-      ),
-    );
+    // Sélecteur de créneaux toutes les 30 min
+    final picked = await _showTimeSlotPicker(context, _selectedTime);
     if (picked != null) setState(() => _selectedTime = picked);
+  }
+
+  static Future<TimeOfDay?> _showTimeSlotPicker(
+      BuildContext context, TimeOfDay current) {
+    // Créneaux de 7h00 à 21h30 par tranches de 30 min
+    final slots = <TimeOfDay>[];
+    for (int h = 7; h <= 21; h++) {
+      slots.add(TimeOfDay(hour: h, minute: 0));
+      if (h < 21) slots.add(TimeOfDay(hour: h, minute: 30));
+    }
+
+    return showModalBottomSheet<TimeOfDay>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _TimeSlotSheet(slots: slots, current: current),
+    );
   }
 
   Future<void> _submit() async {
@@ -1205,6 +1209,141 @@ class _DrawerItem extends StatelessWidget {
           fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sélecteur de créneaux horaires (toutes les 30 min)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TimeSlotSheet extends StatelessWidget {
+  final List<TimeOfDay> slots;
+  final TimeOfDay current;
+
+  const _TimeSlotSheet({required this.slots, required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    // Index du créneau le plus proche de l'heure actuelle
+    final now = TimeOfDay.now();
+    final initialIndex = slots.indexWhere((s) => s.hour > now.hour || (s.hour == now.hour && s.minute >= now.minute));
+    final scrollIndex = initialIndex < 0 ? 0 : initialIndex;
+
+    final controller = ScrollController(
+      initialScrollOffset: scrollIndex * 56.0 > 0 ? (scrollIndex * 56.0) - 56 : 0,
+    );
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle + titre
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+            child: Column(children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Text('Choisir l\'heure',
+                      style: GoogleFonts.bricolageGrotesque(
+                          fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgSurface,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close_rounded, size: 16, color: AppTheme.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ]),
+          ),
+          const Divider(height: 1),
+
+          // Grille de créneaux
+          SizedBox(
+            height: 320,
+            child: GridView.builder(
+              controller: controller,
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                mainAxisSpacing: 8,
+                crossAxisSpacing: 8,
+                childAspectRatio: 2.2,
+              ),
+              itemCount: slots.length,
+              itemBuilder: (ctx, i) {
+                final slot = slots[i];
+                final isSelected = slot.hour == current.hour && slot.minute == current.minute;
+                final isPast = () {
+                  final now = DateTime.now();
+                  return DateTime(now.year, now.month, now.day, slot.hour, slot.minute)
+                      .isBefore(now);
+                }();
+
+                return GestureDetector(
+                  onTap: isPast ? null : () => Navigator.pop(context, slot),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.primary
+                          : isPast
+                              ? AppTheme.bgSurface
+                              : AppTheme.bgSurface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppTheme.primary
+                            : isPast
+                                ? AppTheme.border
+                                : AppTheme.border,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${slot.hour.toString().padLeft(2, '0')}:${slot.minute.toString().padLeft(2, '0')}',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 13,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white
+                              : isPast
+                                  ? AppTheme.textMuted
+                                  : AppTheme.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Padding bas
+          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+        ],
+      ),
     );
   }
 }
