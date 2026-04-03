@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs sed:*)",
+      "Bash(grep -r \"BarberBook\\\\|Barber Book\\\\|barberbook\\\\|BARBERBOOK\" --include=*.html --include=*.js --include=*.css --include=*.json --include=*.svg -l)",
+      "Bash(grep -r \"Kreno\\\\|kreno\" --include=*.html --include=*.js --include=*.css --include=*.json --include=*.svg -l)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(grep -rn \"affiliation\\\\|partenaire\\\\|invite\\\\|friend\\\\|refer\" /c/Users/fabio/CascadeProjects/barber-salon --include=*.js --include=*.json)",
+      "Bash(node --check server.js)",
+      "Bash(node --check email.js)",
+      "Bash(node --check db.js)",
+      "Bash(wc:*)",
+      "Bash(flutter --version)",
+      "Bash(python3 .claude/skills/ui-ux-pro-max/scripts/search.py 'SaaS booking platform salon beauty service conversion landing page' --design-system -p Kreno -f markdown)",
+      "Bash(python3 /c/Users/fabio/CascadeProjects/barber-salon/.claude/skills/ui-ux-pro-max/scripts/search.py \"SaaS booking platform salon beauty service conversion landing page\" --design-system -p \"Kreno\" -f markdown)",
+      "Bash(python3 \"/c/Users/fabio/CascadeProjects/barber-salon/.claude/skills/ui-ux-pro-max/scripts/search.py\" \"SaaS booking platform salon beauty service conversion landing page\" --design-system -p \"Kreno\" -f markdown)",
+      "Bash(find C:/Users/fabio/CascadeProjects/barber-salon -name *.js -path */routes/*)",
+      "Bash(find C:/Users/fabio/CascadeProjects/barber-salon -name server.js -o -name app.js -not -path */website/*)",
+      "Bash(node generate_icon.js)",
+      "Bash(flutter pub:*)",
+      "Bash(dart run:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(python3 -c ':*)"
+    ]
+  }
+}

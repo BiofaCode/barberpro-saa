@@ -1654,14 +1654,22 @@ h3 {
     grid-column: span 2;
   }
 
-  /* Testimonials mobile */
+  /* Testimonials mobile — swipeable CSS carousel */
   .testimonials-grid {
-    padding-left: 0;
-    padding-right: 0;
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: 16px;
+    padding: 8px 4px 20px;
+    scrollbar-width: none;
   }
-
-  .testimonial-card {
-    min-width: 0; /* grid items don't need min-width */
+  .testimonials-grid::-webkit-scrollbar { display: none; }
+  .testimonials-grid .testimonial-card {
+    flex: 0 0 85%;
+    scroll-snap-align: center;
+    max-width: 320px;
   }
 
   .testimonial-card {
@@ -2341,16 +2349,32 @@ h3 {
 }
 
 .bcc-features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  margin: 1rem 0;
+  display: none;
 }
 
-.bcc-features span {
-  font-size: 0.8rem;
-  color: var(--color-success);
-  font-weight: 500;
+/* ============================================
+   TESTIMONIALS DOTS INDICATOR
+   ============================================ */
+.testimonials-dots {
+  display: none; /* shown by JS on mobile */
+  justify-content: center;
+  gap: 6px;
+  margin-top: 16px;
+}
+.testimonials-dots .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-secondary, rgba(255,255,255,.2));
+  transition: all .2s;
+  cursor: pointer;
+}
+.testimonials-dots .dot.active {
+  width: 20px;
+  border-radius: 3px;
+  background: var(--color-primary, #B8952A);
+}
+@media (max-width: 768px) {
+  .testimonials-dots { display: flex; }
 }
 
 .bcc-btn {
@@ -2378,15 +2402,26 @@ body {
   section { padding: 3rem 1.25rem; }
   .services-grid { grid-template-columns: 1fr; gap: 1rem; }
   .section-title { font-size: 1.6rem; }
-  /* Testimonials: override flex carousel to single column grid on small screens */
+  /* Testimonials: keep carousel on small screens — dots handle navigation */
   .testimonials-grid {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 1rem;
-    overflow: visible !important;
-    scroll-snap-type: none !important;
-    padding: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    gap: 16px;
+    padding: 8px 4px 20px !important;
   }
+  /* Booking CTA card — mobile-first clean layout */
+  .booking-cta-section { padding: 40px 16px; }
+  .booking-cta-card {
+    padding: 28px 20px 24px;
+    border-radius: 20px;
+  }
+  .bcc-icon { font-size: 2rem; margin-bottom: 8px; }
+  .bcc-top { margin-bottom: 12px; }
+  .booking-cta-card h3 { font-size: 1.25rem; margin-bottom: 8px; }
+  .booking-cta-card p { font-size: 0.9rem; margin-bottom: 20px; }
+  .bcc-btn { width: 100%; padding: 14px; font-size: 1rem; }
 }
 
 /* Testimonial cards — large decorative quote */
