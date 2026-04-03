@@ -67,6 +67,10 @@ async function makeUniqueSlug(name) {
     return slug;
 }
 
+function escHtml(str) {
+    return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function json(res, status, data) {
     res.writeHead(status, {
         'Content-Type': 'application/json',
@@ -372,9 +376,10 @@ function route(method, pattern, handler) {
 //  SUPER ADMIN API
 // ==========================
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'adminPro2026';
-if (process.env.NODE_ENV === 'production' && ADMIN_PASSWORD === 'adminPro2026') {
-    console.warn('⚠️  WARNING: ADMIN_PASSWORD is using the default value in production! Set ADMIN_PASSWORD env variable.');
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+    console.error('🚨 CRITICAL: ADMIN_PASSWORD environment variable is not set! Server cannot start safely.');
+    process.exit(1);
 }
 
 route('POST', '/api/admin/login', async (req, res) => {
@@ -405,7 +410,7 @@ route('POST', '/api/contact', async (req, res) => {
         await sendEmail({
             to: process.env.CONTACT_EMAIL || process.env.RESEND_FROM_EMAIL || 'info@kreno.ch',
             subject: `[Kreno Contact] ${name} — ${salon || 'Sans salon'}`,
-            html: `<p><strong>Nom:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Salon:</strong> ${salon || '—'}</p><p><strong>Message:</strong></p><p>${message.replace(/\n/g, '<br>')}</p>`,
+            html: `<p><strong>Nom:</strong> ${escHtml(name)}</p><p><strong>Email:</strong> ${escHtml(email)}</p><p><strong>Salon:</strong> ${escHtml(salon || '—')}</p><p><strong>Message:</strong></p><p>${escHtml(message).replace(/\n/g, '<br>')}</p>`,
         });
     } catch (e) {
         console.error('Contact email error:', e);
@@ -521,7 +526,7 @@ route('POST', '/api/admin/salons', async (req, res) => {
         salon: salon._id,
         name: body.ownerName || 'Propriétaire',
         email: body.ownerEmail || '',
-        password: body.ownerPassword || 'salon123',
+        password: body.ownerPassword || require('crypto').randomBytes(12).toString('hex'),
         phone: body.ownerPhone || '',
         role: 'owner',
     });
@@ -656,6 +661,11 @@ route('GET', '/api/admin/salons/:id/magic-link', async (req, res, params) => {
 // ==========================
 
 route('POST', '/api/pro/login', async (req, res) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    if (rateLimit(ip, 'pro_login', 10, 15 * 60 * 1000)) {
+        return json(res, 429, { success: false, error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
+    }
+
     const body = await parseBody(req);
     console.log(`\n🔑 Login attempt for email: "${body.email}"`);
 
@@ -890,7 +900,8 @@ route('DELETE', '/api/pro/salon/:salonId/hero-image', async (req, res, params) =
 
 // Stats
 route('GET', '/api/pro/salon/:salonId/stats', async (req, res, params) => {
-    const user = verifyToken(req);
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     const isEmployee = user?.role === 'employee';
 
     const today = new Date().toISOString().split('T')[0];
@@ -922,7 +933,7 @@ route('GET', '/api/pro/salon/:salonId/stats', async (req, res, params) => {
 
 // Analytics (last 6 months)
 route('GET', '/api/pro/salon/:salonId/analytics', async (req, res, params) => {
-    const user = verifyToken(req);
+    const user = verifySalonAccess(req, params.salonId);
     if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
 
     const query = { salon: params.salonId };
@@ -1179,6 +1190,8 @@ route('DELETE', '/api/pro/salon/:salonId/testimonials/:tid', async (req, res, pa
 
 // Employees and Team Management
 route('GET', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     const employees = await db.findEmployees({ salon: params.salonId });
     const owners = await db.findOwners({ salon: params.salonId });
 
@@ -1213,7 +1226,7 @@ route('POST', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
             salon: params.salonId,
             name: body.name,
             email: body.email || '',
-            password: body.password || 'salon123',
+            password: body.password || require('crypto').randomBytes(12).toString('hex'),
             phone: body.phone || '',
             role: 'owner'
         });
@@ -1251,7 +1264,7 @@ route('DELETE', '/api/pro/salon/:salonId/employees/:empId', async (req, res, par
 });
 
 route('PUT', '/api/pro/salon/:salonId/employees/:empId/password', async (req, res, params) => {
-    const user = verifyToken(req);
+    const user = verifySalonAccess(req, params.salonId);
     if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     if (user.role === 'employee' && user.employeeId !== params.empId) {
         return json(res, 403, { success: false, error: 'Non autorisé' });
@@ -1276,7 +1289,7 @@ route('PUT', '/api/pro/salon/:salonId/employees/:empId/hours', async (req, res, 
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     
     // Authorization
-    const user = verifyToken(req);
+    const user = verifySalonAccess(req, params.salonId);
     if (!user || (user.role !== 'owner' && user.employeeId !== params.empId)) {
         return json(res, 403, { success: false, error: 'Non autorisé' });
     }
@@ -1289,7 +1302,8 @@ route('PUT', '/api/pro/salon/:salonId/employees/:empId/hours', async (req, res, 
 
 // Bookings
 route('GET', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
-    const user = verifyToken(req);
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     const url = new URL(req.url, `http://localhost`);
     const dateFilter = url.searchParams.get('date');
     const fromFilter = url.searchParams.get('from');
@@ -1317,7 +1331,7 @@ route('GET', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
 });
 
 route('PUT', '/api/pro/salon/:salonId/bookings/:bookingId', async (req, res, params) => {
-    const user = verifyToken(req);
+    const user = verifySalonAccess(req, params.salonId);
     if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     const body = await parseBody(req);
     const VALID_STATUSES = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'];
@@ -1343,7 +1357,8 @@ route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
         name: body.clientName, email: body.clientEmail || '', phone: body.clientPhone || '', price: body.price || 0
     });
 
-    const user = verifyToken(req);
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
 
     // Determine employee defaults if not provided in the payload and an employee creates it
     let employeeId = body.employeeId || null;
@@ -1459,7 +1474,7 @@ route('GET', '/api/pro/salon/:salonId/clients', async (req, res, params) => {
 
 // Client search autocomplete (must be before /:clientId route)
 route('GET', '/api/pro/salon/:salonId/clients/search', async (req, res, params) => {
-    const user = verifyToken(req);
+    const user = verifySalonAccess(req, params.salonId);
     if (!user) return json(res, 401, { success: false });
     const url = new URL(req.url, 'http://localhost');
     const q = (url.searchParams.get('q') || '').toLowerCase().trim();
@@ -1475,8 +1490,8 @@ route('GET', '/api/pro/salon/:salonId/clients/search', async (req, res, params) 
 
 // Single client + booking history
 route('GET', '/api/pro/salon/:salonId/clients/:clientId', async (req, res, params) => {
-    const user = verifyToken(req);
-    if (!user) return json(res, 401, { success: false });
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 403, { success: false, error: 'Accès refusé' });
     const client = await db.findClientById(params.clientId);
     if (!client || String(client.salon) !== String(params.salonId)) return json(res, 404, { success: false });
     const bookings = await db.findBookings({ salon: params.salonId, client: params.clientId });
@@ -1485,8 +1500,8 @@ route('GET', '/api/pro/salon/:salonId/clients/:clientId', async (req, res, param
 
 // Update client notes
 route('PUT', '/api/pro/salon/:salonId/clients/:clientId/notes', async (req, res, params) => {
-    const user = verifyToken(req);
-    if (!user) return json(res, 401, { success: false });
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 403, { success: false, error: 'Accès refusé' });
     const body = await parseBody(req);
     await db.updateClient(params.clientId, { notes: body.notes || '' });
     json(res, 200, { success: true });
@@ -1508,7 +1523,7 @@ route('GET', '/api/pro/salon/:salonId/sms-status', async (req, res, params) => {
 });
 
 route('PUT', '/api/pro/salon/:salonId/sms-settings', async (req, res, params) => {
-    const user = verifyToken(req);
+    const user = verifySalonAccess(req, params.salonId);
     if (!user) return json(res, 401, { success: false });
     const body = await parseBody(req);
     const smsSettings = {
@@ -1523,7 +1538,7 @@ route('PUT', '/api/pro/salon/:salonId/sms-settings', async (req, res, params) =>
 
 // Buy SMS credits via Stripe checkout
 route('POST', '/api/pro/sms/buy', async (req, res) => {
-    const user = verifyToken(req);
+    const user = verifySalonAccess(req, params.salonId);
     if (!user || user.role === 'employee') return json(res, 403, { success: false });
 
     const body = await parseBody(req);
@@ -1931,25 +1946,16 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
     let event;
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    if (endpointSecret && stripe) {
-        try {
-            const sig = req.headers['stripe-signature'];
-            event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
-        } catch (err) {
-            console.error('⚠️ Webhook signature verification failed:', err.message);
-            return json(res, 400, { error: 'Webhook signature invalide' });
-        }
-    } else {
-        if (process.env.NODE_ENV === 'production') {
-            console.error('⚠️ STRIPE_WEBHOOK_SECRET manquant en production — webhook rejeté');
-            return json(res, 400, { error: 'Webhook non vérifié' });
-        }
-        // Dev/test only: parse without signature
-        try {
-            event = JSON.parse(rawBody);
-        } catch (err) {
-            return json(res, 400, { error: 'Invalid JSON' });
-        }
+    if (!endpointSecret || !stripe) {
+        console.error('⚠️ STRIPE_WEBHOOK_SECRET manquant — webhook rejeté');
+        return json(res, 400, { error: 'Webhook non configuré' });
+    }
+    try {
+        const sig = req.headers['stripe-signature'];
+        event = stripe.webhooks.constructEvent(rawBody, sig, endpointSecret);
+    } catch (err) {
+        console.error('⚠️ Webhook signature verification failed:', err.message);
+        return json(res, 400, { error: 'Webhook signature invalide' });
     }
 
     console.log(`📩 Stripe Webhook: ${event.type}`);
@@ -2791,7 +2797,7 @@ route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
     if (!email) return json(res, 400, { success: false, error: 'Email requis' });
 
     // Generate 6 digit code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = crypto.randomInt(100000, 1000000).toString();
     const expires = Date.now() + 10 * 60 * 1000; // 10 minutes valid
     otpStore.set(email, { code, expires });
 
@@ -2839,7 +2845,7 @@ route('POST', '/api/salon/:slug/my-bookings', async (req, res, params) => {
     json(res, 200, { success: true, data: bookings });
 });
 
-// Client: cancel a booking
+// Client: cancel a booking (requires cancelToken to prevent IDOR)
 route('PUT', '/api/salon/:slug/bookings/:bookingId/cancel', async (req, res, params) => {
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
@@ -2848,6 +2854,15 @@ route('PUT', '/api/salon/:slug/bookings/:bookingId/cancel', async (req, res, par
     if (!booking || booking.salon.toString() !== salon._id.toString()) {
         return json(res, 404, { success: false, error: 'RDV non trouvé' });
     }
+
+    // Validate cancelToken to prevent unauthorized cancellation (IDOR)
+    const url = new URL(req.url, 'http://localhost');
+    const body = await parseBody(req);
+    const providedToken = url.searchParams.get('token') || body.token;
+    if (!providedToken || providedToken !== booking.cancelToken) {
+        return json(res, 403, { success: false, error: 'Token d\'annulation invalide' });
+    }
+
     if (booking.status === 'cancelled') {
         return json(res, 400, { success: false, error: 'Ce RDV est déjà annulé' });
     }
@@ -3073,10 +3088,16 @@ const server = http.createServer(async (req, res) => {
     if (pathname.startsWith('/admin')) {
         const adminPath = pathname === '/admin' || pathname === '/admin/' ? '/admin/index.html' : pathname;
         filePath = path.join(__dirname, adminPath);
+        if (!path.resolve(filePath).startsWith(path.resolve(__dirname, 'admin'))) {
+            res.writeHead(403); res.end('Forbidden'); return;
+        }
     }
     else if (pathname.startsWith('/pro')) {
         const proPath = pathname === '/pro' || pathname === '/pro/' ? '/pro/index.html' : pathname;
         filePath = path.join(__dirname, proPath);
+        if (!path.resolve(filePath).startsWith(path.resolve(__dirname, 'pro'))) {
+            res.writeHead(403); res.end('Forbidden'); return;
+        }
     }
     else if (pathname.startsWith('/review/')) {
         const bookingId = pathname.split('/review/')[1]?.split('?')[0] || '';
@@ -3207,6 +3228,9 @@ tr+tr td{border-top:1px solid #f0f0f0}
     else if (pathname.startsWith('/saas/')) {
         const cleanUrl = pathname.split('?')[0];
         filePath = path.join(__dirname, cleanUrl);
+        if (!path.resolve(filePath).startsWith(path.resolve(__dirname, 'saas'))) {
+            res.writeHead(403); res.end('Forbidden'); return;
+        }
     }
     // Redirect old testing root to the saas page just in case
     else if (pathname === '/website/index.html') {

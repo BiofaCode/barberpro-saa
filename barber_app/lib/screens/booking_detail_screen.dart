@@ -69,19 +69,21 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
     );
     if (pickedDate == null || !mounted) return;
 
-    final pickedTime = await showTimePicker(
+    if (!mounted) return;
+    // 30-min slot picker (7h–21h30)
+    final slots = <TimeOfDay>[];
+    for (int h = 7; h <= 21; h++) {
+      slots.add(TimeOfDay(hour: h, minute: 0));
+      if (h < 21) slots.add(TimeOfDay(hour: h, minute: 30));
+    }
+    final pickedTime = await showModalBottomSheet<TimeOfDay>(
       context: context,
-      initialTime: TimeOfDay(hour: currentDt.hour, minute: currentDt.minute),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: AppTheme.primary,
-            onPrimary: Colors.white,
-            surface: AppTheme.bgCard,
-            onSurface: AppTheme.textPrimary,
-          ),
-        ),
-        child: child!,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _RescheduleTimeSheet(
+        slots: slots,
+        current: TimeOfDay(hour: currentDt.hour, minute: currentDt.minute),
+        selectedDate: pickedDate,
       ),
     );
     if (pickedTime == null || !mounted) return;
@@ -630,6 +632,98 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
   }
 
   String _capitalize(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+}
+
+// ── Reschedule time picker ────────────────────────────────────────────────────
+
+class _RescheduleTimeSheet extends StatelessWidget {
+  final List<TimeOfDay> slots;
+  final TimeOfDay current;
+  final DateTime selectedDate;
+
+  const _RescheduleTimeSheet({
+    required this.slots,
+    required this.current,
+    required this.selectedDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final isToday = selectedDate.year == now.year &&
+        selectedDate.month == now.month &&
+        selectedDate.day == now.day;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36, height: 4,
+            decoration: BoxDecoration(
+              color: AppTheme.textMuted.withAlpha(80),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text('Choisir un créneau',
+              style: GoogleFonts.bricolageGrotesque(
+                  fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+          const SizedBox(height: 16),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 2.2,
+            ),
+            itemCount: slots.length,
+            itemBuilder: (ctx, i) {
+              final slot = slots[i];
+              final isSelected = slot.hour == current.hour && slot.minute == current.minute;
+              final isPast = isToday &&
+                  DateTime(now.year, now.month, now.day, slot.hour, slot.minute).isBefore(now);
+
+              return GestureDetector(
+                onTap: isPast ? null : () => Navigator.pop(context, slot),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppTheme.primary : AppTheme.bgSurface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected ? AppTheme.primary : AppTheme.border,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${slot.hour.toString().padLeft(2, '0')}:${slot.minute.toString().padLeft(2, '0')}',
+                      style: GoogleFonts.dmSans(
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected
+                            ? Colors.white
+                            : isPast
+                                ? AppTheme.textMuted
+                                : AppTheme.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // Backward-compat alias so existing Navigator.push calls still compile

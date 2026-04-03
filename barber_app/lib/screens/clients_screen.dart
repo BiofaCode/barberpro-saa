@@ -251,7 +251,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
   Widget _buildClientCard(Map<String, dynamic> client) {
     final name = client['name'] as String? ?? 'Client';
     final phone = client['phone'] as String? ?? '';
-    final visits = client['visits'] as int? ?? 0;
+    final visits = (client['totalBookings'] ?? client['visits'] ?? 0) as int;
 
     final initials = name
         .split(' ')

@@ -291,12 +291,12 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
 
   Future<void> _pickTime() async {
     // Sélecteur de créneaux toutes les 30 min
-    final picked = await _showTimeSlotPicker(context, _selectedTime);
+    final picked = await _showTimeSlotPicker(context, _selectedTime, _selectedDate);
     if (picked != null) setState(() => _selectedTime = picked);
   }
 
   static Future<TimeOfDay?> _showTimeSlotPicker(
-      BuildContext context, TimeOfDay current) {
+      BuildContext context, TimeOfDay current, DateTime selectedDate) {
     // Créneaux de 7h00 à 21h30 par tranches de 30 min
     final slots = <TimeOfDay>[];
     for (int h = 7; h <= 21; h++) {
@@ -308,7 +308,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _TimeSlotSheet(slots: slots, current: current),
+      builder: (_) => _TimeSlotSheet(slots: slots, current: current, selectedDate: selectedDate),
     );
   }
 
@@ -1220,8 +1220,9 @@ class _DrawerItem extends StatelessWidget {
 class _TimeSlotSheet extends StatelessWidget {
   final List<TimeOfDay> slots;
   final TimeOfDay current;
+  final DateTime selectedDate;
 
-  const _TimeSlotSheet({required this.slots, required this.current});
+  const _TimeSlotSheet({required this.slots, required this.current, required this.selectedDate});
 
   @override
   Widget build(BuildContext context) {
@@ -1295,11 +1296,13 @@ class _TimeSlotSheet extends StatelessWidget {
               itemBuilder: (ctx, i) {
                 final slot = slots[i];
                 final isSelected = slot.hour == current.hour && slot.minute == current.minute;
-                final isPast = () {
-                  final now = DateTime.now();
-                  return DateTime(now.year, now.month, now.day, slot.hour, slot.minute)
-                      .isBefore(now);
-                }();
+                final now = DateTime.now();
+                final isToday = selectedDate.year == now.year &&
+                    selectedDate.month == now.month &&
+                    selectedDate.day == now.day;
+                final isPast = isToday &&
+                    DateTime(now.year, now.month, now.day, slot.hour, slot.minute)
+                        .isBefore(now);
 
                 return GestureDetector(
                   onTap: isPast ? null : () => Navigator.pop(context, slot),
