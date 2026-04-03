@@ -1608,12 +1608,12 @@ h1, h2, h3, h4 {
     position: absolute;
     top: var(--nav-h);
     left: 0; right: 0;
-    background: #fff;
+    background: var(--bg-card, #fff);
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
     padding: 12px 20px 20px;
     z-index: 99;
-    box-shadow: 0 8px 24px rgba(12,11,26,.08);
+    box-shadow: 0 8px 24px rgba(12,11,26,.12);
   }
   .nav-links.open a {
     font-size: 15px;
@@ -1651,6 +1651,10 @@ h1, h2, h3, h4 {
 
 @media (max-width: 480px) {
   .hero-title { font-size: 32px; }
+  /* Hero badge: hide long text, keep only the chip on small screens */
+  .hero-badge { font-size: 0; gap: 6px; padding: 5px 12px 5px 5px; }
+  .hero-badge .badge-chip { font-size: 10px; }
+  .hero-badge svg { display: none; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
   .plan { padding: 24px 20px; }
   .plan-amt { font-size: 44px; }

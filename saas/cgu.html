@@ -396,7 +396,7 @@
         // Scroll reveal
         document.addEventListener('DOMContentLoaded', () => {
             const obs = new IntersectionObserver(entries => {
-                entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('active'); });
+                entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('revealed'); });
             }, { threshold: 0.1 });
             document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
         });
