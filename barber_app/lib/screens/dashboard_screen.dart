@@ -606,18 +606,8 @@ class DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _openBookingDetail(BookingModel booking) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => BookingDetailScreen(
-          booking: booking,
-          onStatusChanged: (newStatus) async {
-            await ApiService.updateBookingStatus(
-                booking.id, booking.copyWith(status: newStatus).statusString);
-            _loadData();
-          },
-        ),
-      ),
-    );
+  Future<void> _openBookingDetail(BookingModel booking) async {
+    await BookingDetailSheet.show(context, booking);
+    _loadData();
   }
 }

@@ -1320,13 +1320,15 @@ route('PUT', '/api/pro/salon/:salonId/bookings/:bookingId', async (req, res, par
     const user = verifyToken(req);
     if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     const body = await parseBody(req);
-    const VALID_STATUSES = ['pending', 'confirmed', 'completed', 'cancelled'];
+    const VALID_STATUSES = ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'];
     if (body.status && !VALID_STATUSES.includes(body.status)) {
         return json(res, 400, { success: false, error: 'Statut invalide' });
     }
     const updates = {};
     if (body.status) updates.status = body.status;
     if (body.notes !== undefined) updates.notes = body.notes;
+    if (body.date) updates.date = body.date;
+    if (body.time) updates.time = body.time;
     const booking = await db.updateBooking(params.bookingId, updates);
     if (!booking) return json(res, 404, { success: false });
     json(res, 200, { success: true, data: booking });
