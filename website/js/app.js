@@ -190,10 +190,12 @@ function applySalonBranding(salon) {
 
   const stats = salon.branding?.heroStats;
   const statsBlock = document.getElementById('heroStatsBlock');
-  if (statsBlock && stats) {
-    if (stats.hide) {
+  // Hide hero stats by default; only show when salon has explicitly configured heroStats
+  if (statsBlock) {
+    if (!stats || stats.hide) {
       statsBlock.style.display = 'none';
     } else {
+      statsBlock.style.display = '';
       const el1Val = document.getElementById('heroStat1Value');
       const el1Lab = document.getElementById('heroStat1Label');
       if (el1Val) { el1Val.dataset.count = stats.stat1Value || '2500'; el1Val.textContent = '0'; }
@@ -202,7 +204,7 @@ function applySalonBranding(salon) {
       const el2Val = document.getElementById('heroStat2Value');
       const el2Lab = document.getElementById('heroStat2Label');
       if (el2Val) { el2Val.dataset.count = stats.stat2Value || '8'; el2Val.textContent = '0'; }
-      if (el2Lab) el2Lab.textContent = stats.stat2Label || 'Ann\u00e9es d\'exp\u00e9rience';
+      if (el2Lab) el2Lab.textContent = stats.stat2Label || 'Années d\'expérience';
 
       const el3Val = document.getElementById('heroStat3Value');
       const el3Lab = document.getElementById('heroStat3Label');
@@ -292,7 +294,13 @@ function applySalonBranding(salon) {
         }));
         const allCards = [...ownerTestimonials, ...clientReviews];
 
-        if (allCards.length > 0) {
+        if (allCards.length === 0) {
+          // No reviews configured — keep section hidden
+          testimonialsSection.style.display = 'none';
+          document.querySelectorAll('a[href="#testimonials"]').forEach(el => el.style.display = 'none');
+        } else {
+          // Show the section and populate cards
+          testimonialsSection.style.display = '';
           testimonialsGrid.innerHTML = allCards.map(t => `
             <div class="testimonial-card reveal active">
               <div class="testimonial-stars">${stars(t.stars)}</div>
@@ -312,10 +320,10 @@ function applySalonBranding(salon) {
             initTestimonialCarousel(testimonialsGrid);
             return;
           }
+          // ≤3 cards → grid layout
+          const cols = window.innerWidth < 640 ? '1fr' : 'repeat(auto-fit,minmax(260px,1fr))';
+          testimonialsGrid.style.cssText = `display:grid;grid-template-columns:${cols};gap:20px;overflow:visible;scroll-snap-type:none;padding:0`;
         }
-        // ≤3 cards OR empty → grid layout
-        const cols = window.innerWidth < 640 ? '1fr' : 'repeat(auto-fit,minmax(260px,1fr))';
-        testimonialsGrid.style.cssText = `display:grid;grid-template-columns:${cols};gap:20px;overflow:visible;scroll-snap-type:none;padding:0`;
       }
     }
   }

@@ -20,7 +20,7 @@
   --color-bg-elevated: #252525;
   --color-bg-glass: rgba(26, 26, 26, 0.7);
   /* Hero & Navbar (overridable by JS for light themes) */
-  --hero-overlay: linear-gradient(135deg, rgba(13,13,13,0.96) 0%, rgba(13,13,13,0.72) 55%, rgba(13,13,13,0.88) 100%);
+  --hero-overlay: linear-gradient(105deg, rgba(13,13,13,0.97) 0%, rgba(13,13,13,0.82) 45%, rgba(13,13,13,0.60) 100%);
   --navbar-scrolled-bg: rgba(13,13,13,0.92);
   --navbar-scrolled-border: rgba(201,169,110,0.1);
   --badge-bg: rgba(201,169,110,0.10);
@@ -1744,6 +1744,11 @@ h3 {
     gap: var(--space-md);
   }
 
+  /* Reduce particle opacity on small screens for performance and readability */
+  .hero-particles {
+    opacity: 0.4;
+  }
+
   .service-select-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -2373,6 +2378,15 @@ body {
   section { padding: 3rem 1.25rem; }
   .services-grid { grid-template-columns: 1fr; gap: 1rem; }
   .section-title { font-size: 1.6rem; }
+  /* Testimonials: override flex carousel to single column grid on small screens */
+  .testimonials-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+    overflow: visible !important;
+    scroll-snap-type: none !important;
+    padding: 0 !important;
+  }
 }
 
 /* Testimonial cards — large decorative quote */
