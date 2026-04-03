@@ -73,7 +73,7 @@ class BookingModel {
     }
 
     return BookingModel(
-      id: json['id'] ?? '',
+      id: json['_id'] ?? json['id'] ?? '',
       serviceName: json['serviceName'] ?? '',
       serviceIcon: json['serviceIcon'] ?? '✂️',
       price: (json['price'] ?? 0).toDouble(),

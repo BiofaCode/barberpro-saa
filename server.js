@@ -372,9 +372,10 @@ function route(method, pattern, handler) {
 //  SUPER ADMIN API
 // ==========================
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'adminPro2026';
-if (process.env.NODE_ENV === 'production' && ADMIN_PASSWORD === 'adminPro2026') {
-    console.warn('⚠️  WARNING: ADMIN_PASSWORD is using the default value in production! Set ADMIN_PASSWORD env variable.');
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+    console.error('🚨 CRITICAL: ADMIN_PASSWORD environment variable is not set! Server cannot start safely.');
+    process.exit(1);
 }
 
 route('POST', '/api/admin/login', async (req, res) => {
@@ -521,7 +522,7 @@ route('POST', '/api/admin/salons', async (req, res) => {
         salon: salon._id,
         name: body.ownerName || 'Propriétaire',
         email: body.ownerEmail || '',
-        password: body.ownerPassword || 'salon123',
+        password: body.ownerPassword || require('crypto').randomBytes(12).toString('hex'),
         phone: body.ownerPhone || '',
         role: 'owner',
     });
@@ -656,6 +657,11 @@ route('GET', '/api/admin/salons/:id/magic-link', async (req, res, params) => {
 // ==========================
 
 route('POST', '/api/pro/login', async (req, res) => {
+    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    if (rateLimit(ip, 'pro_login', 10, 15 * 60 * 1000)) {
+        return json(res, 429, { success: false, error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
+    }
+
     const body = await parseBody(req);
     console.log(`\n🔑 Login attempt for email: "${body.email}"`);
 
@@ -1213,7 +1219,7 @@ route('POST', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
             salon: params.salonId,
             name: body.name,
             email: body.email || '',
-            password: body.password || 'salon123',
+            password: body.password || require('crypto').randomBytes(12).toString('hex'),
             phone: body.phone || '',
             role: 'owner'
         });
@@ -2839,7 +2845,7 @@ route('POST', '/api/salon/:slug/my-bookings', async (req, res, params) => {
     json(res, 200, { success: true, data: bookings });
 });
 
-// Client: cancel a booking
+// Client: cancel a booking (requires cancelToken to prevent IDOR)
 route('PUT', '/api/salon/:slug/bookings/:bookingId/cancel', async (req, res, params) => {
     const salon = await db.findSalonBySlug(params.slug);
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
@@ -2848,6 +2854,15 @@ route('PUT', '/api/salon/:slug/bookings/:bookingId/cancel', async (req, res, par
     if (!booking || booking.salon.toString() !== salon._id.toString()) {
         return json(res, 404, { success: false, error: 'RDV non trouvé' });
     }
+
+    // Validate cancelToken to prevent unauthorized cancellation (IDOR)
+    const url = new URL(req.url, 'http://localhost');
+    const body = await parseBody(req);
+    const providedToken = url.searchParams.get('token') || body.token;
+    if (!providedToken || providedToken !== booking.cancelToken) {
+        return json(res, 403, { success: false, error: 'Token d\'annulation invalide' });
+    }
+
     if (booking.status === 'cancelled') {
         return json(res, 400, { success: false, error: 'Ce RDV est déjà annulé' });
     }
