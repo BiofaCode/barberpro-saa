@@ -2571,6 +2571,7 @@ async function loadSettings() {
                         <div class="form-group" style="flex:1;min-width:160px"><label class="form-label">Téléphone</label><input class="form-input form-input-full" id="set-phone" value="${salon.phone || ''}" placeholder="06 12 34 56 78"></div>
                     </div>
                     <div class="form-group"><label class="form-label">Email</label><input class="form-input form-input-full" id="set-email" value="${salon.email || ''}" placeholder="contact@monsalon.fr"></div>
+                    <div class="form-group"><label class="form-label">Catégorie du salon</label><select class="form-input form-input-full" id="set-category"><option value="">— Sélectionner une catégorie —</option><option value="Coiffure mixte"${salon.category==='Coiffure mixte'?' selected':''}>Coiffure mixte</option><option value="Coiffure femme"${salon.category==='Coiffure femme'?' selected':''}>Coiffure femme</option><option value="Barbier / Coiffure homme"${salon.category==='Barbier / Coiffure homme'?' selected':''}>Barbier / Coiffure homme</option><option value="Onglerie & Beauté des mains"${salon.category==='Onglerie & Beauté des mains'?' selected':''}>Onglerie &amp; Beauté des mains</option><option value="Épilation"${salon.category==='Épilation'?' selected':''}>Épilation</option><option value="Soin du visage & Beauté"${salon.category==='Soin du visage & Beauté'?' selected':''}>Soin du visage &amp; Beauté</option><option value="Massage & Spa"${salon.category==='Massage & Spa'?' selected':''}>Massage &amp; Spa</option><option value="Institut de beauté"${salon.category==='Institut de beauté'?' selected':''}>Institut de beauté</option><option value="Autre"${salon.category==='Autre'?' selected':''}>Autre</option></select></div>
                     <div style="display:flex;align-items:center;gap:8px;margin-top:4px;font-size:.82rem;color:var(--text-muted)">
                         <span>🌐</span> Site web : <a href="/s/${salon.slug}" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:600">/s/${salon.slug}</a>
                         <button onclick="copyShareLink()" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.2);color:var(--primary);border-radius:6px;padding:2px 8px;font-size:.76rem;cursor:pointer">📋 Copier</button>
@@ -2895,6 +2896,7 @@ async function saveInfo() {
         address: document.getElementById('set-address').value.trim(),
         phone: document.getElementById('set-phone').value.trim(),
         email: document.getElementById('set-email').value.trim(),
+        category: document.getElementById('set-category')?.value || '',
     };
     if (!updates.name) return showToast('Le nom du salon est obligatoire', 'error');
     try {

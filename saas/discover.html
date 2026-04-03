@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trouver un salon — Kreno</title>
+  <meta name="description" content="Trouvez et réservez chez les meilleurs salons de coiffure, instituts de beauté et spas près de chez vous.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/saas/css/saas.css">
+  <link rel="icon" href="/saas/img/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#5850E8">
+  <style>
+    .disc-hero{padding:120px 0 64px;background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(88,80,232,.22) 0%,transparent 70%);text-align:center}
+    .disc-hero h1{font-size:clamp(36px,6vw,64px);letter-spacing:-2px;margin-bottom:12px}
+    .disc-hero p{color:var(--muted);font-size:18px;margin-bottom:36px}
+    .search-bar{display:flex;gap:8px;max-width:700px;margin:0 auto 32px;background:var(--surface,#111116);border:1px solid var(--border);border-radius:16px;padding:8px;box-shadow:0 0 0 1px rgba(88,80,232,.1)}
+    .search-input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:"DM Sans",sans-serif;font-size:15px;padding:10px 14px;min-width:0}
+    .search-input::placeholder{color:var(--muted)}
+    .search-divider{width:1px;background:var(--border);align-self:stretch;margin:6px 0}
+    .search-btn{background:var(--primary,#5850E8);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-family:"DM Sans",sans-serif;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+    .search-btn:hover{opacity:.85}
+    .cat-chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;max-width:800px;margin:0 auto}
+    .cat-chip{padding:7px 16px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;font-family:"DM Sans",sans-serif}
+    .cat-chip:hover,.cat-chip.active{background:rgba(88,80,232,.12);border-color:rgba(88,80,232,.35);color:var(--text)}
+    .disc-results{padding:48px 0 100px}
+    .disc-results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+    .disc-count{font-size:14px;color:var(--muted)}
+    .disc-count strong{color:var(--text)}
+    .salons-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    @media(max-width:900px){.salons-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:560px){.salons-grid{grid-template-columns:1fr}}
+    .salon-card{background:var(--surface,#111116);border:1px solid var(--border);border-radius:20px;overflow:hidden;transition:border-color .2s,transform .2s;display:flex;flex-direction:column}
+    .salon-card:hover{border-color:rgba(88,80,232,.35);transform:translateY(-3px)}
+    .salon-card-img{height:140px;background:linear-gradient(135deg,rgba(88,80,232,.12),rgba(168,85,247,.08));display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:800;color:rgba(88,80,232,.5);position:relative;overflow:hidden}
+    .salon-card-img img{width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0}
+    .salon-card-body{padding:18px 18px 16px;flex:1;display:flex;flex-direction:column}
+    .salon-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+    .salon-card-name{font-size:16px;font-weight:700;letter-spacing:-.3px}
+    .salon-card-cat{font-size:11px;font-weight:600;color:var(--primary,#5850E8);background:rgba(88,80,232,.1);border:1px solid rgba(88,80,232,.2);border-radius:6px;padding:2px 7px;white-space:nowrap;flex-shrink:0}
+    .salon-card-addr{font-size:13px;color:var(--muted);margin-bottom:10px}
+    .salon-card-rating{display:flex;align-items:center;gap:5px;font-size:13px;margin-bottom:12px}
+    .stars{color:#f59e0b;letter-spacing:-1px}
+    .rating-count{color:var(--muted);font-size:12px}
+    .salon-card-services{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px;flex:1}
+    .svc-pill{font-size:11px;color:var(--muted);background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:6px;padding:3px 8px}
+    .salon-card-cta{display:block;text-align:center;background:rgba(88,80,232,.1);border:1px solid rgba(88,80,232,.25);color:var(--primary,#5850E8);border-radius:10px;padding:9px;font-size:13px;font-weight:700;text-decoration:none;transition:all .15s}
+    .salon-card-cta:hover{background:var(--primary,#5850E8);color:#fff}
+    .skeleton-card{background:var(--surface,#111116);border:1px solid var(--border);border-radius:20px;overflow:hidden}
+    .skel{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    .skel-img{height:140px;border-radius:0}
+    .skel-body{padding:18px}
+    .skel-line{height:14px;margin-bottom:10px}
+    .skel-line.w60{width:60%}.skel-line.w40{width:40%}.skel-line.w80{width:80%}
+    .disc-empty{text-align:center;padding:80px 0;color:var(--muted);grid-column:1/-1}
+    .disc-empty-icon{font-size:48px;margin-bottom:16px}
+    .disc-empty h3{font-size:20px;color:var(--text);margin-bottom:8px}
+    @media(max-width:640px){.disc-hero{padding:100px 0 48px}.search-bar{flex-direction:column;border-radius:14px}.search-divider{display:none}.search-btn{width:100%;padding:12px}}
+  </style>
+</head>
+<body>
+
+<nav class="nav" id="mainNav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <span class="logo-mark">K</span>
+      <span class="logo-name">kreno</span>
+    </a>
+    <div class="nav-links" id="navLinks">
+      <a href="/#features">Fonctionnalités</a>
+      <a href="/#pricing">Tarifs</a>
+      <a href="/saas/discover.html" class="active">Découvrir</a>
+      <a href="/saas/faq.html">FAQ</a>
+      <a href="/#contact">Contact</a>
+      <a href="/pro" class="nav-login">Connexion</a>
+      <a href="/saas/" class="btn btn-sm">Essai gratuit</a>
+    </div>
+    <button class="nav-hamburger" id="navHamburger" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<section class="disc-hero">
+  <div class="wrap">
+    <span class="tag">Annuaire</span>
+    <h1>Trouvez votre salon</h1>
+    <p>Réservez chez les meilleurs salons près de chez vous</p>
+    <div class="search-bar">
+      <input class="search-input" id="searchQ" type="text" placeholder="Nom du salon ou prestation..." autocomplete="off">
+      <div class="search-divider"></div>
+      <input class="search-input" id="searchCity" type="text" placeholder="Ville..." autocomplete="off">
+      <button class="search-btn" id="searchBtn">Rechercher</button>
+    </div>
+    <div class="cat-chips" id="catChips">
+      <button class="cat-chip active" data-cat="">Tous</button>
+      <button class="cat-chip" data-cat="Coiffure mixte">Coiffure</button>
+      <button class="cat-chip" data-cat="Barbier / Coiffure homme">Barbier</button>
+      <button class="cat-chip" data-cat="Onglerie &amp; Beauté des mains">Onglerie</button>
+      <button class="cat-chip" data-cat="Épilation">Épilation</button>
+      <button class="cat-chip" data-cat="Soin du visage &amp; Beauté">Visage &amp; Beauté</button>
+      <button class="cat-chip" data-cat="Massage &amp; Spa">Massage &amp; Spa</button>
+      <button class="cat-chip" data-cat="Institut de beauté">Institut</button>
+    </div>
+  </div>
+</section>
+
+<section class="disc-results">
+  <div class="wrap">
+    <div class="disc-results-header">
+      <div class="disc-count" id="discCount"><strong>0</strong> salons trouvés</div>
+    </div>
+    <div class="salons-grid" id="salonsGrid"></div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px">Kreno</div>
+        <p>Le logiciel n°1 pour les professionnels de la beauté en Suisse.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Produit</h4>
+        <a href="/#features">Fonctionnalités</a>
+        <a href="/#pricing">Tarifs</a>
+        <a href="/pro">Espace Pro</a>
+      </div>
+      <div class="footer-col">
+        <h4>Contact</h4>
+        <a href="mailto:info@osmodigital.ch">info@osmodigital.ch</a>
+        <a href="/saas/faq.html">FAQ</a>
+      </div>
+    </div>
+    <div class="footer-legal" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:40px;padding-top:20px;border-top:1px solid var(--border)">
+      <span>&copy; 2026 Kreno — Un produit Osmo Digital. Tous droits réservés.</span>
+      <a href="/saas/cgu.html">Conditions &amp; Confidentialité</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function() {
+  "use strict";
+
+  /* ── Navbar ── */
+  var nav = document.getElementById("mainNav");
+  window.addEventListener("scroll", function() { nav.classList.toggle("nav-scrolled", window.scrollY > 50); });
+  var burger = document.getElementById("navHamburger");
+  var navLinksEl = document.getElementById("navLinks");
+  if (burger) burger.addEventListener("click", function() { navLinksEl.classList.toggle("open"); burger.classList.toggle("open"); });
+
+  /* ── State ── */
+  var activeCategory = "";
+  var searchTimer = null;
+
+  /* ── Category chips ── */
+  document.getElementById("catChips").addEventListener("click", function(e) {
+    var chip = e.target.closest(".cat-chip");
+    if (!chip) return;
+    document.querySelectorAll(".cat-chip").forEach(function(c) { c.classList.remove("active"); });
+    chip.classList.add("active");
+    activeCategory = chip.getAttribute("data-cat") || "";
+    doSearch();
+  });
+
+  /* ── Search ── */
+  function debounce(fn, ms) {
+    return function() {
+      var a = arguments;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function() { fn.apply(null, a); }, ms);
+    };
+  }
+  document.getElementById("searchQ").addEventListener("input", debounce(doSearch, 350));
+  document.getElementById("searchCity").addEventListener("input", debounce(doSearch, 350));
+  document.getElementById("searchBtn").addEventListener("click", doSearch);
+  ["searchQ", "searchCity"].forEach(function(id) {
+    document.getElementById(id).addEventListener("keydown", function(e) { if (e.key === "Enter") doSearch(); });
+  });
+
+  async function doSearch() {
+    var q = document.getElementById("searchQ").value.trim();
+    var city = document.getElementById("searchCity").value.trim();
+    var params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (city) params.set("city", city);
+    if (activeCategory) params.set("category", activeCategory);
+    showSkeletons();
+    try {
+      var res = await fetch("/api/salons/public?" + params.toString());
+      var data = await res.json();
+      if (data.success) renderSalons(data.data);
+      else renderError("Erreur serveur.");
+    } catch (err) { renderError("Connexion impossible."); }
+  }
+
+  /* ── Skeleton ── */
+  function showSkeletons() {
+    var grid = document.getElementById("salonsGrid");
+    grid.textContent = "";
+    for (var i = 0; i < 3; i++) {
+      var card = document.createElement("div"); card.className = "skeleton-card";
+      var si = document.createElement("div"); si.className = "skel skel-img";
+      var sb = document.createElement("div"); sb.className = "skel-body";
+      ["w80","w40","w60"].forEach(function(cls) {
+        var l = document.createElement("div"); l.className = "skel skel-line " + cls; sb.appendChild(l);
+      });
+      card.appendChild(si); card.appendChild(sb); grid.appendChild(card);
+    }
+    updateCount("—");
+  }
+
+  /* ── Render ── */
+  function renderSalons(salons) {
+    var grid = document.getElementById("salonsGrid");
+    grid.textContent = "";
+    updateCount(salons.length + " salon" + (salons.length !== 1 ? "s" : "") + " trouvé" + (salons.length !== 1 ? "s" : ""));
+    if (!salons.length) { grid.appendChild(makeEmpty("Aucun salon trouvé", "Essayez avec d'autres termes ou une autre ville.")); return; }
+    salons.forEach(function(s) { grid.appendChild(buildCard(s)); });
+  }
+
+  function renderError(msg) {
+    document.getElementById("salonsGrid").textContent = "";
+    document.getElementById("salonsGrid").appendChild(makeEmpty("Erreur de chargement", msg));
+    updateCount("0 salons trouvés");
+  }
+
+  function updateCount(txt) {
+    var el = document.getElementById("discCount");
+    el.textContent = "";
+    var strong = document.createElement("strong");
+    if (typeof txt === "number") { strong.textContent = txt; el.appendChild(strong); el.appendChild(document.createTextNode(" salons trouvés")); }
+    else { el.appendChild(document.createTextNode(txt)); }
+  }
+
+  function makeEmpty(title, sub) {
+    var d = document.createElement("div"); d.className = "disc-empty"; d.style.gridColumn = "1/-1";
+    var ic = document.createElement("div"); ic.className = "disc-empty-icon"; ic.textContent = "🔍";
+    var h = document.createElement("h3"); h.textContent = title;
+    var p = document.createElement("p"); p.textContent = sub;
+    d.appendChild(ic); d.appendChild(h); d.appendChild(p); return d;
+  }
+
+  /* ── Build card using DOM (no dynamic HTML injection) ── */
+  function buildCard(s) {
+    var card = document.createElement("div"); card.className = "salon-card";
+
+    /* image / initials */
+    var iw = document.createElement("div"); iw.className = "salon-card-img";
+    var initials = (s.name || "?").split(" ").map(function(w) { return w[0] || ""; }).join("").slice(0, 2).toUpperCase();
+    iw.textContent = initials;
+    if (s.logo) {
+      var im = document.createElement("img");
+      im.src = s.logo; im.alt = s.name || ""; im.loading = "lazy";
+      iw.appendChild(im);
+    }
+    card.appendChild(iw);
+
+    /* body */
+    var body = document.createElement("div"); body.className = "salon-card-body";
+
+    /* name + category badge */
+    var top = document.createElement("div"); top.className = "salon-card-top";
+    var nm = document.createElement("div"); nm.className = "salon-card-name"; nm.textContent = s.name || "";
+    top.appendChild(nm);
+    if (s.category) { var ct = document.createElement("span"); ct.className = "salon-card-cat"; ct.textContent = s.category; top.appendChild(ct); }
+    body.appendChild(top);
+
+    /* address (city only) */
+    if (s.address) {
+      var ad = document.createElement("div"); ad.className = "salon-card-addr";
+      ad.textContent = "📍 " + cityFromAddr(s.address);
+      body.appendChild(ad);
+    }
+
+    /* rating */
+    var rr = document.createElement("div"); rr.className = "salon-card-rating";
+    if (s.rating) {
+      var st = document.createElement("span"); st.className = "stars";
+      st.textContent = "★".repeat(Math.round(s.rating)) + "☆".repeat(5 - Math.round(s.rating));
+      rr.appendChild(st);
+      if (s.reviewCount) {
+        var rc = document.createElement("span"); rc.className = "rating-count";
+        rc.textContent = "(" + s.reviewCount + ")"; rr.appendChild(rc);
+      }
+    } else {
+      var nb = document.createElement("span"); nb.className = "rating-count"; nb.textContent = "Nouveau"; rr.appendChild(nb);
+    }
+    body.appendChild(rr);
+
+    /* services */
+    if (s.services && s.services.length) {
+      var sw = document.createElement("div"); sw.className = "salon-card-services";
+      s.services.forEach(function(sv) {
+        var pill = document.createElement("span"); pill.className = "svc-pill";
+        pill.textContent = sv.name + (sv.price ? " · " + sv.price + " CHF" : "");
+        sw.appendChild(pill);
+      });
+      body.appendChild(sw);
+    } else { var sp = document.createElement("div"); sp.style.flex = "1"; body.appendChild(sp); }
+
+    /* CTA */
+    var cta = document.createElement("a"); cta.className = "salon-card-cta"; cta.textContent = "Réserver →";
+    cta.href = "/website/?salon=" + encodeURIComponent(s.slug || "");
+    body.appendChild(cta);
+
+    card.appendChild(body);
+    return card;
+  }
+
+  function cityFromAddr(a) {
+    if (!a) return "";
+    var parts = a.split(",");
+    return parts[parts.length - 1].trim().replace(/^\d{4,6}\s*/, "");
+  }
+
+  /* Initial load */
+  doSearch();
+})();
+</script>
+<script src="/saas/js/cookie.js" defer></script>
+</body>
+</html>

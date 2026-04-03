@@ -793,6 +793,7 @@ route('PUT', '/api/pro/salon/:salonId', async (req, res, params) => {
     if (body.branding) updates.branding = { ...salon.branding, ...body.branding };
     if (body.hours) updates.hours = body.hours;
     if (body.closedDates !== undefined) updates.closedDates = body.closedDates;
+    if (body.category !== undefined) updates.category = body.category;
 
     const updated = await db.updateSalon(params.salonId, updates);
     json(res, 200, { success: true, data: updated });
@@ -2532,6 +2533,39 @@ route('DELETE', '/api/pro/salon/:salonId/webhooks/:webhookId', async (req, res, 
 // ==========================
 //  PUBLIC SALON API
 // ==========================
+
+// Public: search/discovery — GET /api/salons/public?q=&city=&category=
+route('GET', '/api/salons/public', async (req, res) => {
+    const url = new URL(req.url, 'http://localhost');
+    const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+    const city = (url.searchParams.get('city') || '').trim().toLowerCase();
+    const category = (url.searchParams.get('category') || '').trim();
+
+    let salons = await db.findSalons({ active: true });
+
+    if (q) salons = salons.filter(s =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.description || '').toLowerCase().includes(q)
+    );
+    if (city) salons = salons.filter(s => (s.address || '').toLowerCase().includes(city));
+    if (category) salons = salons.filter(s => s.category === category);
+
+    const result = salons.slice(0, 50).map(s => ({
+        _id: s._id,
+        name: s.name,
+        slug: s.slug,
+        address: s.address || '',
+        logo: s.logo || '',
+        category: s.category || '',
+        rating: s.rating || null,
+        reviewCount: s.reviewCount || 0,
+        description: s.description || '',
+        services: (s.services || []).filter(sv => sv.active).slice(0, 3).map(sv => ({ name: sv.name, price: sv.price })),
+        plan: s.subscription?.plan || 'pro',
+    }));
+
+    json(res, 200, { success: true, data: result, total: result.length });
+});
 
 route('GET', '/api/salon/:slug', async (req, res, params) => {
     const salon = await db.findSalonBySlug(params.slug);
