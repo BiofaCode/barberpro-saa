@@ -13,7 +13,7 @@ const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelco
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
 const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
-const { getCORSHeaders, applySecurityHeaders, rateLimit, getClientIP } = require('./lib/security');
+const { getCORSHeaders, applySecurityHeaders, getClientIP } = require('./lib/security');
 
 // Configure Web Push (VAPID)
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -73,12 +73,13 @@ function escHtml(str) {
 }
 
 function json(res, status, data, origin = '*') {
+    const { SECURITY_HEADERS } = require('./lib/security');
     const headers = {
         'Content-Type': 'application/json',
-        ...getCORSHeaders(origin)
+        ...getCORSHeaders(origin),
+        ...SECURITY_HEADERS
     };
     res.writeHead(status, headers);
-    applySecurityHeaders(res);
     res.end(JSON.stringify(data));
 }
 
