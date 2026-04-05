@@ -5,16 +5,19 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "test": "jest --coverage --forceExit",
+    "test:watch": "jest --watch",
+    "lint": "eslint server.js db.js email.js sms.js lib/ tests/ 2>/dev/null || true"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "keywords": [
-    "barber",
     "salon",
     "saas",
-    "booking"
+    "booking",
+    "kreno"
   ],
   "author": "Fabio",
   "license": "ISC",
@@ -32,5 +35,11 @@
     "stripe": "^20.4.1",
     "twilio": "^5.13.0",
     "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3",
+    "mongodb-memory-server": "^9.1.6",
+    "eslint": "^8.54.0"
   }
 }

@@ -7,7 +7,7 @@ import '../models/booking_model.dart';
 
 class ApiService {
   // URL de production par défaut
-  static const String _defaultUrl = 'https://barberpro-saa.onrender.com';
+  static const String _defaultUrl = 'https://kreno.ch';
 
   static String? _customUrl;
 
@@ -25,7 +25,7 @@ class ApiService {
 
   static void setBaseUrl(String url) => _customUrl = url;
 
-  // Barbier connecté
+  // Employé/Propriétaire connecté
   static String? _token;
   static String? _salonId;
   static Map<String, dynamic>? _currentUser;
@@ -68,7 +68,7 @@ class ApiService {
   static Future<bool> forgotPassword(String email) async {
     try {
       final res = await http.post(
-        Uri.parse('$_url/api/barber/forgot-password'),
+        Uri.parse('$_url/api/pro/forgot-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );
@@ -80,11 +80,11 @@ class ApiService {
     }
   }
 
-  // ---- Login barbier ----
+  // ---- Login ----
   static Future<bool> login(String email, String password) async {
     try {
       final res = await http.post(
-        Uri.parse('$_url/api/barber/login'),
+        Uri.parse('$_url/api/pro/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
@@ -132,7 +132,7 @@ class ApiService {
   static Future<Map<String, dynamic>?> getMySalon() async {
     if (_salonId == null) return null;
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId'), headers: _authHeaders);
+      final res = await http.get(Uri.parse('$_url/api/pro/salon/$_salonId'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) {
         _currentSalon = Map<String, dynamic>.from(data['data']);
@@ -148,7 +148,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.put(
-        Uri.parse('$_url/api/barber/salon/$_salonId'),
+        Uri.parse('$_url/api/pro/salon/$_salonId'),
         headers: _authHeaders,
         body: jsonEncode(updates),
       );
@@ -167,7 +167,7 @@ class ApiService {
   static Future<Map<String, dynamic>> getMyStats() async {
     if (_salonId == null) return {};
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/stats'), headers: _authHeaders);
+      final res = await http.get(Uri.parse('$_url/api/pro/salon/$_salonId/stats'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) return Map<String, dynamic>.from(data['data']);
     } catch (e) {
@@ -183,7 +183,7 @@ class ApiService {
       final params = <String, String>{};
       if (date != null) params['date'] = date;
       if (status != null) params['status'] = status;
-      final uri = Uri.parse('$_url/api/barber/salon/$_salonId/bookings')
+      final uri = Uri.parse('$_url/api/pro/salon/$_salonId/bookings')
           .replace(queryParameters: params.isEmpty ? null : params);
       final res = await http.get(uri, headers: _authHeaders);
       final data = jsonDecode(res.body);
@@ -200,7 +200,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.put(
-        Uri.parse('$_url/api/barber/salon/$_salonId/bookings/$bookingId'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/bookings/$bookingId'),
         headers: _authHeaders,
         body: jsonEncode({'status': status}),
       );
@@ -216,7 +216,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.put(
-        Uri.parse('$_url/api/barber/salon/$_salonId/bookings/$bookingId'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/bookings/$bookingId'),
         headers: _authHeaders,
         body: jsonEncode({'date': date, 'time': time}),
       );
@@ -232,7 +232,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getMyClients() async {
     if (_salonId == null) return [];
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/clients'), headers: _authHeaders);
+      final res = await http.get(Uri.parse('$_url/api/pro/salon/$_salonId/clients'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
     } catch (e) {
@@ -245,7 +245,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getMyEmployees() async {
     if (_salonId == null) return [];
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/employees'), headers: _authHeaders);
+      final res = await http.get(Uri.parse('$_url/api/pro/salon/$_salonId/employees'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
     } catch (e) {
@@ -258,7 +258,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.post(
-        Uri.parse('$_url/api/barber/salon/$_salonId/employees'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/employees'),
         headers: _authHeaders,
         body: jsonEncode(empData),
       );
@@ -273,7 +273,7 @@ class ApiService {
   static Future<bool> deleteEmployee(String empId) async {
     if (_salonId == null) return false;
     try {
-      final res = await http.delete(Uri.parse('$_url/api/barber/salon/$_salonId/employees/$empId'), headers: _authHeaders);
+      final res = await http.delete(Uri.parse('$_url/api/pro/salon/$_salonId/employees/$empId'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       return data['success'] == true;
     } catch (e) {
@@ -286,7 +286,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getMyServices() async {
     if (_salonId == null) return [];
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/services'), headers: _authHeaders);
+      final res = await http.get(Uri.parse('$_url/api/pro/salon/$_salonId/services'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
     } catch (e) {
@@ -299,7 +299,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.post(
-        Uri.parse('$_url/api/barber/salon/$_salonId/services'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/services'),
         headers: _authHeaders,
         body: jsonEncode(svcData),
       );
@@ -315,7 +315,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.put(
-        Uri.parse('$_url/api/barber/salon/$_salonId/services/$svcId'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/services/$svcId'),
         headers: _authHeaders,
         body: jsonEncode(updates),
       );
@@ -330,7 +330,7 @@ class ApiService {
   static Future<bool> deleteService(String svcId) async {
     if (_salonId == null) return false;
     try {
-      final res = await http.delete(Uri.parse('$_url/api/barber/salon/$_salonId/services/$svcId'), headers: _authHeaders);
+      final res = await http.delete(Uri.parse('$_url/api/pro/salon/$_salonId/services/$svcId'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       return data['success'] == true;
     } catch (e) {
@@ -344,7 +344,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.put(
-        Uri.parse('$_url/api/barber/salon/$_salonId/branding'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/branding'),
         headers: _authHeaders,
         body: jsonEncode(branding),
       );
@@ -361,7 +361,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.post(
-        Uri.parse('$_url/api/barber/salon/$_salonId/testimonials'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/testimonials'),
         headers: _authHeaders,
         body: jsonEncode(data),
       );
@@ -377,7 +377,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.put(
-        Uri.parse('$_url/api/barber/salon/$_salonId/testimonials/$id'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/testimonials/$id'),
         headers: _authHeaders,
         body: jsonEncode(data),
       );
@@ -393,7 +393,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.delete(
-        Uri.parse('$_url/api/barber/salon/$_salonId/testimonials/$id'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/testimonials/$id'),
         headers: _authHeaders,
       );
       final decoded = jsonDecode(res.body);
@@ -408,7 +408,7 @@ class ApiService {
   static Future<bool> addGalleryPhoto(String title, File image) async {
     if (_salonId == null || _token == null) return false;
     try {
-      final request = http.MultipartRequest('POST', Uri.parse('$_url/api/barber/salon/$_salonId/gallery'));
+      final request = http.MultipartRequest('POST', Uri.parse('$_url/api/pro/salon/$_salonId/gallery'));
       request.headers['Authorization'] = 'Bearer $_token';
       request.fields['title'] = title;
       request.files.add(await http.MultipartFile.fromPath('image', image.path));
@@ -427,7 +427,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.delete(
-        Uri.parse('$_url/api/barber/salon/$_salonId/gallery/$id'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/gallery/$id'),
         headers: _authHeaders,
       );
       final decoded = jsonDecode(res.body);
@@ -443,7 +443,7 @@ class ApiService {
     if (_salonId == null) return null;
     try {
       final res = await http.post(
-        Uri.parse('$_url/api/barber/salon/$_salonId/bookings'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/bookings'),
         headers: _authHeaders,
         body: jsonEncode(bookingData),
       );
@@ -459,7 +459,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> searchClients(String query) async {
     if (_salonId == null) return [];
     try {
-      final uri = Uri.parse('$_url/api/barber/salon/$_salonId/clients/search')
+      final uri = Uri.parse('$_url/api/pro/salon/$_salonId/clients/search')
           .replace(queryParameters: {'q': query});
       final res = await http.get(uri, headers: _authHeaders);
       final data = jsonDecode(res.body);
@@ -474,7 +474,7 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getBlocks() async {
     if (_salonId == null) return [];
     try {
-      final res = await http.get(Uri.parse('$_url/api/barber/salon/$_salonId/blocks'), headers: _authHeaders);
+      final res = await http.get(Uri.parse('$_url/api/pro/salon/$_salonId/blocks'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
     } catch (e) {
@@ -487,7 +487,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.post(
-        Uri.parse('$_url/api/barber/salon/$_salonId/blocks'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/blocks'),
         headers: _authHeaders,
         body: jsonEncode(blockData),
       );
@@ -503,7 +503,7 @@ class ApiService {
     if (_salonId == null) return false;
     try {
       final res = await http.delete(
-        Uri.parse('$_url/api/barber/salon/$_salonId/blocks/$blockId'),
+        Uri.parse('$_url/api/pro/salon/$_salonId/blocks/$blockId'),
         headers: _authHeaders,
       );
       final data = jsonDecode(res.body);

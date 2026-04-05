@@ -1,5 +1,5 @@
 /* ============================================
-   BARBER PRO - SaaS Platform Server v2.0
+   Kreno - SaaS Platform Server v2.0
    JSON DB (dev) → MongoDB (prod)
    ============================================ */
 
@@ -13,6 +13,7 @@ const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelco
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
 const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
+const { getCORSHeaders, applySecurityHeaders, rateLimit, getClientIP } = require('./lib/security');
 
 // Configure Web Push (VAPID)
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -41,8 +42,8 @@ if (process.env.CLOUDINARY_URL) {
 }
 
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'barberpro_dev_secret';
-if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'barberpro_dev_secret') {
+const JWT_SECRET = process.env.JWT_SECRET || 'kreno_dev_secret';
+if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'kreno_dev_secret') {
     console.error('🚨 CRITICAL: JWT_SECRET is using the default dev value in production! Set JWT_SECRET env variable.');
     process.exit(1);
 }
@@ -71,16 +72,13 @@ function escHtml(str) {
     return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function json(res, status, data) {
-    res.writeHead(status, {
+function json(res, status, data, origin = '*') {
+    const headers = {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'DENY',
-        'Referrer-Policy': 'strict-origin-when-cross-origin',
-    });
+        ...getCORSHeaders(origin)
+    };
+    res.writeHead(status, headers);
+    applySecurityHeaders(res);
     res.end(JSON.stringify(data));
 }
 
@@ -311,7 +309,7 @@ async function sendPendingReviewRequests() {
             reviewed: { $ne: true },
             reviewEmailSent: { $ne: true },
         });
-        const baseUrl = `${process.env.BASE_URL || 'https://barberpro-saa.onrender.com'}`;
+        const baseUrl = `${process.env.BASE_URL || 'https://kreno.ch'}`;
         let sent = 0;
         for (const booking of bookings) {
             if (!booking.clientEmail || !booking.time) continue;
@@ -3333,7 +3331,7 @@ async function start() {
 
     server.listen(PORT, () => {
         console.log('');
-        console.log('  💈 BarberPro SaaS Platform v2.0');
+        console.log('  👨‍💼 Kreno SaaS Platform v2.0');
         console.log('  ════════════════════════════════════');
         console.log('  📦 Mode: MongoDB Atlas (persistent)');
         console.log('  ════════════════════════════════════');

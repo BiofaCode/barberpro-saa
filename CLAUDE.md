@@ -78,3 +78,25 @@ See `.env` for the full list. Required for full functionality:
 
 ## Deployment
 Hosted on Render.com (`render.yaml`). Health check endpoint: `GET /api/health`. Production port: `10000`.
+
+## Recent Changes (Kreno Rebranding)
+
+### Color Palette Picker - Flutter Mobile App
+**Status:** ✅ Completed (2026-04-04)
+
+**What changed:**
+- Replaced hex input fields with intuitive color palette picker in mobile app's branding settings
+- File: `barber_app/lib/screens/settings_screen.dart` → `_showBrandingBottomSheet()` method
+- Replaced 2 simple `TextField` inputs ("Couleur Primaire (HEX)", "Couleur Accent (HEX)") with `buildColorPicker()` widget
+
+**Implementation details:**
+- 16-color palette (indigo, violet, blues, teals, greens, ambers, oranges, reds, pinks, grays, black, off-white)
+- Tap a color swatch to select it (visual feedback: white border + checkmark + shadow glow)
+- Selected color displays a small preview circle next to the label
+- Hex input field still available below palette for manual entry
+- Real-time sync: palette selection updates hex field, typing hex updates palette selection
+- No external dependencies—uses standard Flutter (Color, Container, GestureDetector, etc.)
+
+**Consistency note:**
+- Mobile color palette now matches web pro portal's branding section (where colors use native `<input type="color">`)
+- Web still uses hex input + gradient preview; mobile now has more visual, palette-driven UX

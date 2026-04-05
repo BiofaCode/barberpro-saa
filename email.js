@@ -176,7 +176,7 @@ async function sendOTPEmail(email, code, salonName = 'Kreno') {
 }
 // Send welcome email after signup
 async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
-  baseUrl = baseUrl || process.env.BASE_URL || 'https://barberpro-saa.onrender.com';
+  baseUrl = baseUrl || process.env.BASE_URL || 'https://kreno.ch';
   const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const planLabel = { starter: 'Starter', pro: 'Pro ⭐', premium: 'Premium 🚀' }[plan] || plan;
@@ -368,7 +368,7 @@ async function sendReminderEmail(booking, salon) {
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const primaryColor = salon.branding?.primaryColor || '#6366F1';
   const salonName = salon.name || 'Kreno';
-  const cancelUrl = booking.cancelToken ? `${process.env.BASE_URL || 'https://barberpro-saa.onrender.com'}/cancel/${booking.cancelToken}` : null;
+  const cancelUrl = booking.cancelToken ? `${process.env.BASE_URL || 'https://kreno.ch'}/cancel/${booking.cancelToken}` : null;
   try {
     const { data, error } = await resend.emails.send({
       from: `${fromName} <${fromEmail}>`,
@@ -562,7 +562,7 @@ async function sendAdminNewSubscriptionEmail(adminEmail, { salonName, ownerEmail
   const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const planLabel = { starter: 'Starter', pro: 'Pro ⭐', premium: 'Premium 🚀' }[plan] || plan;
-  const adminUrl = (baseUrl || process.env.BASE_URL || 'https://barberpro-saa.onrender.com') + '/admin';
+  const adminUrl = (baseUrl || process.env.BASE_URL || 'https://kreno.ch') + '/admin';
   const now = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' });
 
   try {
@@ -634,7 +634,7 @@ async function sendEmployeeBookingNotification(booking, salon, employeeEmail) {
         ${booking.clientPhone ? `<tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Téléphone</td><td style="padding:8px 0">${booking.clientPhone}</td></tr>` : ''}
         ${booking.notes ? `<tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Notes</td><td style="padding:8px 0">${booking.notes}</td></tr>` : ''}
       </table>
-      <p style="margin:20px 0 0;text-align:center"><a href="${process.env.BASE_URL || 'https://barberpro-saa.onrender.com'}/pro" style="background:${primaryColor};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:.9rem">Voir dans le panel</a></p>
+      <p style="margin:20px 0 0;text-align:center"><a href="${process.env.BASE_URL || 'https://kreno.ch'}/pro" style="background:${primaryColor};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:.9rem">Voir dans le panel</a></p>
     </div>
   </div>
 </body></html>`,
