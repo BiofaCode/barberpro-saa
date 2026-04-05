@@ -1,10 +1,10 @@
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:barber_app/main.dart';
+import 'package:kreno_app/main.dart';
 
 void main() {
-  testWidgets('BarberPro app smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const BarberProApp());
-    expect(find.text('BarberPro'), findsWidgets);
+  testWidgets('Kreno app smoke test', (WidgetTester tester) async {
+    await tester.pumpWidget(const KrenoApp());
+    expect(find.text('Kreno'), findsWidgets);
   });
 }

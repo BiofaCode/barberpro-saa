@@ -22,7 +22,14 @@
       "Bash(flutter pub:*)",
       "Bash(dart run:*)",
       "Bash(flutter analyze:*)",
-      "Bash(python3 -c ':*)"
+      "Bash(python3 -c ':*)",
+      "Bash(flutter build:*)",
+      "Bash(sed -i 's|<span class=\"logo-mark\">K</span>|<img src=\"/saas/images/logo.png\" alt=\"Kreno\" style=\"height:30px;width:auto;display:inline-block;vertical-align:middle\">|g' C:/Users/fabio/CascadeProjects/barber-salon/saas/index.html C:/Users/fabio/CascadeProjects/barber-salon/saas/cgu.html C:/Users/fabio/CascadeProjects/barber-salon/saas/discover.html C:/Users/fabio/CascadeProjects/barber-salon/saas/faq.html)",
+      "Bash(sed -i 's|<span class=\"logo-mark\" style=\"width:26px;height:26px;font-size:12px\">K</span>|<img src=\"/saas/images/logo.png\" alt=\"Kreno\" style=\"height:24px;width:auto;display:inline-block;vertical-align:middle\">|g' C:/Users/fabio/CascadeProjects/barber-salon/saas/index.html C:/Users/fabio/CascadeProjects/barber-salon/saas/cgu.html C:/Users/fabio/CascadeProjects/barber-salon/saas/discover.html C:/Users/fabio/CascadeProjects/barber-salon/saas/faq.html)",
+      "Bash(sed -i 's|<span class=\"logo-mark\" style=\"width:28px;height:28px;font-size:13px\">K</span>|<img src=\"/saas/images/logo.png\" alt=\"Kreno\" style=\"height:26px;width:auto;display:inline-block;vertical-align:middle\">|g' C:/Users/fabio/CascadeProjects/barber-salon/saas/index.html)",
+      "Bash(sed -i 's|<div class=\"modal-logo-wrap\"><span class=\"logo-mark\">K</span></div>|<div class=\"modal-logo-wrap\"><img src=\"/saas/images/logo.png\" alt=\"Kreno\" style=\"height:36px;width:auto\"></div>|g' C:/Users/fabio/CascadeProjects/barber-salon/saas/index.html)",
+      "Bash(python3:*)",
+      "Bash(grep -n ''\\\\''$_url/' barber_app/lib/services/api_service.dart)"
     ]
   }
 }
