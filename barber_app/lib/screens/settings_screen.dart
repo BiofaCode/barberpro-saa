@@ -839,89 +839,180 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 24),
-        decoration: const BoxDecoration(
-          color: AppTheme.bgCard,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Personnalisation', style: GoogleFonts.bricolageGrotesque(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-              const SizedBox(height: 20),
-              _buildSimpleTextField('Titre principal', titleCtrl),
-              const SizedBox(height: 16),
-              _buildSimpleTextField('Sous-titre', subtitleCtrl),
-              const SizedBox(height: 16),
-              _buildSimpleTextField('Couleur Primaire (HEX)', primaryColorCtrl),
-              const SizedBox(height: 16),
-              _buildSimpleTextField('Couleur Accent (HEX)', accentColorCtrl),
-              const SizedBox(height: 24),
-              Text("Statistiques d'accroche (Hero)", style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-              const SizedBox(height: 12),
-              StatefulBuilder(
-                builder: (ctx, setStateSheet) => SwitchListTile(
-                  title: Text('Masquer ces statistiques', style: GoogleFonts.dmSans(color: AppTheme.textPrimary, fontSize: 14)),
-                  value: hideStats,
-                  activeThumbColor: Colors.white,
-                  activeTrackColor: AppTheme.primary,
-                  onChanged: (val) => setStateSheet(() => hideStats = val),
-                  contentPadding: EdgeInsets.zero,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          Color hexToColor(String hex) {
+            final h = hex.trim().replaceFirst('#', '');
+            if (h.length != 6) return AppTheme.primary;
+            try { return Color(int.parse('FF$h', radix: 16)); } catch (_) { return AppTheme.primary; }
+          }
+
+          Widget buildColorPicker(String label, TextEditingController ctrl) {
+            const palette = [
+              '#6366F1', '#818CF8', '#9333EA', '#7C3AED',
+              '#3B82F6', '#0EA5E9', '#14B8A6', '#10B981',
+              '#F59E0B', '#F97316', '#EF4444', '#EC4899',
+              '#F43F5E', '#64748B', '#E8E6E3', '#0A0A14',
+            ];
+            final currentHex = ctrl.text.trim().toLowerCase();
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(label, style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted)),
+                    const SizedBox(width: 8),
+                    Container(
+                      width: 16, height: 16,
+                      decoration: BoxDecoration(
+                        color: hexToColor(ctrl.text),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withAlpha(50)),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(children: [ Expanded(child: _buildSimpleTextField('Valeur 1', stat1ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildSimpleTextField('Texte 1', stat1LabCtrl)) ]),
-              const SizedBox(height: 12),
-              Row(children: [ Expanded(child: _buildSimpleTextField('Valeur 2', stat2ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildSimpleTextField('Texte 2', stat2LabCtrl)) ]),
-              const SizedBox(height: 12),
-              Row(children: [ Expanded(child: _buildSimpleTextField('Valeur 3', stat3ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildSimpleTextField('Texte 3', stat3LabCtrl)) ]),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(ctx);
-                    setState(() => _loading = true);
-                    final newBranding = {
-                      ...branding,
-                      'heroTitle': titleCtrl.text.trim(),
-                      'heroSubtitle': subtitleCtrl.text.trim(),
-                      'primaryColor': primaryColorCtrl.text.trim(),
-                      'accentColor': accentColorCtrl.text.trim(),
-                      'heroStats': {
-                        'stat1Value': stat1ValCtrl.text.trim().isNotEmpty ? stat1ValCtrl.text.trim() : '2500+',
-                        'stat1Label': stat1LabCtrl.text.trim().isNotEmpty ? stat1LabCtrl.text.trim() : 'Clients satisfaits',
-                        'stat2Value': stat2ValCtrl.text.trim().isNotEmpty ? stat2ValCtrl.text.trim() : '8+',
-                        'stat2Label': stat2LabCtrl.text.trim().isNotEmpty ? stat2LabCtrl.text.trim() : "Années d'expérience",
-                        'stat3Value': stat3ValCtrl.text.trim().isNotEmpty ? stat3ValCtrl.text.trim() : '15+',
-                        'stat3Label': stat3LabCtrl.text.trim().isNotEmpty ? stat3LabCtrl.text.trim() : 'Services uniques',
-                        'hide': hideStats,
-                      }
-                    };
-                    final success = await ApiService.updateBranding(newBranding);
-                    if (success) {
-                      await _loadSalonData();
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Design mis à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.success));
-                    } else {
-                      setState(() => _loading = false);
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur de mise à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.error));
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: palette.map((hex) {
+                    final isSelected = currentHex == hex.toLowerCase();
+                    final color = hexToColor(hex);
+                    return GestureDetector(
+                      onTap: () => setSheetState(() => ctrl.text = hex),
+                      child: Container(
+                        width: 34, height: 34,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? Colors.white : Colors.white.withAlpha(30),
+                            width: isSelected ? 2.5 : 1,
+                          ),
+                          boxShadow: isSelected
+                              ? [BoxShadow(color: color.withAlpha(120), blurRadius: 6, spreadRadius: 1)]
+                              : null,
+                        ),
+                        child: isSelected
+                            ? Icon(Icons.check_rounded, color: Colors.white.withAlpha(220), size: 16)
+                            : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: ctrl,
+                  onChanged: (_) => setSheetState(() {}),
+                  style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: '#6366F1',
+                    hintStyle: GoogleFonts.dmSans(color: AppTheme.textMuted),
+                    filled: true,
+                    fillColor: AppTheme.bgDark,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.all(11),
+                      child: Container(
+                        width: 18, height: 18,
+                        decoration: BoxDecoration(
+                          color: hexToColor(ctrl.text),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withAlpha(40)),
+                        ),
+                      ),
+                    ),
                   ),
-                  child: Text('Enregistrer', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.bgDark)),
                 ),
+              ],
+            );
+          }
+
+          return Container(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 24),
+            decoration: const BoxDecoration(
+              color: AppTheme.bgCard,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Personnalisation', style: GoogleFonts.bricolageGrotesque(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  const SizedBox(height: 20),
+                  _buildSimpleTextField('Titre principal', titleCtrl),
+                  const SizedBox(height: 16),
+                  _buildSimpleTextField('Sous-titre', subtitleCtrl),
+                  const SizedBox(height: 16),
+                  buildColorPicker('Couleur Primaire', primaryColorCtrl),
+                  const SizedBox(height: 16),
+                  buildColorPicker('Couleur Accent', accentColorCtrl),
+                  const SizedBox(height: 24),
+                  Text("Statistiques d'accroche (Hero)", style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    title: Text('Masquer ces statistiques', style: GoogleFonts.dmSans(color: AppTheme.textPrimary, fontSize: 14)),
+                    value: hideStats,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: AppTheme.primary,
+                    onChanged: (val) => setSheetState(() => hideStats = val),
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(children: [ Expanded(child: _buildSimpleTextField('Valeur 1', stat1ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildSimpleTextField('Texte 1', stat1LabCtrl)) ]),
+                  const SizedBox(height: 12),
+                  Row(children: [ Expanded(child: _buildSimpleTextField('Valeur 2', stat2ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildSimpleTextField('Texte 2', stat2LabCtrl)) ]),
+                  const SizedBox(height: 12),
+                  Row(children: [ Expanded(child: _buildSimpleTextField('Valeur 3', stat3ValCtrl)), const SizedBox(width: 12), Expanded(child: _buildSimpleTextField('Texte 3', stat3LabCtrl)) ]),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        setState(() => _loading = true);
+                        final newBranding = {
+                          ...branding,
+                          'heroTitle': titleCtrl.text.trim(),
+                          'heroSubtitle': subtitleCtrl.text.trim(),
+                          'primaryColor': primaryColorCtrl.text.trim(),
+                          'accentColor': accentColorCtrl.text.trim(),
+                          'heroStats': {
+                            'stat1Value': stat1ValCtrl.text.trim().isNotEmpty ? stat1ValCtrl.text.trim() : '2500+',
+                            'stat1Label': stat1LabCtrl.text.trim().isNotEmpty ? stat1LabCtrl.text.trim() : 'Clients satisfaits',
+                            'stat2Value': stat2ValCtrl.text.trim().isNotEmpty ? stat2ValCtrl.text.trim() : '8+',
+                            'stat2Label': stat2LabCtrl.text.trim().isNotEmpty ? stat2LabCtrl.text.trim() : "Années d'expérience",
+                            'stat3Value': stat3ValCtrl.text.trim().isNotEmpty ? stat3ValCtrl.text.trim() : '15+',
+                            'stat3Label': stat3LabCtrl.text.trim().isNotEmpty ? stat3LabCtrl.text.trim() : 'Services uniques',
+                            'hide': hideStats,
+                          }
+                        };
+                        final success = await ApiService.updateBranding(newBranding);
+                        if (success) {
+                          await _loadSalonData();
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Design mis à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.success));
+                        } else {
+                          setState(() => _loading = false);
+                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur de mise à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.error));
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text('Enregistrer', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.bgDark)),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
