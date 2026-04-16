@@ -49,6 +49,26 @@ if (process.env.NODE_ENV === 'production' && JWT_SECRET === 'kreno_dev_secret') 
 }
 const UPLOAD_DIR = path.join(__dirname, process.env.UPLOAD_DIR || 'uploads');
 
+// ---- Performance Monitoring ----
+const serverMetrics = {
+    startTime: Date.now(),
+    requestCount: 0,
+    requestsByStatus: {},
+    totalDuration: 0,
+    avgDuration: 0
+};
+
+function logRequest(method, path, status, duration) {
+    if (process.env.NODE_ENV === 'production') {
+        console.log(`[${new Date().toISOString()}] ${method} ${path} - ${status} (${duration}ms)`);
+    }
+    // Track metrics
+    serverMetrics.requestCount++;
+    serverMetrics.requestsByStatus[status] = (serverMetrics.requestsByStatus[status] || 0) + 1;
+    serverMetrics.totalDuration += duration;
+    serverMetrics.avgDuration = Math.round(serverMetrics.totalDuration / serverMetrics.requestCount);
+}
+
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // ---- Helpers ----
@@ -80,6 +100,17 @@ function json(res, status, data, origin = '*') {
     };
     res.writeHead(status, headers);
     res.end(JSON.stringify(data));
+
+    // Track request timing for all successful JSON responses
+    if (res.req && res.req.startTime) {
+        const duration = Date.now() - res.req.startTime;
+        logRequest(res.req.method, res.req.url, status, duration);
+    }
+}
+
+// Track request timing (for non-JSON responses and logging)
+function trackRequestTiming(req, status, duration) {
+    logRequest(req.method, req.url, status, duration);
 }
 
 const MAX_BODY_SIZE = 512 * 1024; // 512 KB
@@ -395,6 +426,21 @@ route('POST', '/api/admin/login', async (req, res) => {
 
 route('GET', '/api/health', async (req, res) => {
     json(res, 200, { status: 'ok', ts: Date.now() });
+});
+
+route('GET', '/api/metrics', async (req, res) => {
+    // Only allow admin access to metrics (optional, can remove for internal monitoring)
+    json(res, 200, {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        requests: {
+            total: serverMetrics.requestCount,
+            byStatus: serverMetrics.requestsByStatus,
+            avgDuration: serverMetrics.avgDuration
+        }
+    });
 });
 
 // POST /api/contact — Contact form from landing page
@@ -3005,6 +3051,10 @@ route('POST', '/api/review/:bookingId', async (req, res, params) => {
 const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
     let pathname = decodeURIComponent(url.pathname);
+    const startTime = Date.now();
+
+    // Store start time on request for timing
+    req.startTime = startTime;
 
     // CORS
     if (req.method === 'OPTIONS') {
@@ -3014,6 +3064,8 @@ const server = http.createServer(async (req, res) => {
             ...corsHeaders,
             ...SECURITY_HEADERS
         });
+        const duration = Date.now() - startTime;
+        trackRequestTiming(req, 204, duration);
         return res.end();
     }
 
@@ -3048,12 +3100,18 @@ const server = http.createServer(async (req, res) => {
             try { await match.handler(req, res, params); }
             catch (err) {
                 if (err.message === 'Request body too large') {
+                    const duration = Date.now() - startTime;
+                    trackRequestTiming(req, 413, duration);
                     return json(res, 413, { success: false, error: 'Corps de requête trop volumineux' });
                 }
                 console.error('API Error:', err);
+                const duration = Date.now() - startTime;
+                trackRequestTiming(req, 500, duration);
                 json(res, 500, { success: false, error: 'Erreur serveur' });
             }
         } else {
+            const duration = Date.now() - startTime;
+            trackRequestTiming(req, 404, duration);
             json(res, 404, { success: false, error: 'Endpoint non trouvé' });
         }
         return;
