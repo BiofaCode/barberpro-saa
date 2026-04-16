@@ -1,0 +1,170 @@
+
+> salonpro-saas@2.0.0 test
+> jest --coverage --forceExit
+
+PASS tests/security.test.js
+  Security Tests
+    Rate Limiting
+      √ should block after 10 failed login attempts in 15 minutes (54 ms)
+      √ should reset rate limit after time window (2 ms)
+      √ should limit OTP requests to 5 per 15 minutes (1 ms)
+      √ should limit booking creation to 10 per hour per IP (1 ms)
+    JWT Validation
+      √ should return 401 if Authorization header is missing (2 ms)
+      √ should return 401 if token format is invalid (1 ms)
+      √ should return 401 if signature is invalid (1 ms)
+      √ should return 401 if token is expired (1 ms)
+      √ should accept valid token and extract payload (1 ms)
+    IDOR (Insecure Direct Object Reference)
+      √ should prevent user A from accessing user B salon without permission (2 ms)
+      √ should prevent employee from accessing different salon (1 ms)
+      √ should allow superadmin to access any salon (1 ms)
+      √ should prevent accessing client data from different salon (1 ms)
+    XSS Protection
+      √ should escape HTML in review comments (1 ms)
+      √ should escape HTML in salon description (1 ms)
+      √ should not allow script tags in contact form
+    Path Traversal Protection
+      √ should prevent access to files outside /uploads/
+      √ should block .. in file paths (1 ms)
+      √ should only allow whitelisted file extensions (1 ms)
+    Security Headers
+      √ should include X-Content-Type-Options: nosniff (1 ms)
+      √ should include X-Frame-Options: DENY (1 ms)
+      √ should include Strict-Transport-Security (1 ms)
+      √ should include Content-Security-Policy (1 ms)
+    CORS Configuration
+      √ should restrict Access-Control-Allow-Origin to allowed domains (1 ms)
+      √ should not allow wildcard CORS (1 ms)
+      √ should allow OPTIONS preflight requests
+    Input Validation
+      √ should validate email format
+      √ should validate phone number length (1 ms)
+      √ should enforce max body size (512KB) (1 ms)
+      √ should reject malformed JSON (1 ms)
+
+PASS tests/validation.test.js
+  Input Validation
+    validateEmail
+      √ should accept valid email (55 ms)
+      √ should reject invalid email (1 ms)
+      √ should reject missing email (1 ms)
+    validatePassword
+      √ should accept valid password (2 ms)
+      √ should reject short password (2 ms)
+      √ should reject missing password (1 ms)
+    validateSalonName
+      √ should accept valid salon name (1 ms)
+      √ should reject short name (1 ms)
+      √ should reject very long name (2 ms)
+    validatePhoneNumber
+      √ should accept valid phone number (2 ms)
+      √ should accept phone with formatting (1 ms)
+      √ should reject too short number (1 ms)
+    validateURL
+      √ should accept valid HTTP URL (2 ms)
+      √ should accept valid HTTPS URL (1 ms)
+      √ should reject invalid URL (1 ms)
+    validateDuration
+      √ should accept valid duration (30 minutes) (1 ms)
+      √ should reject too short duration
+      √ should reject too long duration
+    validatePrice
+      √ should accept valid price (1 ms)
+      √ should reject negative price (1 ms)
+      √ should reject too high price (1 ms)
+    validateWebhookURL
+      √ should accept valid HTTPS webhook URL (1 ms)
+      √ should reject localhost (1 ms)
+      √ should reject private IP ranges (1 ms)
+      √ should reject HTTP (require HTTPS) (1 ms)
+    validateHexColor
+      √ should accept valid hex color (1 ms)
+      √ should reject invalid hex color (1 ms)
+      √ should reject short hex (2 ms)
+
+PASS tests/auth.test.js
+  Authentication Routes
+    POST /api/pro/login
+      √ should return 400 if email is missing (40 ms)
+      √ should return 400 if password is missing (1 ms)
+      √ should return 401 if credentials are invalid (1 ms)
+      √ should return 200 and JWT token on successful login (2 ms)
+      √ should enforce rate limiting (10 attempts / 15 min) (8 ms)
+    POST /api/pro/forgot-password
+      √ should return 200 for valid email (silent success) (2 ms)
+      √ should return 200 for invalid email (silent success - no enumeration) (2 ms)
+      √ should send reset email when email exists (1 ms)
+      √ should enforce rate limiting (5 attempts / 15 min) (1 ms)
+    POST /api/pro/reset-password
+      √ should return 400 if token is missing (1 ms)
+      √ should return 400 if new password is missing (1 ms)
+      √ should return 401 if token is invalid (1 ms)
+      √ should return 401 if token is expired (1 ms)
+      √ should return 200 and update password on valid token (1 ms)
+      √ should invalidate token after use (1 ms)
+    POST /api/admin/login
+      √ should return 400 if password is missing (1 ms)
+      √ should return 401 if password is incorrect
+      √ should return 200 and JWT token on correct password
+      √ should enforce rate limiting (10 attempts / 15 min)
+      √ should return superadmin role in token (1 ms)
+
+PASS tests/bookings.test.js
+  Booking Routes
+    GET /api/salon/:slug/available-slots
+      √ should return 400 if date is missing (47 ms)
+      √ should return 400 if date format is invalid (2 ms)
+      √ should return 404 if salon not found (2 ms)
+      √ should return available time slots for valid date (2 ms)
+      √ should exclude already booked slots (2 ms)
+      √ should exclude employee unavailability blocks (1 ms)
+    POST /api/salon/:slug/book
+      √ should return 400 if required fields are missing (1 ms)
+      √ should return 404 if salon not found (1 ms)
+      √ should return 404 if service not found (1 ms)
+      √ should return 409 if time slot is already booked (1 ms)
+      √ should create booking successfully (1 ms)
+      √ should send confirmation email (1 ms)
+      √ should enforce rate limiting (10 bookings / hour per IP) (1 ms)
+      √ should validate email format
+      √ should validate phone number format (1 ms)
+    POST /api/salon/:slug/my-bookings/otp
+      √ should send OTP email to client (1 ms)
+      √ should return 400 if email is invalid
+      √ should enforce rate limiting (5 OTP / 15 min) (1 ms)
+    POST /api/salon/:slug/my-bookings
+      √ should return 400 if OTP is missing (1 ms)
+      √ should return 401 if OTP is invalid (1 ms)
+      √ should return bookings matching email (1 ms)
+    PUT /api/salon/:slug/bookings/:id/cancel
+      √ should cancel booking with email token (1 ms)
+      √ should send cancellation confirmation email
+      √ should return 401 if token is invalid
+      √ should refund payment if applicable (1 ms)
+    PUT /api/pro/salon/:salonId/bookings/:id
+      √ should require authentication (1 ms)
+      √ should only allow owner/employee of same salon
+      √ should update booking status
+      √ should update booking notes (1 ms)
+      √ should prevent updating past bookings (1 ms)
+
+-----------------------|---------|----------|---------|---------|-------------------
+File                   | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-----------------------|---------|----------|---------|---------|-------------------
+All files              |    2.17 |     2.42 |    3.01 |    2.01 |                   
+ production-launch     |       0 |        0 |       0 |       0 |                   
+  db.js                |       0 |        0 |       0 |       0 | 5-370             
+  email.js             |       0 |        0 |       0 |       0 | 6-828             
+  server.js            |       0 |        0 |       0 |       0 | 6-3348            
+  sms.js               |       0 |        0 |       0 |       0 | 6-112             
+ production-launch/lib |   56.98 |       65 |   52.94 |   56.75 |                   
+  security.js          |       0 |        0 |       0 |       0 | 9-103             
+  validation.js        |    80.3 |    81.25 |      90 |    87.5 | 43-51,88          
+-----------------------|---------|----------|---------|---------|-------------------
+Test Suites: 4 passed, 4 total
+Tests:       108 passed, 108 total
+Snapshots:   0 total
+Time:        11.684 s, estimated 12 s
+Ran all test suites.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
