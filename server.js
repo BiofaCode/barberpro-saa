@@ -3008,10 +3008,11 @@ const server = http.createServer(async (req, res) => {
 
     // CORS
     if (req.method === 'OPTIONS') {
+        const origin = req.headers.origin || '';
+        const corsHeaders = getCORSHeaders(origin);
         res.writeHead(204, {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            ...corsHeaders,
+            ...SECURITY_HEADERS
         });
         return res.end();
     }
@@ -3345,4 +3346,9 @@ async function start() {
     });
 }
 
-start();
+// Export for testing
+if (process.env.NODE_ENV === 'test') {
+    module.exports = { server, db, createToken, verifyToken };
+} else {
+    start();
+}

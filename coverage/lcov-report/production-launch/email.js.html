@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">5.44% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/147</span>
+                <span class='fraction'>8/147</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">1.72% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/174</span>
+                <span class='fraction'>3/174</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">6.66% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>1/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">5.88% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/136</span>
+                <span class='fraction'>8/136</span>
             </div>
         
             
@@ -898,12 +898,12 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1542,17 +1542,17 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -1728,12 +1728,12 @@
    Uses Resend API for transactional emails
    ============================================ */
 &nbsp;
-const { Resend } = <span class="cstat-no" title="statement not covered" >require('resend');</span>
+const { Resend } = require('resend');
 &nbsp;
 // Initialize Resend with the provided API key (from env)
-const resend = <span class="cstat-no" title="statement not covered" >new Resend(process.env.RESEND_API_KEY);</span>
+const resend = new Resend(process.env.RESEND_API_KEY);
 &nbsp;
-<span class="cstat-no" title="statement not covered" >console.log(`📧 Email configuré via API Resend`);</span>
+console.log(`📧 Email configuré via API Resend`);
 &nbsp;
 // Beautiful HTML email template
 function <span class="fstat-no" title="function not covered" >buildConfirmationEmail(</span>booking, salon, cancelUrl, receiptUrl) {
@@ -2371,18 +2371,18 @@ async function <span class="fstat-no" title="function not covered" >sendEmployee
 }
 &nbsp;
 // Generic email sender — used for transactional/internal emails (e.g. contact form)
-async function <span class="fstat-no" title="function not covered" >sendEmail(</span>{ to, subject, html }) {
-  const fromEmail = <span class="cstat-no" title="statement not covered" >process.env.RESEND_FROM_EMAIL || 'noreply@kreno.ch';</span>
-  const fromName = <span class="cstat-no" title="statement not covered" >process.env.SMTP_FROM_NAME || 'Kreno';</span>
-<span class="cstat-no" title="statement not covered" >  try {</span>
-<span class="cstat-no" title="statement not covered" >    await resend.emails.send({ from: `${fromName} &lt;${fromEmail}&gt;`, to, subject, html });</span>
+async function sendEmail({ to, subject, html }) {
+  const fromEmail = process.env.RESEND_FROM_EMAIL || <span class="branch-1 cbranch-no" title="branch not covered" >'noreply@kreno.ch';</span>
+  const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
+  try {
+    await resend.emails.send({ from: `${fromName} &lt;${fromEmail}&gt;`, to, subject, html });
   } catch (e) {
 <span class="cstat-no" title="statement not covered" >    console.error('sendEmail error:', e.message);</span>
 <span class="cstat-no" title="statement not covered" >    throw e;</span>
   }
 }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail, sendEmail };</span>
+module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail, sendEmail };
 &nbsp;
 // ---- Referral reward email (sent to parrain when filleul pays first month) ----
 async function <span class="fstat-no" title="function not covered" >sendReferralRewardEmail(</span>parrainEmail, parrainName, filleulSalonName) {
@@ -2560,7 +2560,7 @@ async function <span class="fstat-no" title="function not covered" >sendReviewRe
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-04-16T20:06:47.953Z
+                at 2026-04-16T20:41:34.947Z
             </div>
         <script src="../prettify.js"></script>
         <script>

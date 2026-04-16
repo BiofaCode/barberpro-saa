@@ -3,7 +3,37 @@
  */
 
 const crypto = require('crypto');
+const { MongoMemoryServer } = require('mongodb-memory-server');
 const JWT_SECRET = process.env.JWT_SECRET || 'test_secret';
+
+// Setup test environment before running tests
+beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.JWT_SECRET = JWT_SECRET;
+    process.env.ADMIN_PASSWORD = 'admin123';
+
+    // Start in-memory MongoDB
+    const mongoServer = await MongoMemoryServer.create();
+    process.env.MONGODB_URI = mongoServer.getUri();
+
+    // Store globally for cleanup
+    global.__MONGO_SERVER__ = mongoServer;
+
+    // Clear require cache to ensure new server instance with new DB URI
+    delete require.cache[require.resolve('../db.js')];
+    delete require.cache[require.resolve('../server.js')];
+
+    // Initialize database
+    const db = require('../db.js');
+    await db.connectDB();
+});
+
+afterAll(async () => {
+    // Clean up in-memory MongoDB
+    if (global.__MONGO_SERVER__) {
+        await global.__MONGO_SERVER__.stop();
+    }
+});
 
 // Create test JWT tokens
 function createTestToken(payload = {}, expiresInDays = 30) {
