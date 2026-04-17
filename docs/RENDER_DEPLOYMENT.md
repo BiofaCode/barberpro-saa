@@ -298,7 +298,32 @@ This redeployment will use the same commit and environment variables.
 
 ---
 
-## 10. Security Checklist
+## 10. Email Configuration Checklist
+
+Before going live, email must be fully configured. See `docs/EMAIL_CONFIGURATION.md` for detailed setup:
+
+- [ ] DNS SPF record added: `v=spf1 include:resend.com ~all`
+- [ ] DNS DKIM records added (3 CNAME records from Resend dashboard)
+- [ ] DNS DMARC record added: `v=DMARC1; p=quarantine; rua=mailto:noreply@kreno.ch`
+- [ ] `RESEND_API_KEY` set in Render environment (from Resend dashboard)
+- [ ] `RESEND_FROM_EMAIL` set to `noreply@kreno.ch`
+- [ ] Test booking confirmation email sends without errors
+- [ ] Test OTP email sends and code is correct format
+- [ ] Verify emails do NOT go to spam (use mail-tester.com)
+- [ ] Reminder emails send 24h before appointments
+- [ ] All email templates use correct sender: `noreply@kreno.ch`
+- [ ] No hardcoded test emails in production code
+- [ ] Resend API status is UP (https://status.resend.com)
+
+**Required Environment Variables:**
+```
+RESEND_API_KEY=re_xxxxxxxxxxxxx
+RESEND_FROM_EMAIL=noreply@kreno.ch
+```
+
+---
+
+## 11. Security Checklist
 
 Before going live:
 
@@ -314,7 +339,7 @@ Before going live:
 
 ---
 
-## 11. Further Reading
+## 12. Further Reading
 
 - [Render.com Documentation](https://docs.render.com)
 - [Node.js on Render](https://docs.render.com/deploy-node)
@@ -322,6 +347,8 @@ Before going live:
 - [Environment Variables on Render](https://docs.render.com/environment-variables)
 
 For questions about Kreno-specific configuration, see:
+- `docs/EMAIL_CONFIGURATION.md` — Email setup, DNS records, troubleshooting
+- `docs/EMAIL_TEMPLATES.md` — All email templates and variables
 - `docs/SECURITY_VERIFICATION.md` — Security hardening details
 - `docs/DATABASE_SETUP.md` — MongoDB setup and optimization
 - `docs/MONITORING.md` — Application monitoring and logging
