@@ -1,5 +1,6 @@
-package com.barberpro.barber_app
+package ch.kreno.app
 
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity()
+
