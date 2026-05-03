@@ -34,11 +34,11 @@ workflows:
     max_build_duration: 60
     environment:
       flutter: stable
+      groups:
+        - android_signing         # CM_KEYSTORE_BASE64, CM_KEYSTORE_PASSWORD, CM_KEY_PASSWORD
       vars:
         PACKAGE_NAME: "com.kreno.app"
         CM_KEY_ALIAS: kreno
-        # Les variables secrètes sont dans Codemagic → Environment variables :
-        # CM_KEYSTORE_BASE64, CM_KEYSTORE_PASSWORD, CM_KEY_PASSWORD
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
