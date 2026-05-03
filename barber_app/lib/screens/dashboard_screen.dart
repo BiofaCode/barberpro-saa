@@ -378,7 +378,7 @@ class DashboardScreenState extends State<DashboardScreen> {
           child: Image.network(
             logoUrl,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _defaultAvatar(),
+            errorBuilder: (_, _, _) => _defaultAvatar(),
           ),
         ),
       );

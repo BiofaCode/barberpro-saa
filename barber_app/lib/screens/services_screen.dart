@@ -157,7 +157,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   Navigator.pop(ctx);
                   bool ok;
                   if (isEdit) {
-                    final id = existing!['_id'] as String? ?? existing['id'] as String? ?? '';
+                    final id = existing['_id'] as String? ?? existing['id'] as String? ?? '';
                     ok = await ApiService.updateService(id, payload);
                   } else {
                     ok = await ApiService.addService(payload);
@@ -218,7 +218,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   : ListView.separated(
                       padding: const EdgeInsets.all(20),
                       itemCount: _services.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (_, i) => _buildServiceCard(_services[i]),
                     ),
             ),
@@ -283,7 +283,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                       ),
                     if (price != null && duration != null) const SizedBox(width: 8),
                     if (duration != null)
-                      _buildBadge(Icons.timer_rounded, '${duration} min', AppTheme.warning),
+                      _buildBadge(Icons.timer_rounded, '$duration min', AppTheme.warning),
                   ],
                 ),
               ],

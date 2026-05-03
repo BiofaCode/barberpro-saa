@@ -16,7 +16,6 @@ class _BlocksScreenState extends State<BlocksScreen> {
   bool _loading = true;
 
   final _dateFmt = DateFormat('dd/MM/yyyy', 'fr_FR');
-  final _timeFmt = DateFormat('HH:mm');
 
   @override
   void initState() {
@@ -193,7 +192,7 @@ class _BlocksScreenState extends State<BlocksScreen> {
                   : ListView.separated(
                       padding: const EdgeInsets.all(20),
                       itemCount: _blocks.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (_, i) => _buildBlockCard(_blocks[i]),
                     ),
             ),

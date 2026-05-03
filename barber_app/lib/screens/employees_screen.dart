@@ -174,7 +174,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                   : ListView.separated(
                       padding: const EdgeInsets.all(20),
                       itemCount: _employees.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (_, i) => _buildEmployeeCard(_employees[i]),
                     ),
             ),

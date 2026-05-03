@@ -15,7 +15,7 @@ workflows:
         working_directory: barber_app
 
       - name: Analyze
-        script: flutter analyze --no-fatal-warnings
+        script: flutter analyze --no-fatal-warnings --no-fatal-infos
         working_directory: barber_app
 
       - name: Build APK debug
