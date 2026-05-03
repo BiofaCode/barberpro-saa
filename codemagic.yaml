@@ -1,0 +1,105 @@
+workflows:
+
+  # ─────────────────────────────────────────────
+  #  TEST — Build debug Android (sans signing)
+  #  Objectif : valider que le projet compile
+  # ─────────────────────────────────────────────
+  android-debug:
+    name: Android Debug (no signing)
+    max_build_duration: 30
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+        working_directory: barber_app
+
+      - name: Analyze
+        script: flutter analyze --no-fatal-warnings
+        working_directory: barber_app
+
+      - name: Build APK debug
+        script: flutter build apk --debug
+        working_directory: barber_app
+
+    artifacts:
+      - barber_app/build/app/outputs/flutter-apk/app-debug.apk
+
+
+  # ─────────────────────────────────────────────
+  #  ANDROID — Google Play (internal test track)
+  # ─────────────────────────────────────────────
+  android-release:
+    name: Android Release (AAB)
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      android_signing:
+        - kreno_keystore        # à configurer : Codemagic → Code signing → Android
+      groups:
+        - google_play           # variable GOOGLE_PLAY_CREDENTIALS (JSON service account)
+      vars:
+        PACKAGE_NAME: "com.kreno.app"
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+        working_directory: barber_app
+
+      - name: Build App Bundle
+        script: |
+          flutter build appbundle \
+            --release \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER
+        working_directory: barber_app
+
+    artifacts:
+      - barber_app/build/app/outputs/bundle/release/app-release.aab
+
+    publishing:
+      google_play:
+        credentials: $GOOGLE_PLAY_CREDENTIALS
+        track: internal
+        submit_as_draft: true
+
+
+  # ─────────────────────────────────────────────
+  #  iOS — TestFlight
+  # ─────────────────────────────────────────────
+  ios-testflight:
+    name: iOS TestFlight
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.kreno.app
+      groups:
+        - app_store_connect      # APP_STORE_CONNECT_KEY_IDENTIFIER
+                                 # APP_STORE_CONNECT_ISSUER_ID
+                                 # APP_STORE_CONNECT_PRIVATE_KEY
+
+    scripts:
+      - name: Get Flutter packages
+        script: flutter pub get
+        working_directory: barber_app
+
+      - name: Build IPA
+        script: |
+          flutter build ipa \
+            --release \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER
+        working_directory: barber_app
+
+    artifacts:
+      - barber_app/build/ios/ipa/*.ipa
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - Beta Testers
