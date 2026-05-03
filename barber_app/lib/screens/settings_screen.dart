@@ -1203,7 +1203,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           'stars': stars,
                         };
                         final success = isEdit
-                            ? await ApiService.updateTestimonial(t!['_id'], payload)
+                            ? await ApiService.updateTestimonial(t['_id'], payload)
                             : await ApiService.addTestimonial(payload);
 
                         if (success) {
@@ -1334,6 +1334,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (pickedFile == null) return;
 
     final titleCtrl = TextEditingController();
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

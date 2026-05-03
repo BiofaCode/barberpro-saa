@@ -512,7 +512,7 @@ class _ClientHistorySheetState extends State<_ClientHistorySheet> {
                         controller: scrollCtrl,
                         padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                         itemCount: _bookings.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
                         itemBuilder: (_, i) {
                           final b = _bookings[i];
                           final color = b.status == BookingStatus.completed

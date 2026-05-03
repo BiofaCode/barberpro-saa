@@ -641,7 +641,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: _clientResults.length > 5 ? 5 : _clientResults.length,
-          separatorBuilder: (_, __) => Divider(height: 1, color: AppTheme.border),
+          separatorBuilder: (_, _) => Divider(height: 1, color: AppTheme.border),
           itemBuilder: (_, i) {
             final client = _clientResults[i];
             final name = client['name'] ?? '';
@@ -842,8 +842,8 @@ class _ServiceDropdown extends StatelessWidget {
                         if (price != null || duration != null)
                           Text(
                             [
-                              if (price != null) '${price}€',
-                              if (duration != null) '${duration} min',
+                              if (price != null) '$price€',
+                              if (duration != null) '$duration min',
                             ].join(' · '),
                             style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted),
                           ),
@@ -870,8 +870,8 @@ class _ServiceDropdown extends StatelessWidget {
                   child: Text(
                     [
                       name,
-                      if (price != null) '${price}€',
-                      if (duration != null) '${duration} min',
+                      if (price != null) '$price€',
+                      if (duration != null) '$duration min',
                     ].join(' · '),
                     style: GoogleFonts.dmSans(
                       fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textPrimary),
