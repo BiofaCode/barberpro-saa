@@ -30,19 +30,36 @@ workflows:
   #  ANDROID — Google Play (internal test track)
   # ─────────────────────────────────────────────
   android-release:
-    name: Android Release (AAB)
+    name: Android Release (APK + AAB)
     max_build_duration: 60
     environment:
       flutter: stable
-      android_signing:
-        - kreno_keystore        # à configurer : Codemagic → Code signing → Android
-      groups:
-        - google_play           # variable GOOGLE_PLAY_CREDENTIALS (JSON service account)
       vars:
         PACKAGE_NAME: "com.kreno.app"
+        CM_KEY_ALIAS: kreno
+        # Les variables secrètes sont dans Codemagic → Environment variables :
+        # CM_KEYSTORE_BASE64, CM_KEYSTORE_PASSWORD, CM_KEY_PASSWORD
     scripts:
       - name: Get Flutter packages
         script: flutter pub get
+        working_directory: barber_app
+
+      - name: Set up keystore
+        script: |
+          echo $CM_KEYSTORE_BASE64 | base64 --decode > $CM_BUILD_DIR/kreno-release.keystore
+          cat >> "$CM_BUILD_DIR/barber_app/android/key.properties" <<EOF
+          storePassword=$CM_KEYSTORE_PASSWORD
+          keyPassword=$CM_KEY_PASSWORD
+          keyAlias=$CM_KEY_ALIAS
+          storeFile=$CM_BUILD_DIR/kreno-release.keystore
+          EOF
+
+      - name: Build APK release
+        script: |
+          flutter build apk \
+            --release \
+            --build-name=1.0.0 \
+            --build-number=$BUILD_NUMBER
         working_directory: barber_app
 
       - name: Build App Bundle
@@ -54,13 +71,8 @@ workflows:
         working_directory: barber_app
 
     artifacts:
+      - barber_app/build/app/outputs/flutter-apk/app-release.apk
       - barber_app/build/app/outputs/bundle/release/app-release.aab
-
-    publishing:
-      google_play:
-        credentials: $GOOGLE_PLAY_CREDENTIALS
-        track: internal
-        submit_as_draft: true
 
 
   # ─────────────────────────────────────────────
