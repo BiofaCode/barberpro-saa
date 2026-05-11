@@ -88,6 +88,8 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: ch.kreno.app
+      groups:
+        - app_store_connect
 
     scripts:
       - name: Get Flutter packages
