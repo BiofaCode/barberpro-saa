@@ -87,7 +87,7 @@ workflows:
       cocoapods: default
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.kreno.app
+        bundle_identifier: ch.kreno.app
       groups:
         - app_store_connect      # APP_STORE_CONNECT_KEY_IDENTIFIER
                                  # APP_STORE_CONNECT_ISSUER_ID

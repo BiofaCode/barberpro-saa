@@ -818,7 +818,7 @@ async function sendReviewRequestEmail(booking, salon, reviewUrl) {
 
   try {
     await resend.emails.send({
-      from: process.env.RESEND_FROM || `${salonName} <noreply@barberpro.ch>`,
+      from: process.env.RESEND_FROM_EMAIL || `${salonName} <noreply@kreno.ch>`,
       to: booking.clientEmail,
       subject: `⭐ Comment s'est passé votre visite chez ${salonName} ?`,
       html,
