@@ -94,6 +94,23 @@ workflows:
         script: flutter pub get
         working_directory: barber_app
 
+      - name: Set up manual signing
+        script: |
+          python3 -c "
+          import re
+          path = 'ios/Runner.xcodeproj/project.pbxproj'
+          c = open(path).read()
+          c = c.replace('CODE_SIGN_STYLE = Automatic;', 'CODE_SIGN_STYLE = Manual;')
+          c = re.sub(
+            r'([ \t]+DEVELOPMENT_TEAM = YL6QK29XDD;)',
+            lambda m: m.group(0) + '\n' + re.match(r'[ \t]+', m.group(0)).group(0) + 'CODE_SIGN_STYLE = Manual;',
+            c
+          )
+          open(path, 'w').write(c)
+          "
+          xcode-project use-profiles
+        working_directory: barber_app
+
       - name: Build IPA
         script: |
           flutter build ipa \
