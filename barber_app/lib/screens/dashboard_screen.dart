@@ -548,17 +548,7 @@ class DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
               child: Row(
                 children: [
-                  Container(
-                    width: 36, height: 36,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Center(
-                      child: Text('K', style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
-                    ),
-                  ),
+                  Image.asset('assets/images/logo.png', width: 36, height: 36),
                   const SizedBox(width: 12),
                   Text('Kreno',
                     style: GoogleFonts.bricolageGrotesque(
