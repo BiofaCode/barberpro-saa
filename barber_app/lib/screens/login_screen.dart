@@ -226,21 +226,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 // Logo
                 GestureDetector(
                   onLongPress: _showServerConfig,
-                  child: Container(
-                    width: 80, height: 80,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppTheme.primary, AppTheme.primaryDark],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(22),
-                      boxShadow: [BoxShadow(color: AppTheme.primary.withAlpha(61), blurRadius: 30, offset: const Offset(0, 10))],
-                    ),
-                    child: const Center(
-                      child: Text('K', style: TextStyle(fontSize: 38, fontWeight: FontWeight.w800, color: Colors.white)),
-                    ),
-                  ),
+                  child: Image.asset('assets/images/logo.png', width: 90, height: 90),
                 ),
 
                 const SizedBox(height: 24),
