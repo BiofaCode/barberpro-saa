@@ -165,7 +165,7 @@ function applySalonBranding(salon) {
   }
 
   const logoEl = document.querySelector('.nav-logo-text');
-  const salonIcon = salon.branding?.icon || '✂️';
+  const salonIcon = salon.branding?.icon || '✨';
   document.querySelectorAll('.nav-logo-icon').forEach(el => {
     el.innerHTML = salon.logo
       ? `<img src="${salon.logo}" alt="${salon.name}" style="width:36px;height:36px;object-fit:cover;border-radius:8px">`

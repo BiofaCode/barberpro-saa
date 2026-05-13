@@ -552,16 +552,14 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                             icon: Icons.notes_rounded,
                             maxLines: 3,
                           ),
-                          const SizedBox(height: 28),
-
-                          // ── Submit button ─────────────────────────
-                          _SubmitButton(
-                            loading: _submitting,
-                            onTap: _submit,
-                          ),
                           const SizedBox(height: 8),
                         ],
                       ),
+              ),
+              // ── Fixed footer ──────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                child: _SubmitButton(loading: _submitting, onTap: _submit),
               ),
             ],
           );
