@@ -758,7 +758,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               await launchUrl(uri, mode: LaunchMode.externalApplication);
             },
             icon: const Icon(Icons.credit_card_rounded, size: 18),
-            label: const Text('Gérer sur Stripe'),
+            label: const Text('Gérer l\'abonnement'),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white.withAlpha(10),
               foregroundColor: AppTheme.textPrimary,
