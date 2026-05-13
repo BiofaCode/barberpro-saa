@@ -752,10 +752,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Text('$price CHF / mois', style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textPrimary)),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: () {
-              // Normally this calls an endpoint to generate Stripe Billing Portal link
-              // and opens it in external browser.
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez utiliser la version Web pour gérer votre abonnement sur Stripe.')));
+            onPressed: () async {
+              final uri = Uri.parse('${ApiService.currentServerUrl}/pro');
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
             },
             icon: const Icon(Icons.credit_card_rounded, size: 18),
             label: const Text('Gérer sur Stripe'),
