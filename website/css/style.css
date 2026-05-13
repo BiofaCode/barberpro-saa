@@ -1991,7 +1991,7 @@ h3 {
   min-height: 54px;
   border-radius: var(--radius-full);
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-  box-shadow: 0 6px 28px rgba(99, 102, 241, 0.55), 0 2px 8px rgba(0,0,0,0.35);
+  box-shadow: 0 6px 28px var(--color-primary-glow), 0 2px 8px rgba(0,0,0,0.35);
   white-space: nowrap;
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
 }
@@ -2001,8 +2001,8 @@ h3 {
 }
 
 @keyframes mobileBtnPulse {
-  0%, 100% { box-shadow: 0 6px 28px rgba(99,102,241,0.55), 0 2px 8px rgba(0,0,0,0.35); }
-  50% { box-shadow: 0 8px 36px rgba(99,102,241,0.75), 0 2px 8px rgba(0,0,0,0.4); }
+  0%, 100% { box-shadow: 0 6px 28px var(--color-primary-glow), 0 2px 8px rgba(0,0,0,0.35); }
+  50% { box-shadow: 0 8px 36px var(--color-primary-glow), 0 2px 8px rgba(0,0,0,0.4); }
 }
 
 .mobile-sticky-cta.visible .mobile-sticky-btn {
