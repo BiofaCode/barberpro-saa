@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -824,6 +825,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final subtitleCtrl = TextEditingController(text: branding['heroSubtitle'] ?? '');
     final primaryColorCtrl = TextEditingController(text: branding['primaryColor'] ?? '#6366F1');
     final accentColorCtrl = TextEditingController(text: branding['accentColor'] ?? '#818CF8');
+    final backgroundColorCtrl = TextEditingController(text: branding['backgroundColor'] ?? '#0A0A0F');
 
     final heroStats = branding['heroStats'] as Map<String, dynamic>? ?? {};
     final stat1ValCtrl = TextEditingController(text: heroStats['stat1Value']?.toString() ?? '2500+');
@@ -900,7 +902,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Color pickerColor = hexToColor(ctrl.text);
+                      showDialog(
+                        context: ctx,
+                        builder: (dialogCtx) => StatefulBuilder(
+                          builder: (dialogCtx, setDialogState) => AlertDialog(
+                            backgroundColor: AppTheme.bgCard,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: Text(
+                              'Couleur personnalisée',
+                              style: GoogleFonts.bricolageGrotesque(
+                                color: AppTheme.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            content: ColorPicker(
+                              pickerColor: pickerColor,
+                              onColorChanged: (color) {
+                                setDialogState(() => pickerColor = color);
+                                final hex = '#${(color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+                                setSheetState(() => ctrl.text = hex);
+                              },
+                              enableAlpha: false,
+                              labelTypes: const [],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogCtx),
+                                child: Text(
+                                  'OK',
+                                  style: GoogleFonts.dmSans(color: AppTheme.primary, fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.colorize_rounded, size: 16),
+                    label: Text('Couleur personnalisée', style: GoogleFonts.dmSans(fontSize: 13)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      padding: EdgeInsets.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 TextField(
                   controller: ctrl,
                   onChanged: (_) => setSheetState(() {}),
@@ -949,6 +1003,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   buildColorPicker('Couleur Primaire', primaryColorCtrl),
                   const SizedBox(height: 16),
                   buildColorPicker('Couleur Accent', accentColorCtrl),
+                  const SizedBox(height: 16),
+                  buildColorPicker('Couleur de fond', backgroundColorCtrl),
                   const SizedBox(height: 24),
                   Text("Statistiques d'accroche (Hero)", style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                   const SizedBox(height: 12),
@@ -979,6 +1035,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           'heroSubtitle': subtitleCtrl.text.trim(),
                           'primaryColor': primaryColorCtrl.text.trim(),
                           'accentColor': accentColorCtrl.text.trim(),
+                          'backgroundColor': backgroundColorCtrl.text.trim(),
                           'heroStats': {
                             'stat1Value': stat1ValCtrl.text.trim().isNotEmpty ? stat1ValCtrl.text.trim() : '2500+',
                             'stat1Label': stat1LabCtrl.text.trim().isNotEmpty ? stat1LabCtrl.text.trim() : 'Clients satisfaits',
