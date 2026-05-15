@@ -48,10 +48,11 @@ class _ClientsScreenState extends State<ClientsScreen> {
 
   List<Map<String, dynamic>> get _filteredClients {
     if (_searchQuery.isEmpty) return _clients;
+    final q = _searchQuery.toLowerCase();
     return _clients
-        .where((c) => (c['name'] as String? ?? '')
-            .toLowerCase()
-            .contains(_searchQuery.toLowerCase()))
+        .where((c) =>
+            (c['name'] as String? ?? '').toLowerCase().contains(q) ||
+            (c['phone'] as String? ?? '').toLowerCase().contains(q))
         .toList();
   }
 
@@ -75,7 +76,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                 children: [
                   Text(
                     'Clients',
-                    style: GoogleFonts.playfairDisplay(
+                    style: GoogleFonts.bricolageGrotesque(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary,
@@ -107,7 +108,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                         ),
                         child: Text(
                           '${_clients.length} clients',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.dmSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.primary,
@@ -127,7 +128,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                 controller: _searchController,
                 onChanged: (v) => setState(() => _searchQuery = v),
                 decoration: InputDecoration(
-                  hintText: 'Rechercher un client...',
+                  hintText: 'Rechercher par nom ou téléphone...',
                   prefixIcon: Icon(
                     Icons.search_rounded,
                     color: AppTheme.textMuted,
@@ -162,7 +163,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                               const SizedBox(height: 16),
                               Text(
                                 'Impossible de charger les données',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.dmSans(
                                   fontSize: 15,
                                   color: AppTheme.textMuted,
                                 ),
@@ -207,7 +208,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                                             _searchQuery.isNotEmpty
                                                 ? 'Aucun client trouvé'
                                                 : 'Aucun client pour l\'instant',
-                                            style: GoogleFonts.outfit(
+                                            style: GoogleFonts.dmSans(
                                               fontSize: 15,
                                               color: AppTheme.textMuted,
                                             ),
@@ -217,7 +218,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                                             Text(
                                               'Les clients ajoutés depuis l\'admin\nou le site apparaîtront ici',
                                               textAlign: TextAlign.center,
-                                              style: GoogleFonts.outfit(
+                                              style: GoogleFonts.dmSans(
                                                 fontSize: 13,
                                                 color: AppTheme.textMuted,
                                                 height: 1.5,
@@ -286,7 +287,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
               child: Center(
                 child: Text(
                   initials,
-                  style: GoogleFonts.outfit(
+                  style: GoogleFonts.dmSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.bgDark,
@@ -303,7 +304,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                 children: [
                   Text(
                     name,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.dmSans(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.textPrimary,
@@ -312,7 +313,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     phone,
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.dmSans(
                       fontSize: 13,
                       color: AppTheme.textSecondary,
                     ),
@@ -329,7 +330,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                   children: [
                     Text(
                       '$visits visites',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.dmSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.primary,
@@ -338,7 +339,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                     const SizedBox(height: 4),
                     Text(
                       visits >= 10 ? 'Client fidèle' : 'Client',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.dmSans(
                         fontSize: 11,
                         color: visits >= 10 ? AppTheme.success : AppTheme.textMuted,
                       ),
@@ -447,7 +448,7 @@ class _ClientHistorySheetState extends State<_ClientHistorySheet> {
                   ),
                   child: Center(
                     child: Text(initials,
-                        style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.bgDark)),
+                        style: GoogleFonts.dmSans(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.bgDark)),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -504,7 +505,7 @@ class _ClientHistorySheetState extends State<_ClientHistorySheet> {
                             const Text('📅', style: TextStyle(fontSize: 40)),
                             const SizedBox(height: 12),
                             Text('Aucun RDV trouvé',
-                                style: GoogleFonts.outfit(fontSize: 14, color: AppTheme.textMuted)),
+                                style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textMuted)),
                           ],
                         ),
                       )
@@ -547,7 +548,7 @@ class _ClientHistorySheetState extends State<_ClientHistorySheet> {
                                   ),
                                 ),
                                 Text('${b.price.toInt()} CHF',
-                                    style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+                                    style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.primary)),
                               ],
                             ),
                           );
@@ -581,7 +582,7 @@ class _StatChip extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 18),
             const SizedBox(height: 4),
-            Text(value, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
+            Text(value, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w700, color: color)),
             Text(label, style: GoogleFonts.dmSans(fontSize: 10, color: AppTheme.textMuted)),
           ],
         ),
