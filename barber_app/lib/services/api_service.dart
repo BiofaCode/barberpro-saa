@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/booking_model.dart';
+import '../theme/app_theme.dart';
 
 class ApiService {
   // URL de production par défaut
@@ -36,6 +37,12 @@ class ApiService {
   static Map<String, dynamic>? get currentSalon => _currentSalon;
   static bool get isLoggedIn => _token != null && _salonId != null;
 
+  static void _applyBrandingColor() {
+    final hex = _currentSalon?['branding']?['primaryColor'] as String?;
+    final color = AppTheme.colorFromHex(hex);
+    if (color != null) AppTheme.primaryNotifier.value = color;
+  }
+
   // ---- Initialiser la session ----
   static Future<bool> loadSession() async {
     try {
@@ -56,6 +63,7 @@ class ApiService {
           _currentSalon = jsonDecode(salonStr);
         }
         _salonId = _currentUser?['salonId'];
+        _applyBrandingColor();
         return true;
       }
     } catch (e) {
@@ -94,6 +102,7 @@ class ApiService {
         _currentUser = Map<String, dynamic>.from(data['user']);
         _currentSalon = data['salon'] != null ? Map<String, dynamic>.from(data['salon']) : null;
         _salonId = _currentUser?['salonId'];
+        _applyBrandingColor();
 
         // Sauvegarder dans SharedPreferences
         final prefs = await SharedPreferences.getInstance();
@@ -116,6 +125,7 @@ class ApiService {
     _salonId = null;
     _currentUser = null;
     _currentSalon = null;
+    AppTheme.primaryNotifier.value = AppTheme.defaultPrimary;
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
   }
