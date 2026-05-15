@@ -1048,6 +1048,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         };
                         final success = await ApiService.updateBranding(newBranding);
                         if (success) {
+                          // Apply new primary color immediately so the app theme
+                          // updates in real-time without waiting for a reload.
+                          final color = AppTheme.colorFromHex(primaryColorCtrl.text.trim());
+                          if (color != null) AppTheme.primaryNotifier.value = color;
+
                           await _loadSalonData();
                           if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Design mis à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.success));
                         } else {
