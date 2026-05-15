@@ -151,7 +151,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                         Expanded(
                           child: Text(
                             _error!,
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.dmSans(
                               fontSize: 13,
                               color: AppTheme.error,
                             ),
@@ -186,7 +186,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                           const SizedBox(height: 16),
                           Text(
                             'Impossible de charger les données',
-                            style: GoogleFonts.outfit(
+                            style: GoogleFonts.dmSans(
                               fontSize: 15,
                               color: AppTheme.textMuted,
                             ),
@@ -320,7 +320,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                             const SizedBox(height: 12),
                             Text(
                               'Aucun rendez-vous aujourd\'hui',
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.dmSans(
                                 fontSize: 15,
                                 color: AppTheme.textMuted,
                               ),
@@ -329,7 +329,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                             Text(
                               'Les réservations depuis le site\net l\'admin apparaîtront ici',
                               textAlign: TextAlign.center,
-                              style: GoogleFonts.outfit(
+                              style: GoogleFonts.dmSans(
                                 fontSize: 13,
                                 color: AppTheme.textMuted,
                                 height: 1.5,

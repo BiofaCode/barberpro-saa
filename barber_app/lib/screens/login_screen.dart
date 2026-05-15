@@ -92,14 +92,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               ),
               const SizedBox(height: 20),
               Text('Mot de passe oublié',
-                style: GoogleFonts.playfairDisplay(
+                style: GoogleFonts.bricolageGrotesque(
                   fontSize: 22, fontWeight: FontWeight.w700,
                   color: AppTheme.textPrimary,
                 )),
               const SizedBox(height: 8),
               Text(
                 'Entrez votre email. Si un compte existe, vous recevrez un lien de réinitialisation valable 1 heure.',
-                style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMuted, height: 1.5),
+                style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted, height: 1.5),
               ),
               const SizedBox(height: 20),
               if (msg != null)
@@ -112,16 +112,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: AppTheme.primary.withAlpha(60)),
                   ),
-                  child: Text(msg!, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.primary)),
+                  child: Text(msg!, style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.primary)),
                 ),
               TextField(
                 controller: ctrl,
                 keyboardType: TextInputType.emailAddress,
                 autofocus: true,
-                style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+                style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'votre@email.com',
-                  hintStyle: GoogleFonts.outfit(color: AppTheme.textMuted),
+                  hintStyle: GoogleFonts.dmSans(color: AppTheme.textMuted),
                   prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textMuted, size: 20),
                   filled: true,
                   fillColor: AppTheme.bgDark,
@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                   child: sending
                     ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text('Envoyer le lien', style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600)),
+                    : Text('Envoyer le lien', style: GoogleFonts.dmSans(fontSize: 15, fontWeight: FontWeight.w600)),
                 ),
               ),
             ],
@@ -172,19 +172,19 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       builder: (_) => AlertDialog(
         backgroundColor: AppTheme.bgCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('URL du serveur', style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+        title: Text('URL du serveur', style: GoogleFonts.dmSans(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Entrez l\'URL de votre instance SalonPro :', style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.textMuted)),
+            Text('Entrez l\'URL de votre instance SalonPro :', style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted)),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
-              style: GoogleFonts.outfit(color: AppTheme.textPrimary, fontSize: 13),
+              style: GoogleFonts.dmSans(color: AppTheme.textPrimary, fontSize: 13),
               decoration: InputDecoration(
                 hintText: 'https://votre-app.onrender.com',
-                hintStyle: GoogleFonts.outfit(color: AppTheme.textMuted, fontSize: 12),
+                hintStyle: GoogleFonts.dmSans(color: AppTheme.textMuted, fontSize: 12),
                 filled: true,
                 fillColor: AppTheme.bgDark,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
@@ -198,13 +198,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.outfit(color: AppTheme.textMuted))),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.dmSans(color: AppTheme.textMuted))),
           TextButton(
             onPressed: () async {
               await ApiService.saveServerUrl(ctrl.text);
               if (context.mounted) Navigator.pop(context);
             },
-            child: Text('Enregistrer', style: GoogleFonts.outfit(color: AppTheme.primary, fontWeight: FontWeight.w600)),
+            child: Text('Enregistrer', style: GoogleFonts.dmSans(color: AppTheme.primary, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -232,10 +232,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 const SizedBox(height: 24),
 
                 Text('Kreno',
-                  style: GoogleFonts.playfairDisplay(fontSize: 32, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  style: GoogleFonts.bricolageGrotesque(fontSize: 32, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
                 const SizedBox(height: 6),
                 Text('Connectez-vous à votre salon',
-                  style: GoogleFonts.outfit(fontSize: 15, color: AppTheme.textMuted)),
+                  style: GoogleFonts.dmSans(fontSize: 15, color: AppTheme.textMuted)),
 
                 const SizedBox(height: 48),
 
@@ -253,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     child: Row(children: [
                       const Icon(Icons.error_outline_rounded, color: AppTheme.error, size: 18),
                       const SizedBox(width: 10),
-                      Expanded(child: Text(_error!, style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.error))),
+                      Expanded(child: Text(_error!, style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.error))),
                     ]),
                   ),
 
@@ -276,7 +276,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   child: GestureDetector(
                     onTap: _showForgotPassword,
                     child: Text('Mot de passe oublié ?',
-                      style: GoogleFonts.outfit(fontSize: 13, color: AppTheme.primary, decoration: TextDecoration.underline, decorationColor: AppTheme.primary)),
+                      style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.primary, decoration: TextDecoration.underline, decorationColor: AppTheme.primary)),
                   ),
                 ),
 
@@ -295,7 +295,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     ),
                     child: _loading
                       ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                      : Text('Se connecter', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w700)),
+                      : Text('Se connecter', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w700)),
                   ),
                 ),
 
@@ -321,13 +321,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
+        Text(label, style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.textSecondary)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscure,
-          style: GoogleFonts.outfit(color: AppTheme.textPrimary),
+          style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
           onSubmitted: (_) => _login(),
           decoration: InputDecoration(
             prefixIcon: Icon(icon, color: AppTheme.textMuted, size: 20),
