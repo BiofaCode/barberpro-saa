@@ -214,8 +214,8 @@ function verifyToken(req) {
         // Verify signature
         const sig = crypto.createHmac('sha256', JWT_SECRET).update(`${parts[0]}.${parts[1]}`).digest('base64url');
         if (sig !== parts[2]) return null;
-        // Check expiration (only enforced if exp is present — legacy tokens without exp still work)
-        if (payload.exp && Date.now() > payload.exp) return null;
+        // Reject tokens without expiry or past their expiry
+        if (!payload.exp || Date.now() > payload.exp) return null;
         return payload;
     } catch { return null; }
 }
@@ -3009,9 +3009,8 @@ const server = http.createServer(async (req, res) => {
     // CORS
     if (req.method === 'OPTIONS') {
         res.writeHead(204, {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            ...getCORSHeaders(req.headers.origin),
+            ...SECURITY_HEADERS,
         });
         return res.end();
     }
