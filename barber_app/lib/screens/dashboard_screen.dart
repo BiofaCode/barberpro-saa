@@ -91,7 +91,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                               color: AppTheme.bgCard,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.menu_rounded,
+                            child: Icon(Icons.menu_rounded,
                                 color: AppTheme.textPrimary, size: 20),
                           ),
                         ),
@@ -145,7 +145,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.wifi_off_rounded,
+                        Icon(Icons.wifi_off_rounded,
                             color: AppTheme.error, size: 20),
                         const SizedBox(width: 10),
                         Expanded(
@@ -159,7 +159,7 @@ class DashboardScreenState extends State<DashboardScreen> {
                         ),
                         GestureDetector(
                           onTap: _loadData,
-                          child: const Icon(Icons.refresh_rounded,
+                          child: Icon(Icons.refresh_rounded,
                               color: AppTheme.error, size: 20),
                         ),
                       ],
@@ -168,7 +168,7 @@ class DashboardScreenState extends State<DashboardScreen> {
 
                 // Stats
                 if (_loading)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.all(40),
                     child: Center(
                       child: CircularProgressIndicator(color: AppTheme.primary),
@@ -392,7 +392,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       width: 46,
       height: 46,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           colors: [AppTheme.primary, AppTheme.primaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -560,7 +560,7 @@ class DashboardScreenState extends State<DashboardScreen> {
             ),
             const Divider(height: 24),
             ListTile(
-              leading: const Icon(Icons.group_rounded, color: AppTheme.textSecondary, size: 22),
+              leading: Icon(Icons.group_rounded, color: AppTheme.textSecondary, size: 22),
               title: Text('Équipe',
                 style: GoogleFonts.dmSans(
                     fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
@@ -572,7 +572,7 @@ class DashboardScreenState extends State<DashboardScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
             ),
             ListTile(
-              leading: const Icon(Icons.spa_rounded, color: AppTheme.textSecondary, size: 22),
+              leading: Icon(Icons.spa_rounded, color: AppTheme.textSecondary, size: 22),
               title: Text('Services',
                 style: GoogleFonts.dmSans(
                     fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),

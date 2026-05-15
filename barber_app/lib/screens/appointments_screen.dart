@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
@@ -155,7 +155,7 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppTheme.border),
                       ),
-                      child: const Icon(Icons.refresh_rounded, color: AppTheme.primary, size: 18),
+                      child: Icon(Icons.refresh_rounded, color: AppTheme.primary, size: 18),
                     ),
                   ),
                 ],
@@ -185,7 +185,7 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
             // ── Content ──────────────────────────────────────────
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                  ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
                   : _viewMode == _ViewMode.day
                           ? _buildDayCalendarView()
                           : TabBarView(

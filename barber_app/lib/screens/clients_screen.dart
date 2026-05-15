@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
@@ -91,7 +91,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                             color: AppTheme.bgCard,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.refresh_rounded,
+                          child: Icon(Icons.refresh_rounded,
                               color: AppTheme.primary, size: 20),
                         ),
                       ),
@@ -128,13 +128,13 @@ class _ClientsScreenState extends State<ClientsScreen> {
                 onChanged: (v) => setState(() => _searchQuery = v),
                 decoration: InputDecoration(
                   hintText: 'Rechercher un client...',
-                  prefixIcon: const Icon(
+                  prefixIcon: Icon(
                     Icons.search_rounded,
                     color: AppTheme.textMuted,
                   ),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.clear_rounded,
+                          icon: Icon(Icons.clear_rounded,
                               color: AppTheme.textMuted),
                           onPressed: () {
                             _searchController.clear();
@@ -149,7 +149,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
             // Client list
             Expanded(
               child: _loading
-                  ? const Center(
+                  ? Center(
                       child: CircularProgressIndicator(color: AppTheme.primary),
                     )
                   : _hasError
@@ -276,7 +276,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
+                gradient: LinearGradient(
                   colors: [AppTheme.primary, AppTheme.primaryDark],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -346,7 +346,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                   ],
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 18),
+                Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted, size: 18),
               ],
             ),
           ],
@@ -442,7 +442,7 @@ class _ClientHistorySheetState extends State<_ClientHistorySheet> {
                 Container(
                   width: 52, height: 52,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
+                    gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Center(
@@ -495,7 +495,7 @@ class _ClientHistorySheetState extends State<_ClientHistorySheet> {
           const SizedBox(height: 8),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
                 : _bookings.isEmpty
                     ? Center(
                         child: Column(

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -57,7 +57,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
       lastDate: now.add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
+          colorScheme: ColorScheme.light(
             primary: AppTheme.primary,
             onPrimary: Colors.white,
             surface: AppTheme.bgCard,
@@ -227,14 +227,14 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                   ),
                   const Spacer(),
                   if (_saving)
-                    const SizedBox(
+                    SizedBox(
                       width: 20, height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
                     )
                   else
                     // More actions popup
                     PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_horiz_rounded, color: AppTheme.textSecondary),
+                      icon: Icon(Icons.more_horiz_rounded, color: AppTheme.textSecondary),
                       color: AppTheme.bgCard,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       onSelected: (val) {
@@ -266,7 +266,7 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
                         color: AppTheme.bgSurface,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.close_rounded, size: 18, color: AppTheme.textSecondary),
+                      child: Icon(Icons.close_rounded, size: 18, color: AppTheme.textSecondary),
                     ),
                   ),
                 ],

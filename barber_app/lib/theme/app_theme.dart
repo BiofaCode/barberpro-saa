@@ -17,7 +17,7 @@ class AppTheme {
   }
 
   // ── Brand Colors ─────────────────────────────────────────
-  static const Color primary      = Color(0xFF5850E8);
+  static Color get primary => primaryNotifier.value;
   static const Color primaryDark  = Color(0xFF4740D4);
   static const Color primaryLight = Color(0xFFEEEDFD);
   static const Color primaryMid   = Color(0xFFB5B0F5);

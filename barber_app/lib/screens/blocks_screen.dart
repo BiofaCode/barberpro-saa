@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
@@ -170,19 +170,19 @@ class _BlocksScreenState extends State<BlocksScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.primary),
+            icon: Icon(Icons.refresh_rounded, color: AppTheme.primary),
             tooltip: 'Actualiser',
             onPressed: _load,
           ),
           IconButton(
-            icon: const Icon(Icons.add_rounded, color: AppTheme.primary),
+            icon: Icon(Icons.add_rounded, color: AppTheme.primary),
             tooltip: 'Ajouter',
             onPressed: _showAddSheet,
           ),
         ],
       ),
       body: _loading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppTheme.primary))
           : RefreshIndicator(
               color: AppTheme.primary,
@@ -200,7 +200,7 @@ class _BlocksScreenState extends State<BlocksScreen> {
           ? FloatingActionButton(
               onPressed: _showAddSheet,
               tooltip: 'Ajouter un créneau',
-              child: const Icon(Icons.add_rounded),
+              child: Icon(Icons.add_rounded),
             )
           : null,
     );
@@ -230,7 +230,7 @@ class _BlocksScreenState extends State<BlocksScreen> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: _showAddSheet,
-            icon: const Icon(Icons.add_rounded),
+            icon: Icon(Icons.add_rounded),
             label: Text('Ajouter un créneau',
                 style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
           ),
@@ -266,7 +266,7 @@ class _BlocksScreenState extends State<BlocksScreen> {
             width: 4,
             height: 64,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [AppTheme.warning, Color(0xFFF97316)],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
@@ -283,7 +283,7 @@ class _BlocksScreenState extends State<BlocksScreen> {
                 // Date + time row
                 Row(
                   children: [
-                    const Icon(Icons.calendar_today_rounded,
+                    Icon(Icons.calendar_today_rounded,
                         size: 14, color: AppTheme.primary),
                     const SizedBox(width: 4),
                     Text(
@@ -294,7 +294,7 @@ class _BlocksScreenState extends State<BlocksScreen> {
                           color: AppTheme.textPrimary),
                     ),
                     const SizedBox(width: 12),
-                    const Icon(Icons.access_time_rounded,
+                    Icon(Icons.access_time_rounded,
                         size: 14, color: AppTheme.textMuted),
                     const SizedBox(width: 4),
                     Text(
@@ -365,7 +365,7 @@ class _BlocksScreenState extends State<BlocksScreen> {
                 color: AppTheme.error.withAlpha(20),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.delete_outline_rounded,
+              child: Icon(Icons.delete_outline_rounded,
                   color: AppTheme.error, size: 18),
             ),
           ),
@@ -430,7 +430,7 @@ class _AddBlockSheetState extends State<_AddBlockSheet> {
       locale: const Locale('fr', 'FR'),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
+          colorScheme: ColorScheme.light(
             primary: AppTheme.primary,
             onPrimary: Colors.white,
             surface: AppTheme.bgCard,
@@ -473,7 +473,7 @@ class _AddBlockSheetState extends State<_AddBlockSheet> {
   Widget _timePickerTheme(BuildContext ctx, Widget? child) {
     return Theme(
       data: Theme.of(ctx).copyWith(
-        colorScheme: const ColorScheme.light(
+        colorScheme: ColorScheme.light(
           primary: AppTheme.primary,
           onPrimary: Colors.white,
           surface: AppTheme.bgCard,
@@ -626,7 +626,7 @@ class _AddBlockSheetState extends State<_AddBlockSheet> {
             style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
             decoration: InputDecoration(
               hintText: 'Ex: Réunion, Congé, Formation…',
-              prefixIcon: const Icon(Icons.notes_rounded,
+              prefixIcon: Icon(Icons.notes_rounded,
                   color: AppTheme.primary, size: 20),
             ),
           ),
@@ -636,7 +636,7 @@ class _AddBlockSheetState extends State<_AddBlockSheet> {
           _SectionLabel(label: 'Employé (optionnel)'),
           const SizedBox(height: 8),
           _loadingEmployees
-              ? const Center(
+              ? Center(
                   child: SizedBox(
                     height: 48,
                     child: Center(
@@ -656,7 +656,7 @@ class _AddBlockSheetState extends State<_AddBlockSheet> {
                     child: DropdownButton<Map<String, dynamic>?>(
                       value: _selectedEmployee,
                       isExpanded: true,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded,
+                      icon: Icon(Icons.keyboard_arrow_down_rounded,
                           color: AppTheme.textMuted),
                       dropdownColor: AppTheme.bgCard,
                       style: GoogleFonts.dmSans(
@@ -666,7 +666,7 @@ class _AddBlockSheetState extends State<_AddBlockSheet> {
                           value: null,
                           child: Row(
                             children: [
-                              const Icon(Icons.store_rounded,
+                              Icon(Icons.store_rounded,
                                   color: AppTheme.primary, size: 18),
                               const SizedBox(width: 10),
                               Text('Tout le salon',
@@ -682,7 +682,7 @@ class _AddBlockSheetState extends State<_AddBlockSheet> {
                             value: emp,
                             child: Row(
                               children: [
-                                const Icon(Icons.person_rounded,
+                                Icon(Icons.person_rounded,
                                     color: AppTheme.textMuted, size: 18),
                                 const SizedBox(width: 10),
                                 Text(name,
@@ -786,7 +786,7 @@ class _PickerButton extends StatelessWidget {
                     color: AppTheme.textPrimary),
               ),
             ),
-            const Icon(Icons.keyboard_arrow_down_rounded,
+            Icon(Icons.keyboard_arrow_down_rounded,
                 color: AppTheme.textMuted, size: 18),
           ],
         ),

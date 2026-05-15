@@ -35,6 +35,20 @@ class _HomeScreenState extends State<HomeScreen> {
   void openDrawer() => _scaffoldKey.currentState?.openDrawer();
 
   @override
+  void initState() {
+    super.initState();
+    AppTheme.primaryNotifier.addListener(_onColorChanged);
+  }
+
+  void _onColorChanged() => setState(() {});
+
+  @override
+  void dispose() {
+    AppTheme.primaryNotifier.removeListener(_onColorChanged);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
@@ -266,7 +280,7 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
+          colorScheme: ColorScheme.light(
             primary: AppTheme.primary,
             onPrimary: Colors.white,
             surface: AppTheme.bgCard,
