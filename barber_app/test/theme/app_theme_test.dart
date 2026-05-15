@@ -30,14 +30,14 @@ void main() {
       const testColor = Color(0xFFFF5722);
       final theme = AppTheme.themeFor(testColor);
       expect(theme.colorScheme.primary, testColor);
-      await tester.pump();
+      await tester.pumpAndSettle();
     });
     testWidgets('themeFor(defaultPrimary) has same primary as theme',
         (tester) async {
       final a = AppTheme.themeFor(AppTheme.defaultPrimary);
       final b = AppTheme.theme;
       expect(a.colorScheme.primary, b.colorScheme.primary);
-      await tester.pump();
+      await tester.pumpAndSettle();
     });
   });
 

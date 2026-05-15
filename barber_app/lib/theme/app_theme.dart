@@ -16,13 +16,6 @@ class AppTheme {
     return Color(0xFF000000 | value);
   }
 
-  static Color _darken(Color color, double amount) {
-    final hsl = HSLColor.fromColor(color);
-    return hsl
-        .withLightness((hsl.lightness - amount).clamp(0.0, 1.0))
-        .toColor();
-  }
-
   // ── Brand Colors ─────────────────────────────────────────
   static const Color primary      = Color(0xFF5850E8);
   static const Color primaryDark  = Color(0xFF4740D4);
@@ -75,9 +68,8 @@ class AppTheme {
 
   // ── Theme ─────────────────────────────────────────────────
   static ThemeData themeFor(Color primary) {
-    final primaryDark  = _darken(primary, 0.08);
-    final primaryLight = primary.withAlpha(30);
-    final primaryMid   = primary.withAlpha(128);
+    final dynamicPrimaryLight = primary.withAlpha(30);
+    final dynamicPrimaryMid   = primary.withAlpha(128);
 
     return ThemeData(
       brightness: Brightness.light,
@@ -85,7 +77,7 @@ class AppTheme {
       primaryColor: primary,
       colorScheme: ColorScheme.light(
         primary: primary,
-        secondary: primaryMid,
+        secondary: dynamicPrimaryMid,
         surface: bgCard,
         error: error,
       ),
@@ -186,7 +178,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: bgSurface,
-        selectedColor: primaryLight,
+        selectedColor: dynamicPrimaryLight,
         labelStyle: GoogleFonts.dmSans(color: textSecondary, fontSize: 13),
         secondaryLabelStyle: GoogleFonts.dmSans(
             color: primary, fontSize: 13, fontWeight: FontWeight.w600),
