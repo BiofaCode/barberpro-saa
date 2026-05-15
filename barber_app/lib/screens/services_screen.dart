@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
@@ -98,7 +98,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
               style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Nom de la prestation *',
-                prefixIcon: const Icon(Icons.spa_rounded, color: AppTheme.primary, size: 20),
+                prefixIcon: Icon(Icons.spa_rounded, color: AppTheme.primary, size: 20),
               ),
             ),
             const SizedBox(height: 14),
@@ -112,7 +112,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
                     decoration: InputDecoration(
                       labelText: 'Prix (CHF)',
-                      prefixIcon: const Icon(Icons.attach_money_rounded, color: AppTheme.primary, size: 20),
+                      prefixIcon: Icon(Icons.attach_money_rounded, color: AppTheme.primary, size: 20),
                     ),
                   ),
                 ),
@@ -125,7 +125,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
                     decoration: InputDecoration(
                       labelText: 'Durée (min)',
-                      prefixIcon: const Icon(Icons.timer_rounded, color: AppTheme.primary, size: 20),
+                      prefixIcon: Icon(Icons.timer_rounded, color: AppTheme.primary, size: 20),
                     ),
                   ),
                 ),
@@ -138,7 +138,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
               maxLines: 2,
               decoration: InputDecoration(
                 labelText: 'Description (optionnel)',
-                prefixIcon: const Icon(Icons.notes_rounded, color: AppTheme.primary, size: 20),
+                prefixIcon: Icon(Icons.notes_rounded, color: AppTheme.primary, size: 20),
               ),
             ),
             const SizedBox(height: 24),
@@ -181,13 +181,13 @@ class _ServicesScreenState extends State<ServicesScreen> {
         title: const Text('Mes prestations'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_rounded, color: AppTheme.primary),
+            icon: Icon(Icons.add_rounded, color: AppTheme.primary),
             onPressed: () => _showServiceSheet(null),
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : RefreshIndicator(
               color: AppTheme.primary,
               onRefresh: _load,
@@ -208,7 +208,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
                             onPressed: () => _showServiceSheet(null),
-                            icon: const Icon(Icons.add_rounded),
+                            icon: Icon(Icons.add_rounded),
                             label: Text('Ajouter une prestation',
                                 style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
                           ),
@@ -225,7 +225,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
       floatingActionButton: _services.isNotEmpty
           ? FloatingActionButton(
               onPressed: () => _showServiceSheet(null),
-              child: const Icon(Icons.add_rounded),
+              child: Icon(Icons.add_rounded),
             )
           : null,
     );
@@ -254,7 +254,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
               color: AppTheme.primary.withAlpha(26),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Center(
+            child: Center(
               child: Icon(Icons.spa_rounded, color: AppTheme.primary, size: 22),
             ),
           ),
@@ -299,7 +299,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     color: AppTheme.primary.withAlpha(26),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.edit_rounded, color: AppTheme.primary, size: 16),
+                  child: Icon(Icons.edit_rounded, color: AppTheme.primary, size: 16),
                 ),
               ),
               const SizedBox(height: 6),
@@ -311,7 +311,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     color: AppTheme.error.withAlpha(20),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.delete_outline_rounded, color: AppTheme.error, size: 16),
+                  child: Icon(Icons.delete_outline_rounded, color: AppTheme.error, size: 16),
                 ),
               ),
             ],

@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -249,7 +249,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       body: SafeArea(
         child: _loading
-            ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+            ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
             : RefreshIndicator(
                 color: AppTheme.primary,
                 onRefresh: _loadSalonData,
@@ -295,7 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Text('Informations du salon', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                           IconButton(
-                            icon: const Icon(Icons.edit_rounded, color: AppTheme.primary, size: 20),
+                            icon: Icon(Icons.edit_rounded, color: AppTheme.primary, size: 20),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             onPressed: _editSalonInfo,
@@ -374,7 +374,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: GoogleFonts.bricolageGrotesque(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.add_photo_alternate_outlined, color: AppTheme.primary),
+                            icon: Icon(Icons.add_photo_alternate_outlined, color: AppTheme.primary),
                             onPressed: _pickAndUploadPhoto,
                           ),
                         ],
@@ -392,7 +392,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             style: GoogleFonts.bricolageGrotesque(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
+                            icon: Icon(Icons.add_circle_outline, color: AppTheme.primary),
                             onPressed: () => _showTestimonialSheet(null),
                           ),
                         ],
@@ -407,7 +407,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Text('Horaires d\'ouverture', style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                           IconButton(
-                            icon: const Icon(Icons.edit_rounded, color: AppTheme.primary, size: 20),
+                            icon: Icon(Icons.edit_rounded, color: AppTheme.primary, size: 20),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             onPressed: _editHours,
@@ -471,7 +471,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             width: 64, height: 64,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
+              gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Center(
@@ -530,7 +530,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: AppTheme.primary.withAlpha(26),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.language_rounded, color: AppTheme.primary, size: 22),
+              child: Icon(Icons.language_rounded, color: AppTheme.primary, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -552,7 +552,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.launch_rounded, color: AppTheme.primary, size: 18),
+            Icon(Icons.launch_rounded, color: AppTheme.primary, size: 18),
           ],
         ),
       ),
@@ -788,7 +788,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(color: AppTheme.primary.withAlpha(26), borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.palette_rounded, color: AppTheme.primary, size: 22),
+                child: Icon(Icons.palette_rounded, color: AppTheme.primary, size: 22),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1091,7 +1091,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         filled: true,
         fillColor: AppTheme.bgDark,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primary)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.primary)),
       ),
     );
   }
@@ -1171,7 +1171,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 18, color: AppTheme.primary),
+                    icon: Icon(Icons.edit_outlined, size: 18, color: AppTheme.primary),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => _showTestimonialSheet(t),

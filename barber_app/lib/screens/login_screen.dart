@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
@@ -128,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.primary),
+                    borderSide: BorderSide(color: AppTheme.primary),
                   ),
                 ),
               ),
@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(color: AppTheme.primary),
+                  borderSide: BorderSide(color: AppTheme.primary),
                 ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
@@ -336,7 +336,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             fillColor: AppTheme.bgCard,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.white.withAlpha(10))),
             enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.white.withAlpha(10))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primary)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.primary)),
           ),
         ),
       ],

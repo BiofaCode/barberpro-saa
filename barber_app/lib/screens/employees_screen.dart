@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
@@ -92,7 +92,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
               style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Nom complet *',
-                prefixIcon: const Icon(Icons.person_rounded, color: AppTheme.primary, size: 20),
+                prefixIcon: Icon(Icons.person_rounded, color: AppTheme.primary, size: 20),
               ),
             ),
             const SizedBox(height: 14),
@@ -101,7 +101,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
               style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
               decoration: InputDecoration(
                 labelText: 'Spécialités (séparées par une virgule)',
-                prefixIcon: const Icon(Icons.auto_awesome_rounded, color: AppTheme.primary, size: 20),
+                prefixIcon: Icon(Icons.auto_awesome_rounded, color: AppTheme.primary, size: 20),
                 hintText: 'Coupe, Barbe, Coloration…',
               ),
             ),
@@ -137,13 +137,13 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
         title: const Text('Mon équipe'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_rounded, color: AppTheme.primary),
+            icon: Icon(Icons.add_rounded, color: AppTheme.primary),
             onPressed: _showAddSheet,
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : RefreshIndicator(
               color: AppTheme.primary,
               onRefresh: _load,
@@ -164,7 +164,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
                             onPressed: _showAddSheet,
-                            icon: const Icon(Icons.add_rounded),
+                            icon: Icon(Icons.add_rounded),
                             label: Text('Ajouter un employé',
                                 style: GoogleFonts.dmSans(fontWeight: FontWeight.w600)),
                           ),
@@ -181,7 +181,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
       floatingActionButton: _employees.isNotEmpty
           ? FloatingActionButton(
               onPressed: _showAddSheet,
-              child: const Icon(Icons.add_rounded),
+              child: Icon(Icons.add_rounded),
             )
           : null,
     );
@@ -205,7 +205,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           Container(
             width: 52, height: 52,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [AppTheme.primary, AppTheme.primaryDark],
                 begin: Alignment.topLeft, end: Alignment.bottomRight,
               ),
@@ -267,7 +267,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                 color: AppTheme.error.withAlpha(20),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.delete_outline_rounded, color: AppTheme.error, size: 18),
+              child: Icon(Icons.delete_outline_rounded, color: AppTheme.error, size: 18),
             ),
           ),
         ],

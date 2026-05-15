@@ -180,7 +180,9 @@ function applySalonBranding(salon) {
   // Update favicon dynamically
   const faviconLink = document.getElementById('faviconLink');
   if (faviconLink) {
-    faviconLink.href = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E${encodeURIComponent(salonIcon)}%3C/text%3E%3C/svg%3E`;
+    faviconLink.href = salon.logo
+      ? salon.logo
+      : `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E${encodeURIComponent(salonIcon)}%3C/text%3E%3C/svg%3E`;
   }
 
   const heroTitle = document.querySelector('.hero h1');

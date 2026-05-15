@@ -245,8 +245,8 @@ function verifyToken(req) {
         // Verify signature
         const sig = crypto.createHmac('sha256', JWT_SECRET).update(`${parts[0]}.${parts[1]}`).digest('base64url');
         if (sig !== parts[2]) return null;
-        // Check expiration (only enforced if exp is present — legacy tokens without exp still work)
-        if (payload.exp && Date.now() > payload.exp) return null;
+        // Reject tokens without expiry or past their expiry
+        if (!payload.exp || Date.now() > payload.exp) return null;
         return payload;
     } catch { return null; }
 }
@@ -3062,7 +3062,7 @@ const server = http.createServer(async (req, res) => {
         const corsHeaders = getCORSHeaders(origin);
         res.writeHead(204, {
             ...corsHeaders,
-            ...SECURITY_HEADERS
+            ...SECURITY_HEADERS,
         });
         const duration = Date.now() - startTime;
         trackRequestTiming(req, 204, duration);
