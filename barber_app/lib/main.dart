@@ -32,18 +32,21 @@ class KrenoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Kreno',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      locale: const Locale('fr', 'FR'),
-      supportedLocales: const [Locale('fr', 'FR'), Locale('en', 'US')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
+    return ValueListenableBuilder<Color>(
+      valueListenable: AppTheme.primaryNotifier,
+      builder: (context, primaryColor, _) => MaterialApp(
+        title: 'Kreno',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.themeFor(primaryColor),
+        locale: const Locale('fr', 'FR'),
+        supportedLocales: const [Locale('fr', 'FR'), Locale('en', 'US')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
+      ),
     );
   }
 }
