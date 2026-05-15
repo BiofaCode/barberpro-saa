@@ -2,6 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
+  // ── Dynamic theming ───────────────────────────────────────
+  static const Color defaultPrimary = Color(0xFF5850E8);
+  static final ValueNotifier<Color> primaryNotifier =
+      ValueNotifier(defaultPrimary);
+
+  static Color? colorFromHex(String? hex) {
+    if (hex == null) return null;
+    final clean = hex.startsWith('#') ? hex.substring(1) : hex;
+    if (clean.length != 6) return null;
+    final value = int.tryParse(clean, radix: 16);
+    if (value == null) return null;
+    return Color(0xFF000000 | value);
+  }
+
+  static Color _darken(Color color, double amount) {
+    final hsl = HSLColor.fromColor(color);
+    return hsl
+        .withLightness((hsl.lightness - amount).clamp(0.0, 1.0))
+        .toColor();
+  }
+
   // ── Brand Colors ─────────────────────────────────────────
   static const Color primary      = Color(0xFF5850E8);
   static const Color primaryDark  = Color(0xFF4740D4);
@@ -53,12 +74,16 @@ class AppTheme {
   ];
 
   // ── Theme ─────────────────────────────────────────────────
-  static ThemeData get theme {
+  static ThemeData themeFor(Color primary) {
+    final primaryDark  = _darken(primary, 0.08);
+    final primaryLight = primary.withAlpha(30);
+    final primaryMid   = primary.withAlpha(128);
+
     return ThemeData(
       brightness: Brightness.light,
       scaffoldBackgroundColor: bgMain,
       primaryColor: primary,
-      colorScheme: const ColorScheme.light(
+      colorScheme: ColorScheme.light(
         primary: primary,
         secondary: primaryMid,
         surface: bgCard,
@@ -90,7 +115,7 @@ class AppTheme {
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: const IconThemeData(color: primary),
+        iconTheme: IconThemeData(color: primary),
       ),
       cardTheme: CardThemeData(
         color: bgCard,
@@ -100,14 +125,14 @@ class AppTheme {
           side: const BorderSide(color: border),
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: bgCard,
         selectedItemColor: primary,
         unselectedItemColor: textMuted,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
         foregroundColor: Colors.white,
         elevation: 4,
@@ -125,7 +150,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primary, width: 1.5),
+          borderSide: BorderSide(color: primary, width: 1.5),
         ),
         hintStyle: const TextStyle(color: textMuted),
         labelStyle: const TextStyle(color: textSecondary),
@@ -147,7 +172,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primary,
-          side: const BorderSide(color: primary, width: 1.5),
+          side: BorderSide(color: primary, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
@@ -171,6 +196,8 @@ class AppTheme {
       ),
     );
   }
+
+  static ThemeData get theme => themeFor(defaultPrimary);
 
   // Backward-compat alias
   static ThemeData get darkTheme => theme;
