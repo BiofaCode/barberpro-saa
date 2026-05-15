@@ -146,6 +146,7 @@ class ApiService {
       final data = jsonDecode(res.body);
       if (data['success'] == true) {
         _currentSalon = Map<String, dynamic>.from(data['data']);
+        _applyBrandingColor();
         return _currentSalon;
       }
     } catch (e) {
