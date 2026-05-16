@@ -104,4 +104,4 @@ async function sendToSalon(salonId, payload) {
     return sendPush(tokens, payload);
 }
 
-module.exports = { sendPush, sendToSalon };
+module.exports = { init, sendPush, sendToSalon };
