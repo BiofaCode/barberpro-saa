@@ -48,6 +48,8 @@ async function connectDB() {
         await dbInstance.collection('salons').createIndex({ 'referral.code': 1 }, { sparse: true });
         await dbInstance.collection('clients').createIndex({ salon: 1 });
         await dbInstance.collection('bookings').createIndex({ salon: 1, date: -1 });
+        await dbInstance.collection('pushTokens').createIndex({ token: 1 }, { unique: true });
+        await dbInstance.collection('pushTokens').createIndex({ owner: 1 });
         console.log('📇 Indexes created');
 
         return dbInstance;
@@ -365,6 +367,41 @@ const db = {
     async countEmployees(query = {}) { return await getDB().collection('employees').countDocuments(query); },
     async countAllBookings() { return await getDB().collection('bookings').countDocuments(); },
     async countAllClients() { return await getDB().collection('clients').countDocuments(); },
+
+    // ---- Push tokens (FCM) ----
+    // One document per (owner, token) pair. A user may have several devices.
+    async savePushToken(ownerId, token, platform) {
+        if (!ownerId || !token) return null;
+        await getDB().collection('pushTokens').updateOne(
+            { token },
+            { $set: { owner: ownerId, token, platform: platform || 'unknown', updatedAt: new Date().toISOString() },
+              $setOnInsert: { createdAt: new Date().toISOString() } },
+            { upsert: true },
+        );
+        return await getDB().collection('pushTokens').findOne({ token });
+    },
+    async removePushToken(token) {
+        if (!token) return;
+        await getDB().collection('pushTokens').deleteOne({ token });
+    },
+    async findPushTokensByOwners(ownerIds) {
+        if (!ownerIds || !ownerIds.length) return [];
+        return await getDB().collection('pushTokens').find({ owner: { $in: ownerIds } }).toArray();
+    },
+    async findPushTokensBySalon(salonId) {
+        // Salon → owners + employees → tokens. Notify everyone who can act on the salon.
+        const [owners, employees] = await Promise.all([
+            getDB().collection('owners').find({ salon: salonId }).project({ _id: 1 }).toArray(),
+            getDB().collection('employees').find({ salon: salonId }).project({ _id: 1 }).toArray(),
+        ]);
+        const ids = [...owners.map(o => o._id), ...employees.map(e => e._id)];
+        if (!ids.length) return [];
+        return await getDB().collection('pushTokens').find({ owner: { $in: ids } }).toArray();
+    },
+    async removePushTokensByValues(tokens) {
+        if (!tokens || !tokens.length) return;
+        await getDB().collection('pushTokens').deleteMany({ token: { $in: tokens } });
+    },
 };
 
 module.exports = db;

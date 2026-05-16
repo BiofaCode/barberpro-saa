@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/booking_model.dart';
 import '../theme/app_theme.dart';
+import 'push_service.dart';
 
 class ApiService {
   // URL de production par défaut
@@ -53,6 +54,7 @@ class ApiService {
   static Map<String, dynamic>? _currentSalon;
 
   static String? get salonId => _salonId;
+  static String? get authToken => _token;
   static Map<String, dynamic>? get currentUser => _currentUser;
   static Map<String, dynamic>? get currentSalon => _currentSalon;
   static bool get isLoggedIn => _token != null && _salonId != null;
@@ -132,6 +134,9 @@ class ApiService {
           await prefs.setString('currentSalon', jsonEncode(_currentSalon));
         }
 
+        // Register push token after successful login (non-blocking).
+        PushService.registerToken();
+
         return true;
       }
     } catch (e) {
@@ -141,6 +146,8 @@ class ApiService {
   }
 
   static Future<void> logout() async {
+    // Drop server-side token while we still have auth.
+    await PushService.clearToken();
     _token = null;
     _salonId = null;
     _currentUser = null;

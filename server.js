@@ -13,6 +13,7 @@ const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelco
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
 const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
+const { sendToSalon: sendFcmToSalon } = require('./push');
 const { getCORSHeaders, SECURITY_HEADERS, getClientIP } = require('./lib/security');
 
 // Configure Web Push (VAPID)
@@ -331,6 +332,40 @@ async function sendPendingReviewRequests() {
 }
 setInterval(sendPendingReviewRequests, 60 * 60 * 1000); // every hour
 setTimeout(sendPendingReviewRequests, 90000); // startup check after 1.5 min
+
+// ---- Daily 8am push reminder (FCM mobile) ----
+const dailyPushSentFor = new Set(); // 'YYYY-MM-DD' guard against double-firing
+async function sendDailyPushReminder() {
+    if (new Date().getHours() !== 8) return;
+    const today = new Date().toISOString().split('T')[0];
+    if (dailyPushSentFor.has(today)) return;
+    dailyPushSentFor.add(today);
+    // Keep set bounded
+    if (dailyPushSentFor.size > 30) {
+        const oldest = [...dailyPushSentFor].sort()[0];
+        dailyPushSentFor.delete(oldest);
+    }
+    try {
+        const todayBookings = await db.findBookings({ date: today, status: { $ne: 'cancelled' } });
+        const bySalon = todayBookings.reduce((acc, b) => {
+            acc[b.salon] = (acc[b.salon] || 0) + 1;
+            return acc;
+        }, {});
+        let salonsNotified = 0;
+        for (const [salonId, count] of Object.entries(bySalon)) {
+            const body = count === 1 ? '1 rendez-vous aujourd\'hui' : `${count} rendez-vous aujourd'hui`;
+            sendFcmToSalon(salonId, {
+                title: 'Bonjour ☀️',
+                body,
+                data: { type: 'daily_reminder', count: String(count) },
+            }).catch(err => console.error('FCM daily reminder error:', err.message));
+            salonsNotified++;
+        }
+        if (salonsNotified > 0) console.log(`☀️ Rappel quotidien push envoyé à ${salonsNotified} salons`);
+    } catch (e) { console.error('Daily push reminder error:', e.message); }
+}
+setInterval(sendDailyPushReminder, 15 * 60 * 1000); // check every 15 min
+setTimeout(sendDailyPushReminder, 120000); // first check 2 min after startup
 
 // ---- Booking conflict helpers ----
 function timeToMinutes(t) {
@@ -832,6 +867,30 @@ route('GET', '/api/pro/salon/:salonId/bootstrap', async (req, res, params) => {
             todayBookings,
         },
     });
+});
+
+// Push tokens — mobile app registers its FCM token on login, deletes on logout.
+route('POST', '/api/pro/push-token', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
+    const body = await parseBody(req);
+    const token = (body.token || '').trim();
+    const platform = (body.platform || '').trim();
+    if (!token) return json(res, 400, { success: false, error: 'Token requis' });
+    const userId = user.ownerId || user.employeeId;
+    if (!userId) return json(res, 400, { success: false, error: 'User invalide' });
+    await db.savePushToken(userId, token, platform);
+    json(res, 200, { success: true });
+});
+
+route('DELETE', '/api/pro/push-token', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
+    const body = await parseBody(req);
+    const token = (body.token || '').trim();
+    if (!token) return json(res, 400, { success: false, error: 'Token requis' });
+    await db.removePushToken(token);
+    json(res, 200, { success: true });
 });
 
 route('PUT', '/api/pro/salon/:salonId', async (req, res, params) => {
@@ -2739,12 +2798,18 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
         })();
     }
 
-    // Push notification to owner
+    // Push notification to owner — Web Push (browser, pro portal)
     sendPushToSalon(salon._id, {
         title: `📅 Nouveau RDV — ${salon.name}`,
         body: `${body.clientName} · ${body.serviceName} · ${body.date} à ${body.time}`,
         url: '/pro', tag: 'new-booking'
     });
+    // Push notification to owner — FCM (mobile app)
+    sendFcmToSalon(salon._id, {
+        title: '📅 Nouvelle réservation',
+        body: `${body.clientName} · ${body.serviceName} · ${body.date} à ${body.time}`,
+        data: { type: 'booking', bookingId: String(booking._id) },
+    }).catch(err => console.error('FCM push error:', err.message));
 
     // SMS to client (if toggle on + phone + credits)
     if (salon.smsSettings?.clientConfirmation !== false && booking.clientPhone && (salon.smsCredits || 0) > 0) {
@@ -3017,6 +3082,13 @@ route('POST', '/api/cancel-token/:token', async (req, res, params) => {
     if (booking.clientEmail) sendCancellationConfirmation(booking, salon || { name: 'Kreno' });
     const owner = await db.findOwnerBySalon(booking.salon);
     if (owner && owner.email) sendCancellationAlertToOwner(booking, salon || { name: 'Kreno' }, owner.email);
+
+    // FCM push to mobile app
+    sendFcmToSalon(booking.salon, {
+        title: '❌ Annulation',
+        body: `${booking.clientName} a annulé son RDV du ${booking.date} à ${booking.time}`,
+        data: { type: 'cancellation', bookingId: String(booking._id) },
+    }).catch(err => console.error('FCM push error:', err.message));
 
     json(res, 200, { success: true });
 });
