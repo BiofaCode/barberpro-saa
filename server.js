@@ -13,7 +13,8 @@ const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelco
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
 const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
-const { sendToSalon: sendFcmToSalon } = require('./push');
+const { sendToSalon: sendFcmToSalon, init: initFcm } = require('./push');
+initFcm(); // eager init so the log appears at startup
 const { getCORSHeaders, SECURITY_HEADERS, getClientIP } = require('./lib/security');
 
 // Configure Web Push (VAPID)
