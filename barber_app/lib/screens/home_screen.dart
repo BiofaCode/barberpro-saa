@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import 'dashboard_screen.dart';
@@ -157,6 +158,17 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const Spacer(),
             const Divider(),
+            _DrawerItem(
+              icon: Icons.privacy_tip_outlined,
+              label: 'Politique de confidentialité',
+              onTap: () {
+                Navigator.pop(context);
+                launchUrl(
+                  Uri.parse('https://kreno.ch/privacy'),
+                  mode: LaunchMode.externalApplication,
+                );
+              },
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text('Version 1.0 · Kreno',

@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../models/booking_model.dart';
 import '../services/api_service.dart';
@@ -20,7 +21,10 @@ class DashboardScreen extends StatefulWidget {
 class DashboardScreenState extends State<DashboardScreen> {
   List<BookingModel> _todayBookings = [];
   Map<String, dynamic> _stats = {};
-  bool _loading = true;
+  // Show spinner only on first load when we have nothing cached.
+  // Subsequent reloads (pull-to-refresh, tab switch) refresh silently.
+  bool _loading = false;
+  bool _firstLoadDone = false;
   String? _error;
   bool _hasError = false;
 
@@ -33,29 +37,35 @@ class DashboardScreenState extends State<DashboardScreen> {
   void reload() => _loadData();
 
   Future<void> _loadData() async {
+    // Show spinner only when we have no data at all (truly first load, no cache).
+    final hasNothing = _stats.isEmpty && _todayBookings.isEmpty && !_firstLoadDone;
     setState(() {
-      _loading = true;
+      if (hasNothing) _loading = true;
       _error = null;
       _hasError = false;
     });
 
     try {
-      final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final results = await Future.wait([
-        ApiService.getMyBookings(date: today),
-        ApiService.getMyStats(),
-      ]);
+      final payload = await ApiService.getBootstrap();
+      if (!mounted) return;
+      if (payload == null) throw Exception('bootstrap failed');
+
+      final bookingsJson = (payload['todayBookings'] as List?) ?? [];
+      final stats = Map<String, dynamic>.from(payload['stats'] ?? {});
 
       setState(() {
-        _todayBookings = results[0] as List<BookingModel>;
-        _stats = results[1] as Map<String, dynamic>;
+        _todayBookings = bookingsJson.map((j) => BookingModel.fromApi(Map<String, dynamic>.from(j))).toList();
+        _stats = stats;
         _loading = false;
+        _firstLoadDone = true;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Impossible de se connecter au serveur';
         _hasError = true;
         _loading = false;
+        _firstLoadDone = true;
       });
     }
   }
@@ -585,6 +595,20 @@ class DashboardScreenState extends State<DashboardScreen> {
             ),
             const Spacer(),
             const Divider(),
+            ListTile(
+              leading: Icon(Icons.privacy_tip_outlined, color: AppTheme.textSecondary, size: 22),
+              title: Text('Politique de confidentialité',
+                style: GoogleFonts.dmSans(
+                    fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                launchUrl(
+                  Uri.parse('https://kreno.ch/privacy'),
+                  mode: LaunchMode.externalApplication,
+                );
+              },
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               child: Text('Version 1.0 · Kreno',

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/booking_model.dart';
 import '../theme/app_theme.dart';
+import 'push_service.dart';
 
 class ApiService {
   // URL de production par défaut
@@ -27,6 +28,16 @@ class ApiService {
   static void setBaseUrl(String url) => _customUrl = url;
 
   static const _timeout = Duration(seconds: 15);
+
+  // Fire-and-forget ping to wake up the Render server. Called from main()
+  // before the user even sees the login screen, so the first authenticated
+  // call doesn't pay the ~30s cold-start latency.
+  static void warmupServer() {
+    http.get(Uri.parse('$_url/api/health'))
+        .timeout(const Duration(seconds: 40))
+        .catchError((_) => http.Response('', 0));
+  }
+
   static Future<http.Response> _get(Uri uri, {Map<String, String>? headers}) =>
       http.get(uri, headers: headers).timeout(_timeout);
   static Future<http.Response> _post(Uri uri, {Map<String, String>? headers, Object? body}) =>
@@ -43,6 +54,7 @@ class ApiService {
   static Map<String, dynamic>? _currentSalon;
 
   static String? get salonId => _salonId;
+  static String? get authToken => _token;
   static Map<String, dynamic>? get currentUser => _currentUser;
   static Map<String, dynamic>? get currentSalon => _currentSalon;
   static bool get isLoggedIn => _token != null && _salonId != null;
@@ -122,6 +134,9 @@ class ApiService {
           await prefs.setString('currentSalon', jsonEncode(_currentSalon));
         }
 
+        // Register push token after successful login (non-blocking).
+        PushService.registerToken();
+
         return true;
       }
     } catch (e) {
@@ -131,6 +146,8 @@ class ApiService {
   }
 
   static Future<void> logout() async {
+    // Drop server-side token while we still have auth.
+    await PushService.clearToken();
     _token = null;
     _salonId = null;
     _currentUser = null;
@@ -161,6 +178,34 @@ class ApiService {
       }
     } catch (e) {
       debugPrint('API Error (getMySalon): $e');
+    }
+    return null;
+  }
+
+  // Bootstrap — single round-trip returning salon + employees + services + stats + todayBookings.
+  // Used by dashboard/settings to avoid 5 sequential cold-start hits.
+  // Also persists fresh salon to SharedPreferences for next launch.
+  static Future<Map<String, dynamic>?> getBootstrap() async {
+    if (_salonId == null) return null;
+    try {
+      final res = await _get(
+        Uri.parse('$_url/api/pro/salon/$_salonId/bootstrap'),
+        headers: _authHeaders,
+      );
+      final data = jsonDecode(res.body);
+      if (data['success'] == true) {
+        final payload = Map<String, dynamic>.from(data['data']);
+        final salon = payload['salon'] as Map?;
+        if (salon != null) {
+          _currentSalon = Map<String, dynamic>.from(salon);
+          _applyBrandingColor();
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('currentSalon', jsonEncode(_currentSalon));
+        }
+        return payload;
+      }
+    } catch (e) {
+      debugPrint('API Error (getBootstrap): $e');
     }
     return null;
   }

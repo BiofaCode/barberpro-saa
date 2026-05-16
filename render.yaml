@@ -29,3 +29,5 @@ services:
         sync: false         # ex: https://salonpro.ch
       - key: ADMIN_PASSWORD
         sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false         # JSON complet du service account Firebase (voir docs/setup-firebase-push.md)
