@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
@@ -300,6 +301,23 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 ),
 
                 const SizedBox(height: 40),
+
+                // Privacy policy link
+                GestureDetector(
+                  onTap: () => launchUrl(
+                    Uri.parse('https://kreno.ch/privacy'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  child: Text(
+                    'Politique de confidentialité',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 12,
+                      color: AppTheme.textMuted,
+                      decoration: TextDecoration.underline,
+                      decorationColor: AppTheme.textMuted,
+                    ),
+                  ),
+                ),
 
                 const SizedBox(height: 8),
               ],

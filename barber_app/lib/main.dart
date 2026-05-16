@@ -10,6 +10,11 @@ import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Fire-and-forget warmup ping — wakes Render server while user types login,
+  // so the first authenticated call doesn't pay the cold-start latency.
+  ApiService.warmupServer();
+
   await initializeDateFormatting('fr_FR', null);
   Intl.defaultLocale = 'fr_FR';
   SystemChrome.setSystemUIOverlayStyle(
@@ -19,7 +24,7 @@ void main() async {
       statusBarBrightness: Brightness.light,
     ),
   );
-  
+
   // Checking for persistent login
   final isLoggedIn = await ApiService.loadSession();
 

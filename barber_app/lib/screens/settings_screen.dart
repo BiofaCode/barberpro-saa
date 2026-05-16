@@ -24,25 +24,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Map<String, dynamic>? _salon;
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _services = [];
-  bool _loading = true;
+  bool _loading = false;
 
   @override
   void initState() {
     super.initState();
+    // Render immediately with whatever is cached from login/SharedPreferences,
+    // then refresh in background.
+    _salon = ApiService.currentSalon;
+    if (_salon != null) {
+      final svc = _salon!['services'];
+      if (svc is List) _services = List<Map<String, dynamic>>.from(svc.map((e) => Map<String, dynamic>.from(e)));
+      final emp = _salon!['employees'];
+      if (emp is List) _employees = List<Map<String, dynamic>>.from(emp.map((e) => Map<String, dynamic>.from(e)));
+    }
     _loadSalonData();
   }
 
   Future<void> _loadSalonData() async {
-    setState(() => _loading = true);
-    final results = await Future.wait([
-      ApiService.getMySalon(),
-      ApiService.getMyEmployees(),
-      ApiService.getMyServices(),
-    ]);
+    // Only show spinner if we have absolutely nothing cached.
+    final hasNothing = _salon == null;
     setState(() {
-      _salon = results[0] as Map<String, dynamic>?;
-      _employees = results[1] as List<Map<String, dynamic>>;
-      _services = results[2] as List<Map<String, dynamic>>;
+      if (hasNothing) _loading = true;
+    });
+    final payload = await ApiService.getBootstrap();
+    if (!mounted) return;
+    if (payload == null) {
+      setState(() => _loading = false);
+      return;
+    }
+    setState(() {
+      _salon = Map<String, dynamic>.from(payload['salon'] ?? {});
+      _employees = List<Map<String, dynamic>>.from(
+        (payload['employees'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)),
+      );
+      _services = List<Map<String, dynamic>>.from(
+        (payload['services'] as List? ?? []).map((e) => Map<String, dynamic>.from(e)),
+      );
       _loading = false;
     });
   }

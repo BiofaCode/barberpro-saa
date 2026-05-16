@@ -785,6 +785,55 @@ route('GET', '/api/pro/salon/:salonId', async (req, res, params) => {
     json(res, 200, { success: true, data: { ...salon, employees, owner: owner ? db.ownerToJSON(owner) : null } });
 });
 
+// Bootstrap: salon + employees + services + stats + today's bookings in one round-trip.
+// Used by the mobile app on dashboard/settings load to avoid 5 sequential cold-start hits.
+route('GET', '/api/pro/salon/:salonId/bootstrap', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 403, { success: false, error: 'Accès refusé' });
+    const isEmployee = user.role === 'employee';
+    const today = new Date().toISOString().split('T')[0];
+
+    const queryToday = { salon: params.salonId, date: today };
+    const queryAll = { salon: params.salonId };
+    if (isEmployee) {
+        queryToday.employeeId = user.employeeId;
+        queryAll.employeeId = user.employeeId;
+    }
+
+    const [salon, employees, todayBookings, allBookings, totalClientsCount] = await Promise.all([
+        db.findSalonById(params.salonId),
+        db.findEmployees({ salon: params.salonId }),
+        db.findBookings(queryToday),
+        db.findBookings(queryAll),
+        isEmployee ? Promise.resolve(0) : db.countClients({ salon: params.salonId }),
+    ]);
+
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+
+    const totalClients = isEmployee
+        ? new Set(allBookings.map(b => b.client)).size
+        : totalClientsCount;
+    const totalRevenue = allBookings.reduce((s, b) => s + (b.price || 0), 0);
+    const todayRevenue = todayBookings.reduce((s, b) => s + (b.price || 0), 0);
+
+    json(res, 200, {
+        success: true,
+        data: {
+            salon: { ...salon, employees },
+            employees,
+            services: salon.services || [],
+            stats: {
+                todayBookings: todayBookings.length,
+                todayRevenue,
+                totalBookings: allBookings.length,
+                totalClients,
+                totalRevenue,
+            },
+            todayBookings,
+        },
+    });
+});
+
 route('PUT', '/api/pro/salon/:salonId', async (req, res, params) => {
     const user = verifySalonAccess(req, params.salonId);
     if (!user || user.role === 'employee') return json(res, 403, { success: false, error: 'Accès refusé' });
@@ -3221,6 +3270,9 @@ tr+tr td{border-top:1px solid #f0f0f0}
     }
     else if (pathname === '/' && req.method === 'GET') {
         filePath = path.join(__dirname, 'saas/index.html');
+    }
+    else if (pathname === '/privacy' || pathname === '/privacy.html') {
+        filePath = path.join(__dirname, 'saas/privacy.html');
     }
     else if (pathname.startsWith('/saas/')) {
         const cleanUrl = pathname.split('?')[0];
