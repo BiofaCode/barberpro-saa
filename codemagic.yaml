@@ -97,9 +97,6 @@ workflows:
                                  # APP_STORE_CONNECT_PRIVATE_KEY
 
     scripts:
-      - name: Inject GoogleService-Info.plist
-        script: echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > "$CM_BUILD_DIR/barber_app/ios/Runner/GoogleService-Info.plist"
-
       - name: Get Flutter packages
         script: flutter pub get
         working_directory: barber_app
