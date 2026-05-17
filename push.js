@@ -101,6 +101,11 @@ async function sendPush(tokens, { title, body, data = {} }) {
 async function sendToSalon(salonId, payload) {
     const docs = await db.findPushTokensBySalon(salonId);
     const tokens = docs.map(d => d.token);
+    if (tokens.length === 0) {
+        console.log(`📵 Push: aucun token enregistré pour le salon ${salonId}`);
+        return { sent: 0, removed: 0 };
+    }
+    console.log(`📤 Push envoyé à ${tokens.length} appareil(s) — salon ${salonId}`);
     return sendPush(tokens, payload);
 }
 
