@@ -29,9 +29,12 @@ class PushService {
     // Request permission (iOS). On Android 13+, this also prompts.
     await _fm.requestPermission(alert: true, badge: true, sound: true);
 
-    // iOS: ensure APNs token is ready before asking for FCM token.
+    // iOS: try to get APNs token but don't block startup if it's slow.
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      await _fm.getAPNSToken();
+      await _fm.getAPNSToken().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => null,
+      );
     }
 
     FirebaseMessaging.onMessage.listen(_onForegroundMessage);
