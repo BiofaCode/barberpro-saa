@@ -55,15 +55,30 @@ class PushService {
   }
 
   // Called from ApiService.login after a successful auth.
+  // Retries up to 3 times with backoff — APNs token can be slow on cold boot.
   static Future<void> registerToken() async {
-    try {
-      final token = await _fm.getToken();
-      if (token == null) return;
-      _currentToken = token;
-      await _registerOnBackend(token);
-    } catch (e) {
-      debugPrint('PushService.registerToken error: $e');
+    String? token;
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        token = await _fm.getToken().timeout(
+          const Duration(seconds: 15),
+          onTimeout: () => null,
+        );
+      } catch (e) {
+        // print (not debugPrint) so it appears in iOS syslog on release builds.
+        print('PushService.registerToken attempt $attempt error: $e'); // ignore: avoid_print
+      }
+      if (token != null) break;
+      print('PushService.registerToken attempt $attempt: getToken() returned null'); // ignore: avoid_print
+      if (attempt < 3) await Future.delayed(Duration(seconds: attempt * 5));
     }
+    if (token == null) {
+      print('PushService.registerToken: all attempts failed, push disabled'); // ignore: avoid_print
+      return;
+    }
+    _currentToken = token;
+    print('PushService.registerToken: got token …${token.substring(token.length - 8)}'); // ignore: avoid_print
+    await _registerOnBackend(token);
   }
 
   // Called from ApiService.logout to drop the token server-side.
