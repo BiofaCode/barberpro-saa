@@ -48,6 +48,10 @@ class PushService {
       _currentToken = newToken;
       _registerOnBackend(newToken);
     });
+
+    // If user already has a session (persistent login), register token now
+    // that Firebase is ready — avoids the race condition with non-blocking init.
+    await registerToken();
   }
 
   // Called from ApiService.login after a successful auth.
