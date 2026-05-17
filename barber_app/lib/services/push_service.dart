@@ -56,12 +56,15 @@ class PushService {
 
   // Called from ApiService.login after a successful auth.
   // Retries up to 3 times with backoff — APNs token can be slow on cold boot.
+  // deleteToken() on each attempt clears any cached failure state in the SDK.
   static Future<void> registerToken() async {
     String? token;
     for (int attempt = 1; attempt <= 3; attempt++) {
       try {
+        // Force-refresh: clear cached token so Firebase re-exchanges with APNs.
+        await _fm.deleteToken();
         token = await _fm.getToken().timeout(
-          const Duration(seconds: 15),
+          const Duration(seconds: 20),
           onTimeout: () => null,
         );
       } catch (e) {
