@@ -18,14 +18,10 @@ void main() async {
   // so the first authenticated call doesn't pay the cold-start latency.
   ApiService.warmupServer();
 
-  // Init Firebase + push handlers. Wrapped in try/catch so a missing config
-  // (e.g. fresh clone before flutterfire configure) does not block app launch.
-  try {
-    await Firebase.initializeApp();
-    await PushService.init();
-  } catch (e) {
-    debugPrint('Firebase init skipped: $e');
-  }
+  // Init Firebase + push handlers in background — never blocks app launch.
+  Firebase.initializeApp()
+      .then((_) => PushService.init())
+      .catchError((e) { debugPrint('Firebase init skipped: $e'); });
 
   await initializeDateFormatting('fr_FR', null);
   Intl.defaultLocale = 'fr_FR';
