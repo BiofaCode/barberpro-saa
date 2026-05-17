@@ -390,13 +390,23 @@ const db = {
     },
     async findPushTokensBySalon(salonId) {
         // Salon → owners + employees → tokens. Notify everyone who can act on the salon.
+        // Query with both ObjectId and string forms to handle type-mismatch edge cases.
+        const salonObjId = typeof salonId === 'string' ? (() => { try { return new ObjectId(salonId); } catch { return null; } })() : salonId;
+        const salonQuery = salonObjId ? { $in: [salonId, salonObjId] } : salonId;
         const [owners, employees] = await Promise.all([
-            getDB().collection('owners').find({ salon: salonId }).project({ _id: 1 }).toArray(),
-            getDB().collection('employees').find({ salon: salonId }).project({ _id: 1 }).toArray(),
+            getDB().collection('owners').find({ salon: salonQuery }).project({ _id: 1 }).toArray(),
+            getDB().collection('employees').find({ salon: salonQuery }).project({ _id: 1 }).toArray(),
         ]);
         const ids = [...owners.map(o => o._id), ...employees.map(e => e._id)];
+        console.log(`🔍 findPushTokensBySalon(${salonId}): ${owners.length} owners, ${employees.length} employees → ${ids.length} ids`);
         if (!ids.length) return [];
-        return await getDB().collection('pushTokens').find({ owner: { $in: ids } }).toArray();
+        // Query with both ObjectId and string forms for owner field too.
+        const idStrings = ids.map(id => String(id));
+        const tokens = await getDB().collection('pushTokens').find({
+            $or: [{ owner: { $in: ids } }, { owner: { $in: idStrings } }]
+        }).toArray();
+        console.log(`🔍 Push tokens trouvés: ${tokens.length}`);
+        return tokens;
     },
     async removePushTokensByValues(tokens) {
         if (!tokens || !tokens.length) return;

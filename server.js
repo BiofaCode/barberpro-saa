@@ -927,6 +927,7 @@ route('POST', '/api/pro/push-token', async (req, res) => {
     const userId = user.ownerId || user.employeeId;
     if (!userId) return json(res, 400, { success: false, error: 'User invalide' });
     await db.savePushToken(userId, token, platform);
+    console.log(`📲 Push token enregistré — user ${userId} [${platform}] token …${token.slice(-8)}`);
     json(res, 200, { success: true });
 });
 
