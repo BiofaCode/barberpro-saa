@@ -26,6 +26,10 @@ const SMS_PACKS = {
 
 // ---- Base send function ----
 async function sendSMS(to, body) {
+    if (process.env.TWILIO_TEST_MODE === 'true') {
+        console.log(`  [TEST] SMS skipped → ${to}: ${body.substring(0, 60)}`);
+        return { success: true, test: true };
+    }
     const client = getTwilioClient();
     if (!client) {
         console.warn(`  ⚠️ SMS non envoyé (Twilio non configuré): ${to}`);
