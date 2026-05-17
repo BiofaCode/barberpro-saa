@@ -932,6 +932,34 @@ async function submitBooking() {
   showBookingSuccess();
 }
 
+function buildCalendarButtons() {
+  if (!bmState.date || !bmState.time) return '';
+  const [h, mn] = bmState.time.split(':').map(Number);
+  const start = new Date(bmState.date);
+  start.setHours(h, mn, 0, 0);
+  const dur = bmState.service?.duration || 60;
+  const end = new Date(start.getTime() + dur * 60000);
+  const pad = n => String(n).padStart(2, '0');
+  const fmtLocal = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  const title = `${bmState.service?.name || 'RDV'} @ ${salon?.name || ''}`;
+  const desc = bmState.employee ? `avec ${bmState.employee.name}` : '';
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kreno//FR','BEGIN:VEVENT',
+    `DTSTART:${fmtLocal(start)}`,`DTEND:${fmtLocal(end)}`,`SUMMARY:${title}`,
+    desc ? `DESCRIPTION:${desc}` : '',`LOCATION:${salon?.name || ''}`,
+    `UID:${Date.now()}@kreno.ch`,'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');
+  const icsUrl = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
+  const gcUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmtLocal(start)}/${fmtLocal(end)}&details=${encodeURIComponent(desc)}&location=${encodeURIComponent(salon?.name || '')}`;
+  const btnStyle = `display:inline-flex;align-items:center;gap:5px;padding:9px 16px;background:rgba(0,0,0,0.06);border-radius:10px;text-decoration:none;color:var(--color-text-primary);font-size:0.82rem;font-weight:500`;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  if (isIOS) return `<a href="${icsUrl}" download="rdv.ics" style="${btnStyle}">📅 Ajouter au calendrier</a>`;
+  if (isAndroid) return `<a href="${gcUrl}" target="_blank" style="${btnStyle}">📅 Google Calendar</a>`;
+  return `<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+    <a href="${icsUrl}" download="rdv.ics" style="${btnStyle}">📅 Apple / iCal</a>
+    <a href="${gcUrl}" target="_blank" style="${btnStyle}">📅 Google Calendar</a>
+  </div>`;
+}
+
 function showBookingSuccess() {
   document.getElementById('bookingModalBody').style.display = 'none';
   document.querySelector('.booking-modal-steps').style.display = 'none';
@@ -952,12 +980,13 @@ function showBookingSuccess() {
       </p>
       ${bmState.employee ? `<p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:1.25rem">avec ${bmState.employee.name}</p>` : '<div style="margin-bottom:1rem"></div>'}
       ${clientEmail
-        ? `<div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px 16px;margin-bottom:1.5rem;font-size:0.82rem;color:var(--color-text-secondary);line-height:1.6">
+        ? `<div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px 16px;margin-bottom:1.25rem;font-size:0.82rem;color:var(--color-text-secondary);line-height:1.6">
             📧 Confirmation envoyée à<br><strong style="color:var(--color-primary)">${clientEmail}</strong>
            </div>`
-        : `<p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:2rem">Vous recevrez une confirmation par email.</p>`
+        : `<p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:1.5rem">Vous recevrez une confirmation par email.</p>`
       }
-      <button class="btn btn-primary" onclick="closeBooking()" style="margin:0 auto">Super, merci !</button>
+      ${buildCalendarButtons()}
+      <button class="btn btn-primary" onclick="closeBooking()" style="margin:0.75rem auto 0">Super, merci !</button>
     </div>
   `;
 }
