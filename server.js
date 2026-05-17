@@ -882,13 +882,19 @@ route('GET', '/api/pro/salon/:salonId/bootstrap', async (req, res, params) => {
         queryAll.employeeId = user.employeeId;
     }
 
-    const [salon, employees, todayBookings, allBookings, totalClientsCount] = await Promise.all([
+    const [salon, employees, todayBookings, allBookings, totalClientsCount, pushTokenDocs] = await Promise.all([
         db.findSalonById(params.salonId),
         db.findEmployees({ salon: params.salonId }),
         db.findBookings(queryToday),
         db.findBookings(queryAll),
         isEmployee ? Promise.resolve(0) : db.countClients({ salon: params.salonId }),
+        db.findPushTokensBySalon(params.salonId),
     ]);
+    if (pushTokenDocs.length === 0) {
+        console.log(`⚠️  Bootstrap [${params.salonId}]: aucun push token enregistré pour ce salon`);
+    } else {
+        console.log(`✅ Bootstrap [${params.salonId}]: ${pushTokenDocs.length} push token(s) actif(s)`);
+    }
 
     if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
