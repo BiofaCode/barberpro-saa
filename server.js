@@ -937,6 +937,20 @@ route('POST', '/api/pro/push-token', async (req, res) => {
     json(res, 200, { success: true });
 });
 
+// Diagnostic endpoint — receives APNs/FCM token status from the Flutter app
+// so we can debug push registration failures without Xcode/Mac access.
+route('POST', '/api/pro/push-debug', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
+    const body = await parseBody(req);
+    const apns = body.apnsToken ? `${String(body.apnsToken).slice(0, 16)}…` : 'NULL';
+    const fcm = body.fcmToken ? `${String(body.fcmToken).slice(-8)}` : 'NULL';
+    const err = body.error || '';
+    const attempt = body.attempt || '?';
+    console.log(`🩺 Push debug [attempt ${attempt}] APNs=${apns} | FCM=${fcm} | err=${err}`);
+    json(res, 200, { success: true });
+});
+
 route('DELETE', '/api/pro/push-token', async (req, res) => {
     const user = verifyToken(req);
     if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });

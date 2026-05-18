@@ -55,33 +55,56 @@ class PushService {
   }
 
   // Called from ApiService.login after a successful auth.
-  // Retries up to 3 times with backoff — APNs token can be slow on cold boot.
-  // deleteToken() on each attempt clears any cached failure state in the SDK.
+  // Sends diagnostic info to server on every attempt so we can debug from Render logs.
   static Future<void> registerToken() async {
     String? token;
     for (int attempt = 1; attempt <= 3; attempt++) {
+      String? apnsToken;
+      String? fcmToken;
+      String errorMsg = '';
       try {
-        // Force-refresh: clear cached token so Firebase re-exchanges with APNs.
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          apnsToken = await _fm.getAPNSToken().timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => null,
+          );
+        }
         await _fm.deleteToken();
-        token = await _fm.getToken().timeout(
+        fcmToken = await _fm.getToken().timeout(
           const Duration(seconds: 20),
           onTimeout: () => null,
         );
       } catch (e) {
-        // print (not debugPrint) so it appears in iOS syslog on release builds.
-        print('PushService.registerToken attempt $attempt error: $e'); // ignore: avoid_print
+        errorMsg = e.toString();
       }
+      _sendDiagnostic(attempt, apnsToken, fcmToken, errorMsg);
+      token = fcmToken;
       if (token != null) break;
-      print('PushService.registerToken attempt $attempt: getToken() returned null'); // ignore: avoid_print
       if (attempt < 3) await Future.delayed(Duration(seconds: attempt * 5));
     }
-    if (token == null) {
-      print('PushService.registerToken: all attempts failed, push disabled'); // ignore: avoid_print
-      return;
-    }
+    if (token == null) return;
     _currentToken = token;
-    print('PushService.registerToken: got token …${token.substring(token.length - 8)}'); // ignore: avoid_print
     await _registerOnBackend(token);
+  }
+
+  static Future<void> _sendDiagnostic(int attempt, String? apns, String? fcm, String err) async {
+    final auth = ApiService.authToken;
+    if (auth == null) return;
+    try {
+      await http.post(
+        Uri.parse('${ApiService.currentServerUrl}/api/pro/push-debug'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $auth',
+        },
+        body: jsonEncode({
+          'attempt': attempt,
+          'apnsToken': apns,
+          'fcmToken': fcm,
+          'error': err,
+        }),
+      ).timeout(const Duration(seconds: 10));
+    } catch (_) {}
   }
 
   // Called from ApiService.logout to drop the token server-side.
