@@ -107,8 +107,23 @@ workflows:
             --release \
             --build-name=1.0.0 \
             --build-number=$BUILD_NUMBER \
-            --export-options-plist=ios/ExportOptions.plist
+            --export-options-plist=/Users/builder/export_options.plist
         working_directory: barber_app
+
+      - name: Inspect IPA entitlements
+        script: |
+          set -e
+          IPA=$(ls barber_app/build/ios/ipa/*.ipa | head -1)
+          echo "Inspecting IPA: $IPA"
+          WORK=$(mktemp -d)
+          unzip -q "$IPA" -d "$WORK"
+          APP=$(ls -d "$WORK"/Payload/*.app | head -1)
+          echo "=== ENTITLEMENTS ==="
+          codesign -d --entitlements :- "$APP" 2>/dev/null || echo "(failed to read entitlements)"
+          echo "=== EMBEDDED PROVISIONING PROFILE ==="
+          security cms -D -i "$APP/embedded.mobileprovision" 2>/dev/null | \
+            plutil -extract Entitlements xml1 -o - - 2>/dev/null || echo "(failed to read profile)"
+          rm -rf "$WORK"
 
     artifacts:
       - barber_app/build/ios/ipa/*.ipa
