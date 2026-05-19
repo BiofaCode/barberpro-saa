@@ -1504,6 +1504,19 @@ route('GET', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
     json(res, 200, { success: true, data: bookings });
 });
 
+route('GET', '/api/pro/salon/:salonId/bookings/:bookingId', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
+    const booking = await db.findBookingById(params.bookingId);
+    if (!booking || String(booking.salon) !== String(params.salonId)) {
+        return json(res, 404, { success: false, error: 'Rendez-vous introuvable' });
+    }
+    if (user.role === 'employee' && String(booking.employeeId) !== String(user.employeeId)) {
+        return json(res, 403, { success: false, error: 'Non autorisé' });
+    }
+    json(res, 200, { success: true, data: booking });
+});
+
 route('PUT', '/api/pro/salon/:salonId/bookings/:bookingId', async (req, res, params) => {
     const user = verifySalonAccess(req, params.salonId);
     if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });

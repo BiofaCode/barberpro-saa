@@ -182,6 +182,23 @@ class ApiService {
     return null;
   }
 
+  static const _bootstrapCacheKey = 'cachedBootstrap_';
+
+  // Returns the last successful bootstrap payload so the dashboard renders
+  // instantly on cold-start. Network refresh runs in parallel.
+  static Future<Map<String, dynamic>?> getCachedBootstrap() async {
+    if (_salonId == null) return null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_bootstrapCacheKey$_salonId');
+      if (raw == null) return null;
+      return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    } catch (e) {
+      debugPrint('getCachedBootstrap error: $e');
+      return null;
+    }
+  }
+
   // Bootstrap — single round-trip returning salon + employees + services + stats + todayBookings.
   // Used by dashboard/settings to avoid 5 sequential cold-start hits.
   // Also persists fresh salon to SharedPreferences for next launch.
@@ -196,12 +213,14 @@ class ApiService {
       if (data['success'] == true) {
         final payload = Map<String, dynamic>.from(data['data']);
         final salon = payload['salon'] as Map?;
+        final prefs = await SharedPreferences.getInstance();
         if (salon != null) {
           _currentSalon = Map<String, dynamic>.from(salon);
           _applyBrandingColor();
-          final prefs = await SharedPreferences.getInstance();
           await prefs.setString('currentSalon', jsonEncode(_currentSalon));
         }
+        // Cache the full payload so the next cold-start has something to show.
+        await prefs.setString('$_bootstrapCacheKey$_salonId', jsonEncode(payload));
         return payload;
       }
     } catch (e) {
@@ -243,6 +262,28 @@ class ApiService {
   }
 
   // ---- Mes RDV ----
+  static const _bookingsCacheKey = 'cachedBookings_';
+
+  // Returns the locally cached bookings (last successful fetch). Lets the UI
+  // render instantly on cold-start / weak connection while a fresh fetch runs.
+  // Only the unfiltered list is cached, so callers passing date/status will
+  // miss the cache — that's intentional.
+  static Future<List<BookingModel>?> getCachedBookings() async {
+    if (_salonId == null) return null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_bookingsCacheKey$_salonId');
+      if (raw == null) return null;
+      final list = jsonDecode(raw) as List;
+      return list
+          .map((j) => BookingModel.fromApi(Map<String, dynamic>.from(j as Map)))
+          .toList();
+    } catch (e) {
+      debugPrint('getCachedBookings error: $e');
+      return null;
+    }
+  }
+
   static Future<List<BookingModel>> getMyBookings({String? date, String? status}) async {
     if (_salonId == null) return [];
     try {
@@ -254,12 +295,34 @@ class ApiService {
       final res = await _get(uri, headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) {
-        return (data['data'] as List).map((j) => BookingModel.fromApi(j)).toList();
+        final rawList = data['data'] as List;
+        // Persist only the unfiltered list so the cache always reflects "everything".
+        if (date == null && status == null) {
+          SharedPreferences.getInstance().then((prefs) {
+            prefs.setString('$_bookingsCacheKey$_salonId', jsonEncode(rawList));
+          });
+        }
+        return rawList.map((j) => BookingModel.fromApi(j)).toList();
       }
     } catch (e) {
       debugPrint('API Error (getMyBookings): $e');
     }
     return [];
+  }
+
+  static Future<BookingModel?> getBookingById(String bookingId) async {
+    if (_salonId == null) return null;
+    try {
+      final res = await _get(
+        Uri.parse('$_url/api/pro/salon/$_salonId/bookings/$bookingId'),
+        headers: _authHeaders,
+      );
+      final data = jsonDecode(res.body);
+      if (data['success'] == true) return BookingModel.fromApi(data['data']);
+    } catch (e) {
+      debugPrint('API Error (getBookingById): $e');
+    }
+    return null;
   }
 
   static Future<bool> updateBookingStatus(String bookingId, String status) async {
