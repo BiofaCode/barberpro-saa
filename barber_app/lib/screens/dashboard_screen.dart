@@ -37,13 +37,34 @@ class DashboardScreenState extends State<DashboardScreen> {
   void reload() => _loadData();
 
   Future<void> _loadData() async {
-    // Show spinner only when we have no data at all (truly first load, no cache).
-    final hasNothing = _stats.isEmpty && _todayBookings.isEmpty && !_firstLoadDone;
-    setState(() {
-      if (hasNothing) _loading = true;
-      _error = null;
-      _hasError = false;
-    });
+    // Hydrate from cache first so the dashboard is never blank on cold-start.
+    if (!_firstLoadDone && _stats.isEmpty && _todayBookings.isEmpty) {
+      final cached = await ApiService.getCachedBootstrap();
+      if (!mounted) return;
+      if (cached != null) {
+        final cachedBookings = (cached['todayBookings'] as List?) ?? [];
+        final cachedStats = Map<String, dynamic>.from(cached['stats'] ?? {});
+        setState(() {
+          _todayBookings = cachedBookings
+              .map((j) => BookingModel.fromApi(Map<String, dynamic>.from(j)))
+              .toList();
+          _stats = cachedStats;
+          _loading = false;
+          _firstLoadDone = true;
+        });
+      } else {
+        setState(() {
+          _loading = true;
+          _error = null;
+          _hasError = false;
+        });
+      }
+    } else {
+      setState(() {
+        _error = null;
+        _hasError = false;
+      });
+    }
 
     try {
       final payload = await ApiService.getBootstrap();
@@ -61,6 +82,14 @@ class DashboardScreenState extends State<DashboardScreen> {
       });
     } catch (e) {
       if (!mounted) return;
+      // If we already have cached data on screen, keep it and silently fail.
+      if (_stats.isNotEmpty || _todayBookings.isNotEmpty) {
+        setState(() {
+          _loading = false;
+          _firstLoadDone = true;
+        });
+        return;
+      }
       setState(() {
         _error = 'Impossible de se connecter au serveur';
         _hasError = true;

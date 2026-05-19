@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import '../screens/booking_detail_screen.dart';
 import '../theme/app_theme.dart';
 import 'api_service.dart';
 
@@ -55,59 +56,31 @@ class PushService {
   }
 
   // Called from ApiService.login after a successful auth.
-  // Sends diagnostic info to server on every attempt so we can debug from Render logs.
   static Future<void> registerToken() async {
     String? token;
     for (int attempt = 1; attempt <= 3; attempt++) {
-      String? apnsToken;
-      String? fcmToken;
-      String errorMsg = '';
       try {
-        // Read APNs token first (iOS only) to see if Apple gave us one.
+        // On iOS, wait briefly for APNs token before asking FCM for its token.
         if (defaultTargetPlatform == TargetPlatform.iOS) {
-          apnsToken = await _fm.getAPNSToken().timeout(
+          await _fm.getAPNSToken().timeout(
             const Duration(seconds: 10),
             onTimeout: () => null,
           );
         }
         await _fm.deleteToken();
-        fcmToken = await _fm.getToken().timeout(
+        token = await _fm.getToken().timeout(
           const Duration(seconds: 20),
           onTimeout: () => null,
         );
       } catch (e) {
-        errorMsg = e.toString();
-        print('PushService.registerToken attempt $attempt error: $e'); // ignore: avoid_print
+        debugPrint('PushService.registerToken attempt $attempt error: $e');
       }
-      // Report diagnostic to server every attempt.
-      _sendDiagnostic(attempt, apnsToken, fcmToken, errorMsg);
-      token = fcmToken;
       if (token != null) break;
       if (attempt < 3) await Future.delayed(Duration(seconds: attempt * 5));
     }
     if (token == null) return;
     _currentToken = token;
     await _registerOnBackend(token);
-  }
-
-  static Future<void> _sendDiagnostic(int attempt, String? apns, String? fcm, String err) async {
-    final auth = ApiService.authToken;
-    if (auth == null) return;
-    try {
-      await http.post(
-        Uri.parse('${ApiService.currentServerUrl}/api/pro/push-debug'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $auth',
-        },
-        body: jsonEncode({
-          'attempt': attempt,
-          'apnsToken': apns,
-          'fcmToken': fcm,
-          'error': err,
-        }),
-      ).timeout(const Duration(seconds: 10));
-    } catch (_) {}
   }
 
   // Called from ApiService.logout to drop the token server-side.
@@ -174,12 +147,43 @@ class PushService {
   }
 
   static void _onMessageTap(RemoteMessage message) {
-    // For all notification types, just navigate to root (HomeScreen with
-    // AppointmentsScreen by default). The app is already authenticated.
     debugPrint('🔔 Tap on notification: ${message.data}');
-    // Navigation deferred to first frame so the navigator is mounted.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      navigatorKey.currentState?.popUntil((r) => r.isFirst);
+    final type = message.data['type']?.toString();
+    final bookingId = message.data['bookingId']?.toString();
+
+    // Deferred to first frame so the navigator is mounted (cold-start case).
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final navigator = navigatorKey.currentState;
+      if (navigator == null) return;
+      // Always return to root first so the detail sheet stacks on a clean state.
+      navigator.popUntil((r) => r.isFirst);
+
+      // For booking events, fetch the booking and open the detail sheet.
+      if ((type == 'booking' || type == 'cancellation') &&
+          bookingId != null && bookingId.isNotEmpty &&
+          ApiService.isLoggedIn) {
+        // Give the fetch a moment so the user sees the navigation happen.
+        await Future.delayed(const Duration(milliseconds: 200));
+        final booking = await ApiService.getBookingById(bookingId);
+        final ctx = navigatorKey.currentContext;
+        if (ctx == null || !ctx.mounted) return;
+        if (booking == null) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Impossible d\'ouvrir le rendez-vous (connexion ?)',
+                style: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.w500),
+              ),
+              backgroundColor: AppTheme.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+          return;
+        }
+        await BookingDetailSheet.show(ctx, booking);
+      }
     });
   }
 }

@@ -40,7 +40,20 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
   void reload() => _loadBookings();
 
   Future<void> _loadBookings() async {
-    setState(() => _loading = true);
+    // Show cached bookings immediately so the UI is never empty on cold-start.
+    // The network fetch runs right after and replaces them.
+    if (_allBookings.isEmpty) {
+      final cached = await ApiService.getCachedBookings();
+      if (mounted && cached != null && cached.isNotEmpty) {
+        setState(() {
+          _allBookings = cached;
+          _loading = false;
+        });
+      } else if (mounted) {
+        setState(() => _loading = true);
+      }
+    }
+
     final bookings = await ApiService.getMyBookings();
 
     // Auto-complétion : marquer localement les RDV passés comme terminés
@@ -56,6 +69,14 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
           autoCompletedIds.add(b.id);
         }
       }
+    }
+
+    // If the network returned nothing but we already had cached results,
+    // keep the cache rather than blanking out the UI.
+    if (!mounted) return;
+    if (bookings.isEmpty && _allBookings.isNotEmpty) {
+      setState(() => _loading = false);
+      return;
     }
 
     setState(() {
