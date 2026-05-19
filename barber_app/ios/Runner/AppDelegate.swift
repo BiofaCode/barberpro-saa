@@ -7,6 +7,10 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Register plugins on the AppDelegate too — required for firebase_messaging
+    // to receive didRegisterForRemoteNotificationsWithDeviceToken callbacks.
+    // Without this, APNs token never reaches Firebase even when iOS issues one.
+    GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
