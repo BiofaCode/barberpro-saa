@@ -7,7 +7,12 @@
     <key>teamID</key>
     <string>YL6QK29XDD</string>
     <key>signingStyle</key>
-    <string>automatic</string>
+    <string>manual</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>ch.kreno.app</key>
+        <string>Kreno App Store</string>
+    </dict>
     <key>uploadBitcode</key>
     <false/>
     <key>compileBitcode</key>
