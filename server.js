@@ -3198,6 +3198,14 @@ route('POST', '/api/review/:bookingId', async (req, res, params) => {
     // reviewApproved: null = pending moderation, true = approved, false = rejected
     await db.updateBooking(booking._id, { reviewed: true, reviewRating: rating, reviewComment: comment, reviewDate: new Date().toISOString(), reviewApproved: null });
     json(res, 200, { success: true });
+
+    // Notify the salon (mobile) that a new review awaits moderation.
+    const stars = '★'.repeat(rating);
+    sendFcmToSalon(booking.salon, {
+        title: '⭐ Nouvel avis client',
+        body: `${booking.clientName} a laissé ${stars} (${rating}/5) — à valider`,
+        data: { type: 'review', bookingId: String(booking._id) },
+    }).catch(err => console.error('FCM review error:', err.message));
 });
 
 // ==========================

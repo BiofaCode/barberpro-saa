@@ -12,6 +12,7 @@ import 'settings_screen.dart';
 import 'employees_screen.dart';
 import 'services_screen.dart';
 import 'blocks_screen.dart';
+import 'reviews_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -154,6 +155,14 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BlocksScreen()));
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.star_outline_rounded,
+              label: 'Avis clients',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReviewsScreen()));
               },
             ),
             const Spacer(),

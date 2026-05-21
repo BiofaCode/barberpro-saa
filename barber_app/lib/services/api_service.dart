@@ -357,6 +357,35 @@ class ApiService {
     return false;
   }
 
+  // ---- Avis clients (modération) ----
+  static Future<List<Map<String, dynamic>>> getReviews() async {
+    if (_salonId == null) return [];
+    try {
+      final res = await _get(Uri.parse('$_url/api/pro/salon/$_salonId/reviews'), headers: _authHeaders);
+      final data = jsonDecode(res.body);
+      if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
+    } catch (e) {
+      debugPrint('API Error (getReviews): $e');
+    }
+    return [];
+  }
+
+  static Future<bool> moderateReview(String bookingId, bool approved) async {
+    if (_salonId == null) return false;
+    try {
+      final res = await _put(
+        Uri.parse('$_url/api/pro/salon/$_salonId/reviews/$bookingId/moderate'),
+        headers: _authHeaders,
+        body: jsonEncode({'approved': approved}),
+      );
+      final data = jsonDecode(res.body);
+      return data['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (moderateReview): $e');
+    }
+    return false;
+  }
+
   // ---- Mes clients ----
   static Future<List<Map<String, dynamic>>> getMyClients() async {
     if (_salonId == null) return [];
