@@ -3360,6 +3360,9 @@ tr+tr td{border-top:1px solid #f0f0f0}
     else if (pathname === '/privacy' || pathname === '/privacy.html') {
         filePath = path.join(__dirname, 'saas/privacy.html');
     }
+    else if (pathname === '/support' || pathname === '/support.html') {
+        filePath = path.join(__dirname, 'saas/faq.html');
+    }
     else if (pathname.startsWith('/saas/')) {
         const cleanUrl = pathname.split('?')[0];
         filePath = path.join(__dirname, cleanUrl);
