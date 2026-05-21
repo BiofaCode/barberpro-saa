@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import '../screens/booking_detail_screen.dart';
+import '../screens/reviews_screen.dart';
 import '../theme/app_theme.dart';
 import 'api_service.dart';
 
@@ -157,6 +158,12 @@ class PushService {
       if (navigator == null) return;
       // Always return to root first so the detail sheet stacks on a clean state.
       navigator.popUntil((r) => r.isFirst);
+
+      // A new review notification opens the moderation screen.
+      if (type == 'review' && ApiService.isLoggedIn) {
+        navigator.push(MaterialPageRoute(builder: (_) => const ReviewsScreen()));
+        return;
+      }
 
       // For booking events, fetch the booking and open the detail sheet.
       if ((type == 'booking' || type == 'cancellation') &&
