@@ -306,7 +306,7 @@ function applySalonBranding(salon) {
           testimonialsGrid.innerHTML = allCards.map(t => `
             <div class="testimonial-card reveal active">
               <div class="testimonial-stars">${stars(t.stars)}</div>
-              <p class="testimonial-text">"${t.text}"</p>
+              ${t.text ? `<p class="testimonial-text">"${t.text}"</p>` : ''}
               <div class="testimonial-author">
                 <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">
                   ${t.name ? t.name[0].toUpperCase() : '?'}

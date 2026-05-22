@@ -844,6 +844,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final primaryColorCtrl = TextEditingController(text: branding['primaryColor'] ?? '#6366F1');
     final accentColorCtrl = TextEditingController(text: branding['accentColor'] ?? '#818CF8');
     final backgroundColorCtrl = TextEditingController(text: branding['backgroundColor'] ?? '#0A0A0F');
+    final textColorCtrl = TextEditingController(text: branding['textColor'] ?? '#F5F0E8');
 
     final heroStats = branding['heroStats'] as Map<String, dynamic>? ?? {};
     final stat1ValCtrl = TextEditingController(text: heroStats['stat1Value']?.toString() ?? '2500+');
@@ -1023,6 +1024,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   buildColorPicker('Couleur Accent', accentColorCtrl),
                   const SizedBox(height: 16),
                   buildColorPicker('Couleur de fond', backgroundColorCtrl),
+                  const SizedBox(height: 16),
+                  buildColorPicker('Couleur de texte', textColorCtrl),
                   const SizedBox(height: 24),
                   Text("Statistiques d'accroche (Hero)", style: GoogleFonts.dmSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                   const SizedBox(height: 12),
@@ -1054,6 +1057,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           'primaryColor': primaryColorCtrl.text.trim(),
                           'accentColor': accentColorCtrl.text.trim(),
                           'backgroundColor': backgroundColorCtrl.text.trim(),
+                          'textColor': textColorCtrl.text.trim(),
                           'heroStats': {
                             'stat1Value': stat1ValCtrl.text.trim().isNotEmpty ? stat1ValCtrl.text.trim() : '2500+',
                             'stat1Label': stat1LabCtrl.text.trim().isNotEmpty ? stat1LabCtrl.text.trim() : 'Clients satisfaits',
