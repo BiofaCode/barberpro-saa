@@ -2781,7 +2781,7 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
     // Fetch approved client reviews (most recent 10)
     const allBookings = await db.findBookings({ salon: salon._id, reviewed: true });
     const approvedReviews = allBookings
-        .filter(b => b.reviewApproved === true && b.reviewRating)
+        .filter(b => b.reviewApproved === true && b.reviewRating && b.reviewComment)
         .map(b => ({ rating: b.reviewRating, comment: b.reviewComment, clientName: b.clientName, date: b.reviewDate, service: b.serviceName }))
         .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
         .slice(0, 10);
