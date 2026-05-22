@@ -10,6 +10,8 @@ import '../widgets/booking_card.dart';
 import 'booking_detail_screen.dart';
 import 'employees_screen.dart';
 import 'services_screen.dart';
+import 'blocks_screen.dart';
+import 'reviews_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -619,6 +621,30 @@ class DashboardScreenState extends State<DashboardScreen> {
                 Navigator.pop(context);
                 Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const ServicesScreen()));
+              },
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+            ),
+            ListTile(
+              leading: Icon(Icons.block_rounded, color: AppTheme.textSecondary, size: 22),
+              title: Text('Créneaux bloqués',
+                style: GoogleFonts.dmSans(
+                    fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const BlocksScreen()));
+              },
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+            ),
+            ListTile(
+              leading: Icon(Icons.star_outline_rounded, color: AppTheme.textSecondary, size: 22),
+              title: Text('Avis clients',
+                style: GoogleFonts.dmSans(
+                    fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ReviewsScreen()));
               },
               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
             ),
