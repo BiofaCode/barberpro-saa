@@ -1002,22 +1002,124 @@ class _SettingsScreenState extends State<SettingsScreen> {
             );
           }
 
+          Widget previewField(String label, TextEditingController controller) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: controller,
+                  onChanged: (_) => setSheetState(() {}),
+                  style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppTheme.bgDark,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                ),
+              ],
+            );
+          }
+
+          final bgColor = hexToColor(backgroundColorCtrl.text);
+          final textColor = hexToColor(textColorCtrl.text);
+          final primaryColor = hexToColor(primaryColorCtrl.text);
+          final accentColor = hexToColor(accentColorCtrl.text);
+          final previewTitle = titleCtrl.text.trim().isEmpty ? 'Mon salon' : titleCtrl.text.trim();
+          final previewSubtitle = subtitleCtrl.text.trim().isEmpty ? 'Votre salon premium' : subtitleCtrl.text.trim();
+          final previewCard = Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.textMuted.withAlpha(50)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: accentColor.withAlpha(40),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: accentColor.withAlpha(120)),
+                      ),
+                      child: Text(
+                        'Aperçu live',
+                        style: GoogleFonts.dmSans(fontSize: 10, fontWeight: FontWeight.w600, color: accentColor),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  previewTitle,
+                  style: GoogleFonts.bricolageGrotesque(
+                    fontSize: 18, fontWeight: FontWeight.w700, color: textColor,
+                  ),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  previewSubtitle,
+                  style: GoogleFonts.dmSans(fontSize: 12, color: textColor.withAlpha(180)),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: primaryColor,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        'Réserver',
+                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.star_rounded, color: accentColor, size: 16),
+                    const SizedBox(width: 2),
+                    Text(
+                      '4.9',
+                      style: GoogleFonts.dmSans(fontSize: 12, fontWeight: FontWeight.w600, color: accentColor),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+
           return Container(
             padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 24),
             decoration: const BoxDecoration(
               color: AppTheme.bgCard,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Personnalisation', style: GoogleFonts.bricolageGrotesque(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-                  const SizedBox(height: 20),
-                  _buildSimpleTextField('Titre principal', titleCtrl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Personnalisation', style: GoogleFonts.bricolageGrotesque(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                const SizedBox(height: 14),
+                previewCard,
+                const SizedBox(height: 16),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                  previewField('Titre principal', titleCtrl),
                   const SizedBox(height: 16),
-                  _buildSimpleTextField('Sous-titre', subtitleCtrl),
+                  previewField('Sous-titre', subtitleCtrl),
                   const SizedBox(height: 16),
                   buildColorPicker('Couleur Primaire', primaryColorCtrl),
                   const SizedBox(height: 16),
@@ -1093,6 +1195,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 24),
                 ],
               ),
+            ),
+            ),
+              ],
             ),
           );
         },

@@ -21,7 +21,7 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
   late TabController _tabController;
   List<BookingModel> _allBookings = [];
   bool _loading = true;
-  _ViewMode _viewMode = _ViewMode.day; // Vue jour par défaut
+  _ViewMode _viewMode = _ViewMode.list; // Vue liste par défaut
 
   DateTime _selectedDate = DateTime.now();       // pour la vue liste
   DateTime _calendarDayDate = DateTime.now();    // pour la vue jour

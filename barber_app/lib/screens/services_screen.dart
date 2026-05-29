@@ -55,6 +55,11 @@ class _ServicesScreenState extends State<ServicesScreen> {
     }
   }
 
+  static const List<String> _emojiPalette = [
+    '✂️','💇','💅','🧖','💆','🪒','🧴','💋','👗','👠',
+    '💄','🌸','🧘','🪮','🧼','🌿','⭐','✨','💎','🔥',
+  ];
+
   void _showServiceSheet(Map<String, dynamic>? existing) {
     final isEdit = existing != null;
     final nameCtrl = TextEditingController(text: existing?['name'] as String? ?? '');
@@ -63,6 +68,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
     final durationCtrl = TextEditingController(
         text: existing?['duration'] != null ? existing!['duration'].toString() : '');
     final descCtrl = TextEditingController(text: existing?['description'] as String? ?? '');
+    String selectedIcon = (existing?['icon'] as String?)?.trim().isNotEmpty == true
+        ? existing!['icon'] as String
+        : '✂️';
 
     showModalBottomSheet(
       context: context,
@@ -70,11 +78,13 @@ class _ServicesScreenState extends State<ServicesScreen> {
       backgroundColor: AppTheme.bgCard,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
         padding: EdgeInsets.only(
           left: 24, right: 24, top: 24,
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
         ),
+        child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -141,6 +151,47 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 prefixIcon: Icon(Icons.notes_rounded, color: AppTheme.primary, size: 20),
               ),
             ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Text('Icône',
+                    style: GoogleFonts.dmSans(
+                        fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+                const SizedBox(width: 10),
+                Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withAlpha(26),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(selectedIcon, style: const TextStyle(fontSize: 20)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8, runSpacing: 8,
+              children: _emojiPalette.map((e) {
+                final isSelected = e == selectedIcon;
+                return GestureDetector(
+                  onTap: () => setSheetState(() => selectedIcon = e),
+                  child: Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: isSelected ? AppTheme.primary.withAlpha(40) : AppTheme.bgSurface,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected ? AppTheme.primary : AppTheme.textMuted.withAlpha(40),
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(e, style: const TextStyle(fontSize: 20)),
+                  ),
+                );
+              }).toList(),
+            ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -150,6 +201,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   if (name.isEmpty) return;
                   final payload = {
                     'name': name,
+                    'icon': selectedIcon,
                     if (priceCtrl.text.isNotEmpty) 'price': double.tryParse(priceCtrl.text) ?? 0,
                     if (durationCtrl.text.isNotEmpty) 'duration': int.tryParse(durationCtrl.text) ?? 30,
                     if (descCtrl.text.isNotEmpty) 'description': descCtrl.text.trim(),
@@ -170,6 +222,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
             ),
           ],
         ),
+        ),
+      ),
       ),
     );
   }
@@ -237,6 +291,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
     final price = svc['price'];
     final duration = svc['duration'];
     final description = svc['description'] as String?;
+    final iconStr = (svc['icon'] as String?)?.trim();
+    final hasIcon = iconStr != null && iconStr.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -255,7 +311,9 @@ class _ServicesScreenState extends State<ServicesScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
-              child: Icon(Icons.spa_rounded, color: AppTheme.primary, size: 22),
+              child: hasIcon
+                  ? Text(iconStr, style: const TextStyle(fontSize: 24))
+                  : Icon(Icons.spa_rounded, color: AppTheme.primary, size: 22),
             ),
           ),
           const SizedBox(width: 14),
