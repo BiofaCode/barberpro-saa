@@ -1525,11 +1525,35 @@ route('PUT', '/api/pro/salon/:salonId/bookings/:bookingId', async (req, res, par
     if (body.status && !VALID_STATUSES.includes(body.status)) {
         return json(res, 400, { success: false, error: 'Statut invalide' });
     }
+
+    const existing = await db.findBookingById(params.bookingId);
+    if (!existing || String(existing.salon) !== String(params.salonId)) {
+        return json(res, 404, { success: false, error: 'Rendez-vous introuvable' });
+    }
+
     const updates = {};
     if (body.status) updates.status = body.status;
     if (body.notes !== undefined) updates.notes = body.notes;
     if (body.date) updates.date = body.date;
     if (body.time) updates.time = body.time;
+
+    // Reschedule: when the date or time changes, make sure the new slot is free.
+    // Without this, two bookings could land on the same employee/time slot.
+    const isReschedule = (body.date && body.date !== existing.date) ||
+                         (body.time && body.time !== existing.time);
+    const willBeActive = (updates.status || existing.status) !== 'cancelled';
+    if (isReschedule && willBeActive) {
+        const newDate = body.date || existing.date;
+        const newTime = body.time || existing.time;
+        const conflict = await hasConflict(
+            params.salonId, existing.employeeId, newDate, newTime,
+            existing.duration || 30, params.bookingId,
+        );
+        if (conflict) {
+            return json(res, 409, { success: false, error: 'Ce créneau est déjà occupé.' });
+        }
+    }
+
     const booking = await db.updateBooking(params.bookingId, updates);
     if (!booking) return json(res, 404, { success: false });
     json(res, 200, { success: true, data: booking });

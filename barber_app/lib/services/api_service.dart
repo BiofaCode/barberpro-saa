@@ -428,10 +428,13 @@ class ApiService {
     return false;
   }
 
-  static Future<bool> deleteEmployee(String empId) async {
+  static Future<bool> deleteEmployee(String empId, {String role = 'employee'}) async {
     if (_salonId == null) return false;
     try {
-      final res = await _delete(Uri.parse('$_url/api/pro/salon/$_salonId/employees/$empId'), headers: _authHeaders);
+      // Owners are stored in a separate collection; the server needs ?role=owner
+      // to delete the right record.
+      final q = role == 'owner' ? '?role=owner' : '';
+      final res = await _delete(Uri.parse('$_url/api/pro/salon/$_salonId/employees/$empId$q'), headers: _authHeaders);
       final data = jsonDecode(res.body);
       return data['success'] == true;
     } catch (e) {

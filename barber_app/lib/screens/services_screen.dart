@@ -13,6 +13,7 @@ class ServicesScreen extends StatefulWidget {
 
 class _ServicesScreenState extends State<ServicesScreen> {
   List<Map<String, dynamic>> _services = [];
+  List<Map<String, dynamic>> _employees = [];
   bool _loading = true;
 
   @override
@@ -23,8 +24,17 @@ class _ServicesScreenState extends State<ServicesScreen> {
 
   Future<void> _load() async {
     setState(() => _loading = true);
-    final list = await ApiService.getMyServices();
-    if (mounted) setState(() { _services = list; _loading = false; });
+    final results = await Future.wait([
+      ApiService.getMyServices(),
+      ApiService.getMyEmployees(),
+    ]);
+    if (mounted) {
+      setState(() {
+        _services = results[0];
+        _employees = results[1];
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _deleteService(String id, String name) async {
@@ -71,6 +81,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
     String selectedIcon = (existing?['icon'] as String?)?.trim().isNotEmpty == true
         ? existing!['icon'] as String
         : '✂️';
+    // Pre-select employees already assigned to this service.
+    final assignedIds = ((existing?['assignedEmployees'] as List?) ?? [])
+        .map((e) => e.toString())
+        .toSet();
 
     showModalBottomSheet(
       context: context,
@@ -192,6 +206,61 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 );
               }).toList(),
             ),
+            if (_employees.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Text('Réalisée par',
+                  style: GoogleFonts.dmSans(
+                      fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+              const SizedBox(height: 2),
+              Text('Aucune sélection = tous les membres',
+                  style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
+              const SizedBox(height: 10),
+              ..._employees.map((emp) {
+                final empId = (emp['_id'] ?? emp['id'] ?? '').toString();
+                final empName = emp['name'] as String? ?? 'Membre';
+                final isAssigned = assignedIds.contains(empId);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: GestureDetector(
+                    onTap: () => setSheetState(() {
+                      if (isAssigned) {
+                        assignedIds.remove(empId);
+                      } else {
+                        assignedIds.add(empId);
+                      }
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isAssigned ? AppTheme.primary.withAlpha(26) : AppTheme.bgSurface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isAssigned ? AppTheme.primary : AppTheme.border,
+                          width: isAssigned ? 2 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isAssigned ? Icons.check_circle_rounded : Icons.circle_outlined,
+                            size: 20,
+                            color: isAssigned ? AppTheme.primary : AppTheme.textMuted,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(empName,
+                                style: GoogleFonts.dmSans(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.textPrimary)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -202,6 +271,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
                   final payload = {
                     'name': name,
                     'icon': selectedIcon,
+                    'assignedEmployees': assignedIds.toList(),
                     if (priceCtrl.text.isNotEmpty) 'price': double.tryParse(priceCtrl.text) ?? 0,
                     if (durationCtrl.text.isNotEmpty) 'duration': int.tryParse(durationCtrl.text) ?? 30,
                     if (descCtrl.text.isNotEmpty) 'description': descCtrl.text.trim(),

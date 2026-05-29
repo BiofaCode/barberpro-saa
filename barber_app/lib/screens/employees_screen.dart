@@ -26,7 +26,7 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     if (mounted) setState(() { _employees = list; _loading = false; });
   }
 
-  Future<void> _deleteEmployee(String id, String name) async {
+  Future<void> _deleteEmployee(String id, String name, String role) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -49,14 +49,27 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
       ),
     );
     if (confirmed == true) {
-      final ok = await ApiService.deleteEmployee(id);
-      if (ok) _load();
+      final ok = await ApiService.deleteEmployee(id, role: role);
+      if (ok) {
+        _load();
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Impossible de supprimer ce membre',
+                style: GoogleFonts.dmSans(color: Colors.white)),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
     }
   }
 
   void _showAddSheet() {
     final nameCtrl = TextEditingController();
     final specCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController();
+    String role = 'employee'; // employee | owner (manager)
 
     showModalBottomSheet(
       context: context,
@@ -64,11 +77,13 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
       backgroundColor: AppTheme.bgCard,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Padding(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => Padding(
         padding: EdgeInsets.only(
           left: 24, right: 24, top: 24,
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
         ),
+        child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,10 +98,29 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            Text('Ajouter un employé',
+            Text('Ajouter un membre',
                 style: GoogleFonts.bricolageGrotesque(
                     fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
             const SizedBox(height: 20),
+            // Role selector
+            Text('Rôle',
+                style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textSecondary)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _roleChip('Employé', 'employee', role, () => setSheetState(() => role = 'employee')),
+                const SizedBox(width: 10),
+                _roleChip('Manager', 'owner', role, () => setSheetState(() => role = 'owner')),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              role == 'owner'
+                  ? 'Le manager peut se connecter et gérer le salon. Email + mot de passe requis.'
+                  : 'Un employé apparaît dans le planning mais ne se connecte pas.',
+              style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: nameCtrl,
               style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
@@ -105,6 +139,29 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                 hintText: 'Coupe, Barbe, Coloration…',
               ),
             ),
+            if (role == 'owner') ...[
+              const SizedBox(height: 14),
+              TextField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Email de connexion *',
+                  prefixIcon: Icon(Icons.email_rounded, color: AppTheme.primary, size: 20),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: passwordCtrl,
+                obscureText: true,
+                style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
+                decoration: InputDecoration(
+                  labelText: 'Mot de passe *',
+                  prefixIcon: Icon(Icons.lock_rounded, color: AppTheme.primary, size: 20),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
@@ -112,19 +169,81 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
                 onPressed: () async {
                   final name = nameCtrl.text.trim();
                   if (name.isEmpty) return;
+                  if (role == 'owner' &&
+                      (emailCtrl.text.trim().isEmpty || passwordCtrl.text.trim().isEmpty)) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(
+                        content: Text('Email et mot de passe requis pour un manager',
+                            style: GoogleFonts.dmSans(color: Colors.white)),
+                        backgroundColor: AppTheme.error,
+                      ),
+                    );
+                    return;
+                  }
                   final specs = specCtrl.text
                       .split(',')
                       .map((s) => s.trim())
                       .where((s) => s.isNotEmpty)
                       .toList();
+                  final payload = <String, dynamic>{
+                    'name': name,
+                    'role': role,
+                    'specialties': specs,
+                  };
+                  if (role == 'owner') {
+                    payload['email'] = emailCtrl.text.trim();
+                    payload['password'] = passwordCtrl.text.trim();
+                  }
                   Navigator.pop(ctx);
-                  final ok = await ApiService.addEmployee({'name': name, 'specialties': specs});
-                  if (ok) _load();
+                  final ok = await ApiService.addEmployee(payload);
+                  if (ok) {
+                    _load();
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Ajout impossible (limite du forfait ou email déjà utilisé)',
+                            style: GoogleFonts.dmSans(color: Colors.white)),
+                        backgroundColor: AppTheme.error,
+                      ),
+                    );
+                  }
                 },
                 child: Text('Ajouter', style: GoogleFonts.dmSans(fontWeight: FontWeight.w600, fontSize: 15)),
               ),
             ),
           ],
+        ),
+        ),
+        ),
+      ),
+    );
+  }
+
+  Widget _roleChip(String label, String value, String current, VoidCallback onTap) {
+    final isSelected = value == current;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? AppTheme.primary.withAlpha(40) : AppTheme.bgSurface,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? AppTheme.primary : AppTheme.border,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.dmSans(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? AppTheme.primary : AppTheme.textSecondary,
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -192,6 +311,8 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
     final name = emp['name'] as String? ?? 'Employé';
     final specs = (emp['specialties'] as List?)?.cast<String>() ?? [];
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final role = emp['role'] as String? ?? 'employee';
+    final isManager = role == 'owner';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -252,15 +373,18 @@ class _EmployeesScreenState extends State<EmployeesScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: AppTheme.success.withAlpha(26),
+              color: (isManager ? AppTheme.primary : AppTheme.success).withAlpha(26),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text('Actif',
-                style: GoogleFonts.dmSans(fontSize: 11, color: AppTheme.success, fontWeight: FontWeight.w600)),
+            child: Text(isManager ? 'Manager' : 'Employé',
+                style: GoogleFonts.dmSans(
+                    fontSize: 11,
+                    color: isManager ? AppTheme.primary : AppTheme.success,
+                    fontWeight: FontWeight.w600)),
           ),
           const SizedBox(width: 6),
           GestureDetector(
-            onTap: () => _deleteEmployee(id, name),
+            onTap: () => _deleteEmployee(id, name, role),
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
