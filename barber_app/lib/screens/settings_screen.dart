@@ -1150,7 +1150,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () async {
-                        Navigator.pop(ctx);
+                        // Capture context-bound objects before any await so we
+                        // don't reference BuildContext across async gaps.
+                        final messenger = ScaffoldMessenger.of(context);
+                        final navigator = Navigator.of(ctx);
+                        // Confirm before persisting so colours/names aren't
+                        // changed by accident.
+                        final confirmed = await showDialog<bool>(
+                          context: ctx,
+                          builder: (dCtx) => AlertDialog(
+                            backgroundColor: AppTheme.bgCard,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: Text('Enregistrer les modifications ?',
+                                style: GoogleFonts.bricolageGrotesque(
+                                    color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 18)),
+                            content: Text(
+                                'Les nouvelles couleurs, textes et statistiques seront appliqués à votre page publique.',
+                                style: GoogleFonts.dmSans(color: AppTheme.textSecondary)),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dCtx, false),
+                                child: Text('Annuler', style: GoogleFonts.dmSans(color: AppTheme.textMuted)),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(dCtx, true),
+                                child: Text('Enregistrer',
+                                    style: GoogleFonts.dmSans(color: AppTheme.primary, fontWeight: FontWeight.w700)),
+                              ),
+                            ],
+                          ),
+                        );
+                        if (confirmed != true) return;
+                        navigator.pop();
                         setState(() => _loading = true);
                         final newBranding = {
                           ...branding,
@@ -1178,10 +1209,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           if (color != null) AppTheme.primaryNotifier.value = color;
 
                           await _loadSalonData();
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Design mis à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.success));
+                          if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Design mis à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.success));
                         } else {
                           setState(() => _loading = false);
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur de mise à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.error));
+                          if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Erreur de mise à jour', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.error));
                         }
                       },
                       style: ElevatedButton.styleFrom(

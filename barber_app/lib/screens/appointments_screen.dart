@@ -9,6 +9,15 @@ import 'booking_detail_screen.dart';
 
 enum _ViewMode { list, day }
 
+/// Layout slot for a booking in the day calendar (column + total columns),
+/// used to lay overlapping bookings side by side.
+class _BookingLayout {
+  final BookingModel booking;
+  final int column;
+  final int columnCount;
+  _BookingLayout(this.booking, this.column, this.columnCount);
+}
+
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
 
@@ -233,15 +242,62 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
   // LISTE : date strip horizontal
   // ═══════════════════════════════════════════════════════════════════════
 
+  Future<void> _pickListDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: now.subtract(const Duration(days: 365)),
+      lastDate: now.add(const Duration(days: 365)),
+      locale: const Locale('fr', 'FR'),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: AppTheme.primary,
+            onPrimary: Colors.white,
+            surface: AppTheme.bgCard,
+            onSurface: AppTheme.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _selectedDate = picked);
+  }
+
   Widget _buildListDateStrip() {
     return SizedBox(
       height: 88,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-        itemCount: 14,
+        // ~3 months ahead (and 7 days back) so future bookings are reachable;
+        // a calendar button at the end jumps to any date beyond that.
+        itemCount: 98,
         itemBuilder: (context, i) {
-          final date = DateTime.now().add(Duration(days: i - 2));
+          // Last item = "jump to any date" calendar button.
+          if (i == 97) {
+            return GestureDetector(
+              onTap: _pickListDate,
+              child: Container(
+                width: 52,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgCard,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.primary.withAlpha(70)),
+                ),
+                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(Icons.event_rounded, color: AppTheme.primary, size: 20),
+                  const SizedBox(height: 4),
+                  Text('Date',
+                      style: GoogleFonts.dmSans(
+                          fontSize: 10, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+                ]),
+              ),
+            );
+          }
+          final date = DateTime.now().add(Duration(days: i - 7));
           final isSelected = _isSameDay(date, _selectedDate);
           final isToday = _isSameDay(date, DateTime.now());
           return GestureDetector(
@@ -499,61 +555,122 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
       );
     }
 
-    return Stack(
-      children: dayBookings.map((booking) {
-        if (booking.dateTime.hour < _startHour || booking.dateTime.hour >= _endHour) {
-          return const SizedBox.shrink();
-        }
-        final top = (booking.dateTime.hour - _startHour + booking.dateTime.minute / 60.0) * _hourHeight;
-        final height = (booking.durationMinutes / 60.0) * _hourHeight;
-        final color = _bookingColor(booking.status);
+    // Lay overlapping bookings out in side-by-side columns so each one stays
+    // tappable (otherwise same-time bookings stack and only the top is clickable).
+    final visible = dayBookings
+        .where((b) => b.dateTime.hour >= _startHour && b.dateTime.hour < _endHour)
+        .toList();
+    final layout = _assignColumns(visible);
 
-        final blockHeight = height < 40 ? 40.0 : height;
-        return Positioned(
-          top: top, left: 4, right: 4,
-          height: blockHeight,
-          child: GestureDetector(
-            onTap: () => _openBookingDetail(booking),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: color.withAlpha(28),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final totalWidth = constraints.maxWidth;
+        return Stack(
+          children: layout.map((entry) {
+            final booking = entry.booking;
+            final top = (booking.dateTime.hour - _startHour + booking.dateTime.minute / 60.0) * _hourHeight;
+            final height = (booking.durationMinutes / 60.0) * _hourHeight;
+            final color = _bookingColor(booking.status);
+            final blockHeight = height < 40 ? 40.0 : height;
+
+            const gap = 4.0;
+            final colWidth = (totalWidth - gap) / entry.columnCount;
+            final left = entry.column * colWidth + gap / 2;
+            final width = colWidth - gap;
+
+            return Positioned(
+              top: top,
+              left: left,
+              width: width,
+              height: blockHeight,
+              child: GestureDetector(
+                onTap: () => _openBookingDetail(booking),
+                child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  border: Border(left: BorderSide(color: color, width: 4)),
-                ),
-                padding: const EdgeInsets.fromLTRB(10, 4, 6, 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(children: [
-                      Text(booking.serviceIcon, style: const TextStyle(fontSize: 11)),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(booking.serviceName,
-                            style: GoogleFonts.dmSans(
-                              fontSize: 12, fontWeight: FontWeight.w700, color: color),
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                      ),
-                    ]),
-                    if (blockHeight >= 52) ...[
-                      Text(booking.clientName,
-                          style: GoogleFonts.dmSans(fontSize: 10, color: color.withAlpha(200)),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                      Text(
-                        '${DateFormat('HH:mm').format(booking.dateTime)} → ${DateFormat('HH:mm').format(booking.endTime)}',
-                        style: GoogleFonts.dmSans(fontSize: 9, color: color.withAlpha(160)),
-                      ),
-                    ],
-                  ],
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: color.withAlpha(28),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border(left: BorderSide(color: color, width: 4)),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(8, 4, 4, 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(children: [
+                          Text(booking.serviceIcon, style: const TextStyle(fontSize: 11)),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(booking.serviceName,
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 12, fontWeight: FontWeight.w700, color: color),
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                        ]),
+                        if (blockHeight >= 52) ...[
+                          Text(booking.clientName,
+                              style: GoogleFonts.dmSans(fontSize: 10, color: color.withAlpha(200)),
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                          if (entry.columnCount == 1)
+                            Text(
+                              '${DateFormat('HH:mm').format(booking.dateTime)} → ${DateFormat('HH:mm').format(booking.endTime)}',
+                              style: GoogleFonts.dmSans(fontSize: 9, color: color.withAlpha(160)),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
+  }
+
+  /// Greedy column assignment for overlapping bookings. Bookings that overlap
+  /// in time share a cluster and are split into N side-by-side columns.
+  List<_BookingLayout> _assignColumns(List<BookingModel> bookings) {
+    final sorted = [...bookings]..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    final result = <_BookingLayout>[];
+    var i = 0;
+    while (i < sorted.length) {
+      // Build a cluster of transitively-overlapping bookings.
+      final cluster = <BookingModel>[sorted[i]];
+      var clusterEnd = sorted[i].endTime;
+      var j = i + 1;
+      while (j < sorted.length && sorted[j].dateTime.isBefore(clusterEnd)) {
+        cluster.add(sorted[j]);
+        if (sorted[j].endTime.isAfter(clusterEnd)) clusterEnd = sorted[j].endTime;
+        j++;
+      }
+      // Assign each booking the first column whose last end <= its start.
+      final colEnds = <DateTime>[];
+      final cols = <int>[];
+      for (final b in cluster) {
+        var placed = false;
+        for (var c = 0; c < colEnds.length; c++) {
+          if (!b.dateTime.isBefore(colEnds[c])) {
+            colEnds[c] = b.endTime;
+            cols.add(c);
+            placed = true;
+            break;
+          }
+        }
+        if (!placed) {
+          cols.add(colEnds.length);
+          colEnds.add(b.endTime);
+        }
+      }
+      final count = colEnds.length;
+      for (var k = 0; k < cluster.length; k++) {
+        result.add(_BookingLayout(cluster[k], cols[k], count));
+      }
+      i = j;
+    }
+    return result;
   }
 
   // ═══════════════════════════════════════════════════════════════════════

@@ -46,6 +46,24 @@ function showPaymentSuccess() {
   const footerEl = document.querySelector('.booking-modal-footer');
   if (stepsEl) stepsEl.style.display = 'none';
   if (footerEl) footerEl.style.display = 'none';
+  // Rebuild the calendar buttons from the context saved before the Stripe redirect.
+  let calHtml = '';
+  try {
+    const raw = sessionStorage.getItem('kreno_pending_cal');
+    if (raw) {
+      const c = JSON.parse(raw);
+      if (c.d && c.t) {
+        const [h, mn] = c.t.split(':').map(Number);
+        const start = new Date(c.d);
+        start.setHours(h, mn, 0, 0);
+        const title = `${c.name || 'RDV'} @ ${c.salon || ''}`;
+        const desc = c.emp ? `avec ${c.emp}` : '';
+        calHtml = calendarButtonsHtml(start, c.dur || 60, title, desc, c.salon || '');
+      }
+      sessionStorage.removeItem('kreno_pending_cal');
+    }
+  } catch (e) { /* non-blocking */ }
+
   const successView = document.getElementById('bmSuccessView');
   if (successView) {
     successView.style.display = 'flex';
@@ -53,8 +71,9 @@ function showPaymentSuccess() {
       <div style="text-align:center;padding:2rem 1rem">
         <span class="bm-success-icon">💳</span>
         <h3 style="margin-bottom:0.5rem;font-size:1.3rem;color:var(--color-text-primary)">Paiement reçu — Rendez-vous confirmé !</h3>
-        <p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:2rem">Vous recevrez une confirmation par email avec tous les détails.</p>
-        <button class="btn btn-primary" onclick="closeBooking()" style="margin:0 auto">Super, merci !</button>
+        <p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:${calHtml ? '1.25rem' : '2rem'}">Vous recevrez une confirmation par email avec tous les détails.</p>
+        ${calHtml}
+        <button class="btn btn-primary" onclick="closeBooking()" style="margin:0.75rem auto 0">Super, merci !</button>
       </div>
     `;
   }
@@ -913,6 +932,18 @@ async function submitBooking() {
       });
       const data = await res.json();
       if (data.success && data.data?.checkoutUrl) {
+        // Persist the event so we can still offer "add to calendar" after the
+        // Stripe round-trip (bmState is lost on redirect).
+        try {
+          sessionStorage.setItem('kreno_pending_cal', JSON.stringify({
+            d: bmState.date ? bmState.date.toISOString() : null,
+            t: bmState.time,
+            name: bmState.service?.name || '',
+            dur: bmState.service?.duration || 60,
+            emp: bmState.employee?.name || '',
+            salon: salon?.name || '',
+          }));
+        } catch (e) { /* sessionStorage unavailable — non-blocking */ }
         window.location.href = data.data.checkoutUrl;
         return;
       }
@@ -932,24 +963,20 @@ async function submitBooking() {
   showBookingSuccess();
 }
 
-function buildCalendarButtons() {
+// Builds the "add to calendar" buttons HTML from explicit event details, so it
+// works both from live bmState and from values restored after a Stripe redirect.
+function calendarButtonsHtml(start, durMin, title, desc, location) {
   try {
-    if (!bmState.date || !bmState.time) return '';
-    const [h, mn] = bmState.time.split(':').map(Number);
-    const start = new Date(bmState.date);
-    start.setHours(h, mn, 0, 0);
-    const dur = bmState.service?.duration || 60;
-    const end = new Date(start.getTime() + dur * 60000);
+    if (!(start instanceof Date) || isNaN(start.getTime())) return '';
+    const end = new Date(start.getTime() + (durMin || 60) * 60000);
     const pad = n => String(n).padStart(2, '0');
     const fmtLocal = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
-    const title = `${bmState.service?.name || 'RDV'} @ ${salon?.name || ''}`;
-    const desc = bmState.employee ? `avec ${bmState.employee.name}` : '';
     const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kreno//FR','BEGIN:VEVENT',
       `DTSTART:${fmtLocal(start)}`,`DTEND:${fmtLocal(end)}`,`SUMMARY:${title}`,
-      desc ? `DESCRIPTION:${desc}` : '',`LOCATION:${salon?.name || ''}`,
+      desc ? `DESCRIPTION:${desc}` : '',`LOCATION:${location || ''}`,
       `UID:${Date.now()}@kreno.ch`,'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');
     const icsUrl = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
-    const gcUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmtLocal(start)}/${fmtLocal(end)}&details=${encodeURIComponent(desc)}&location=${encodeURIComponent(salon?.name || '')}`;
+    const gcUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmtLocal(start)}/${fmtLocal(end)}&details=${encodeURIComponent(desc)}&location=${encodeURIComponent(location || '')}`;
     const btnStyle = `display:inline-flex;align-items:center;gap:5px;padding:9px 16px;background:rgba(0,0,0,0.06);border-radius:10px;text-decoration:none;color:var(--color-text-primary);font-size:0.82rem;font-weight:500`;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isAndroid = /Android/.test(navigator.userAgent);
@@ -960,6 +987,16 @@ function buildCalendarButtons() {
       <a href="${gcUrl}" target="_blank" style="${btnStyle}">📅 Google Calendar</a>
     </div>`;
   } catch(e) { return ''; }
+}
+
+function buildCalendarButtons() {
+  if (!bmState.date || !bmState.time) return '';
+  const [h, mn] = bmState.time.split(':').map(Number);
+  const start = new Date(bmState.date);
+  start.setHours(h, mn, 0, 0);
+  const title = `${bmState.service?.name || 'RDV'} @ ${salon?.name || ''}`;
+  const desc = bmState.employee ? `avec ${bmState.employee.name}` : '';
+  return calendarButtonsHtml(start, bmState.service?.duration || 60, title, desc, salon?.name || '');
 }
 
 function showBookingSuccess() {

@@ -387,12 +387,35 @@ class ApiService {
   }
 
   // ---- Mes clients ----
+  static const _clientsCacheKey = 'cachedClients_';
+
+  /// Locally cached clients so the Clients tab isn't empty offline / cold-start.
+  static Future<List<Map<String, dynamic>>?> getCachedClients() async {
+    if (_salonId == null) return null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_clientsCacheKey$_salonId');
+      if (raw == null) return null;
+      final list = jsonDecode(raw) as List;
+      return list.map((j) => Map<String, dynamic>.from(j as Map)).toList();
+    } catch (e) {
+      debugPrint('getCachedClients error: $e');
+      return null;
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> getMyClients() async {
     if (_salonId == null) return [];
     try {
       final res = await _get(Uri.parse('$_url/api/pro/salon/$_salonId/clients'), headers: _authHeaders);
       final data = jsonDecode(res.body);
-      if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
+      if (data['success'] == true) {
+        final list = List<Map<String, dynamic>>.from(data['data']);
+        SharedPreferences.getInstance().then((prefs) {
+          prefs.setString('$_clientsCacheKey$_salonId', jsonEncode(list));
+        });
+        return list;
+      }
     } catch (e) {
       debugPrint('API Error (getMyClients): $e');
     }

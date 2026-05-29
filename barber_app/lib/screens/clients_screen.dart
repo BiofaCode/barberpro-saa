@@ -18,6 +18,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
   List<Map<String, dynamic>> _clients = [];
   bool _loading = true;
   bool _hasError = false;
+  bool _offline = false;
 
   @override
   void initState() {
@@ -27,20 +28,43 @@ class _ClientsScreenState extends State<ClientsScreen> {
 
   Future<void> _loadClients() async {
     setState(() {
-      _loading = true;
       _hasError = false;
     });
+    // Show cached clients immediately so the tab is never empty offline.
+    if (_clients.isEmpty) {
+      final cached = await ApiService.getCachedClients();
+      if (mounted && cached != null && cached.isNotEmpty) {
+        setState(() {
+          _clients = cached;
+          _loading = false;
+        });
+      } else if (mounted) {
+        setState(() => _loading = true);
+      }
+    }
+
     try {
       final clients = await ApiService.getMyClients();
       if (!mounted) return;
+      // Network returned nothing but we have cache → likely offline, keep cache.
+      if (clients.isEmpty && _clients.isNotEmpty) {
+        setState(() {
+          _offline = true;
+          _loading = false;
+        });
+        return;
+      }
       setState(() {
         _clients = clients;
+        _offline = false;
         _loading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _hasError = true;
+        // Only a hard error if we have nothing to show.
+        _hasError = _clients.isEmpty;
+        _offline = _clients.isNotEmpty;
         _loading = false;
       });
     }
@@ -120,6 +144,31 @@ class _ClientsScreenState extends State<ClientsScreen> {
                 ],
               ),
             ),
+
+            // Offline banner — shown when displaying cached data without network.
+            if (_offline)
+              Container(
+                margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.warning.withAlpha(30),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.warning.withAlpha(120)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.cloud_off_rounded, size: 16, color: AppTheme.warning),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Hors ligne — données en cache, possiblement pas à jour',
+                        style: GoogleFonts.dmSans(
+                            fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.warning),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
             // Search
             Padding(
