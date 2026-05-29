@@ -96,6 +96,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _onNewTap() async {
+    // Pre-fill with the day currently viewed in the Appointments tab so a
+    // booking created from there lands on the right date, not always "today".
+    final initialDate = _appointmentsKey.currentState?.activeDate;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -104,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => const _NewBookingSheet(),
+      builder: (_) => _NewBookingSheet(initialDate: initialDate),
     );
     _appointmentsKey.currentState?.reload();
     _dashboardKey.currentState?.reload();
@@ -195,7 +198,8 @@ class _HomeScreenState extends State<HomeScreen> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _NewBookingSheet extends StatefulWidget {
-  const _NewBookingSheet();
+  final DateTime? initialDate;
+  const _NewBookingSheet({this.initialDate});
 
   @override
   State<_NewBookingSheet> createState() => _NewBookingSheetState();
@@ -212,8 +216,8 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
   // Selected values
   Map<String, dynamic>? _selectedService;
   Map<String, dynamic>? _selectedEmployee; // null = "Aucun / Au choix"
-  DateTime _selectedDate = DateTime.now();
-  TimeOfDay _selectedTime = TimeOfDay.now();
+  late DateTime _selectedDate;
+  late TimeOfDay _selectedTime;
 
   // Client fields
   Map<String, dynamic>? _selectedClient;
@@ -230,16 +234,41 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
   // Submit state
   bool _submitting = false;
   bool _showServiceError = false;
+  String? _errorBanner;
+  Timer? _errorTimer;
 
   @override
   void initState() {
     super.initState();
+    // Default to the day being viewed in the Appointments tab (or today).
+    final now = DateTime.now();
+    final baseDate = widget.initialDate ?? now;
+    _selectedDate = DateTime(baseDate.year, baseDate.month, baseDate.day);
+    // Default to the next clean 30-min slot rather than "now to the minute",
+    // which would both be in the past on submit and look unprofessional.
+    _selectedTime = _nextSlotFor(_selectedDate);
     _loadInitialData();
+  }
+
+  /// First 30-min slot strictly in the future for [date]. For a future date
+  /// we start the day at the first opening slot (07:00).
+  static TimeOfDay _nextSlotFor(DateTime date) {
+    final now = DateTime.now();
+    final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+    if (!isToday) return const TimeOfDay(hour: 9, minute: 0);
+    // Round current time up to the next half hour.
+    int hour = now.hour;
+    int minute = now.minute < 30 ? 30 : 0;
+    if (minute == 0) hour += 1;
+    if (hour > 21) return const TimeOfDay(hour: 21, minute: 30);
+    if (hour < 7) return const TimeOfDay(hour: 7, minute: 0);
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   @override
   void dispose() {
     _searchTimer?.cancel();
+    _errorTimer?.cancel();
     _clientSearchCtrl.dispose();
     _phoneCtrl.dispose();
     _emailCtrl.dispose();
@@ -347,27 +376,27 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
       _selectedTime.minute,
     );
     if (selectedDateTime.isBefore(DateTime.now())) {
-      _showValidationSnack('Impossible de créer un RDV dans le passé');
+      _showError('Impossible de créer un RDV dans le passé');
       return;
     }
 
     // Validation: client name required
     final clientName = _clientSearchCtrl.text.trim();
     if (clientName.isEmpty) {
-      _showValidationSnack('Veuillez saisir le nom du client');
+      _showError('Veuillez saisir le nom du client');
       return;
     }
 
     // Validation: service required
     if (_selectedService == null) {
       setState(() => _showServiceError = true);
-      _showValidationSnack('Veuillez sélectionner une prestation');
+      _showError('Veuillez sélectionner une prestation');
       return;
     }
 
     // Validation: phone required
     if (_phoneCtrl.text.trim().isEmpty) {
-      _showValidationSnack('Veuillez saisir le téléphone du client');
+      _showError('Veuillez saisir le téléphone du client');
       return;
     }
 
@@ -402,35 +431,31 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
     setState(() => _submitting = false);
 
     if (result != null) {
-      _showSnack('RDV créé avec succès ✓', isError: false);
+      // Sheet closes, so a parent snackbar is visible for the success case.
       Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('RDV créé avec succès ✓',
+              style: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.w500)),
+          backgroundColor: AppTheme.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
     } else {
-      _showSnack('Erreur lors de la création du RDV', isError: true);
+      _showError('Erreur lors de la création du RDV');
     }
   }
 
-  void _showValidationSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, style: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.w500)),
-        backgroundColor: AppTheme.warning,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
-  }
-
-  void _showSnack(String msg, {required bool isError}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, style: GoogleFonts.dmSans(color: Colors.white, fontWeight: FontWeight.w500)),
-        backgroundColor: isError ? AppTheme.error : AppTheme.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+  /// Shows an error banner pinned at the top of the sheet (a ScaffoldMessenger
+  /// snackbar would render behind the modal sheet, hidden from the user).
+  void _showError(String msg) {
+    setState(() => _errorBanner = msg);
+    _errorTimer?.cancel();
+    _errorTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _errorBanner = null);
+    });
   }
 
   @override
@@ -493,6 +518,37 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
                   ],
                 ),
               ),
+              // ── Error banner (pinned above the form) ─────────────
+              if (_errorBanner != null)
+                Container(
+                  margin: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.error.withAlpha(30),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.error.withAlpha(120)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline_rounded, size: 18, color: AppTheme.error),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _errorBanner!,
+                          style: GoogleFonts.dmSans(
+                            fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.error),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          _errorTimer?.cancel();
+                          setState(() => _errorBanner = null);
+                        },
+                        child: Icon(Icons.close_rounded, size: 16, color: AppTheme.error),
+                      ),
+                    ],
+                  ),
+                ),
               // ── Body ─────────────────────────────────────────────
               Expanded(
                 child: _loadingInit
@@ -865,7 +921,7 @@ class _ServiceDropdown extends StatelessWidget {
                         if (price != null || duration != null)
                           Text(
                             [
-                              if (price != null) '$price€',
+                              if (price != null) '$price CHF',
                               if (duration != null) '$duration min',
                             ].join(' · '),
                             style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted),
@@ -893,7 +949,7 @@ class _ServiceDropdown extends StatelessWidget {
                   child: Text(
                     [
                       name,
-                      if (price != null) '$price€',
+                      if (price != null) '$price CHF',
                       if (duration != null) '$duration min',
                     ].join(' · '),
                     style: GoogleFonts.dmSans(

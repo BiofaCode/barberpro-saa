@@ -449,41 +449,25 @@ class _AddBlockSheetState extends State<_AddBlockSheet> {
   }
 
   Future<void> _pickStartTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _startTime,
-      builder: (ctx, child) => _timePickerTheme(ctx, child),
-    );
+    final picked = await _showTimeListPicker(_startTime, 'Heure de début');
     if (picked != null) {
       setState(() => _startTime = picked);
     }
   }
 
   Future<void> _pickEndTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _endTime,
-      builder: (ctx, child) => _timePickerTheme(ctx, child),
-    );
+    final picked = await _showTimeListPicker(_endTime, 'Heure de fin');
     if (picked != null) {
       setState(() => _endTime = picked);
     }
   }
 
-  Widget _timePickerTheme(BuildContext ctx, Widget? child) {
-    return Theme(
-      data: Theme.of(ctx).copyWith(
-        colorScheme: ColorScheme.light(
-          primary: AppTheme.primary,
-          onPrimary: Colors.white,
-          surface: AppTheme.bgCard,
-          onSurface: AppTheme.textPrimary,
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(foregroundColor: AppTheme.primary),
-        ),
-      ),
-      child: child!,
+  Future<TimeOfDay?> _showTimeListPicker(TimeOfDay current, String title) {
+    return showModalBottomSheet<TimeOfDay>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _TimeListSheet(current: current, title: title),
     );
   }
 
@@ -791,6 +775,138 @@ class _PickerButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sélecteur d'heure simple : liste de créneaux groupés Matin / Après-midi / Soir
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TimeListSheet extends StatelessWidget {
+  final TimeOfDay current;
+  final String title;
+
+  const _TimeListSheet({required this.current, required this.title});
+
+  /// 15-min slots from 07:00 to 21:45.
+  List<TimeOfDay> _slots() {
+    final out = <TimeOfDay>[];
+    for (int h = 7; h <= 21; h++) {
+      for (final m in [0, 15, 30, 45]) {
+        out.add(TimeOfDay(hour: h, minute: m));
+      }
+    }
+    return out;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final slots = _slots();
+    final morning = slots.where((s) => s.hour < 12).toList();
+    final afternoon = slots.where((s) => s.hour >= 12 && s.hour < 18).toList();
+    final evening = slots.where((s) => s.hour >= 18).toList();
+
+    return Container(
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+      decoration: const BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+            child: Column(children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Text(title,
+                      style: GoogleFonts.bricolageGrotesque(
+                          fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgSurface,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.close_rounded, size: 16, color: AppTheme.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ]),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              children: [
+                _group(context, 'MATIN', morning),
+                _group(context, 'APRÈS-MIDI', afternoon),
+                _group(context, 'SOIR', evening),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _group(BuildContext context, String label, List<TimeOfDay> slots) {
+    if (slots.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+          child: Text(label,
+              style: GoogleFonts.dmSans(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textMuted, letterSpacing: 0.5)),
+        ),
+        Wrap(
+          spacing: 8, runSpacing: 8,
+          children: slots.map((slot) {
+            final isSelected = slot.hour == current.hour && slot.minute == current.minute;
+            final label = '${slot.hour.toString().padLeft(2, '0')}:${slot.minute.toString().padLeft(2, '0')}';
+            return GestureDetector(
+              onTap: () => Navigator.pop(context, slot),
+              child: Container(
+                width: 72,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppTheme.primary : AppTheme.bgSurface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: isSelected ? AppTheme.primary : AppTheme.border),
+                ),
+                child: Center(
+                  child: Text(
+                    label,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? Colors.white : AppTheme.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 }

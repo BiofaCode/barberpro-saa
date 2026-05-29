@@ -39,6 +39,11 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
 
   void reload() => _loadBookings();
 
+  /// The day currently being viewed, used to pre-fill the "+" booking sheet.
+  /// In list mode that's the selected list date; in day mode the calendar date.
+  DateTime get activeDate =>
+      _viewMode == _ViewMode.day ? _calendarDayDate : _selectedDate;
+
   Future<void> _loadBookings() async {
     // Show cached bookings immediately so the UI is never empty on cold-start.
     // The network fetch runs right after and replaces them.
