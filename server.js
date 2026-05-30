@@ -2269,11 +2269,9 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
                 const SMS_MONTHLY = { starter: 0, pro: 200, premium: 400 };
                 const monthlyCredits = SMS_MONTHLY[plan] || 0;
                 if (monthlyCredits > 0) {
-                    // Top up: give new credits, keep any unused (capped at 2× monthly to avoid infinite accumulation)
-                    const current = salon.smsCredits || 0;
-                    const capped = Math.min(current + monthlyCredits, monthlyCredits * 2);
-                    await db.updateSalon(salon._id, { smsCredits: capped });
-                    console.log(`📱 Recharge SMS mensuelle: salon ${salon._id} → ${capped} crédits (plan ${plan})`);
+                    // Reset to the plan's monthly allowance — no rollover of unused credits.
+                    await db.updateSalon(salon._id, { smsCredits: monthlyCredits });
+                    console.log(`📱 Recharge SMS mensuelle: salon ${salon._id} → ${monthlyCredits} crédits (plan ${plan}, reset)`);
                 }
             }
         }
