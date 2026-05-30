@@ -25,6 +25,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _services = [];
   bool _loading = false;
+  Map<String, dynamic>? _smsStatus; // { credits, packs, configured, settings }
 
   @override
   void initState() {
@@ -63,6 +64,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       _loading = false;
     });
+
+    // SMS status (non bloquant — la carte affiche un placeholder si null)
+    final sms = await ApiService.getSmsStatus();
+    if (mounted && sms != null) setState(() => _smsStatus = sms);
   }
 
   void _logout() {
@@ -337,6 +342,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildSectionTitle('Abonnement'),
                       const SizedBox(height: 12),
                       _buildSubscriptionCard(),
+                      const SizedBox(height: 24),
+
+                      // SMS credits
+                      _buildSectionTitle('Crédits SMS'),
+                      const SizedBox(height: 12),
+                      _buildSmsCard(),
                       const SizedBox(height: 24),
 
                       // Branding
@@ -788,6 +799,125 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildSmsCard() {
+    final configured = _smsStatus?['configured'] == true;
+    final credits = (_smsStatus?['credits'] as num?)?.toInt() ?? 0;
+    final settings = (_smsStatus?['settings'] as Map?)?.cast<String, dynamic>() ??
+        {'clientConfirmation': true, 'clientReminder': true};
+    final plan = (_salon?['subscription']?['plan'] ?? 'pro').toString();
+
+    final Color creditColor = credits == 0
+        ? AppTheme.error
+        : credits < 20
+            ? AppTheme.warning
+            : AppTheme.success;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withAlpha(10)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!configured) ...[
+            Text('Envoi SMS bientôt disponible',
+                style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textMuted)),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Crédits disponibles',
+                    style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textMuted)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: creditColor.withAlpha(26),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text('$credits SMS',
+                      style: GoogleFonts.dmSans(
+                          fontSize: 14, fontWeight: FontWeight.w700, color: creditColor)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              plan == 'starter'
+                  ? 'Plan Essentiel — aucun SMS inclus, rechargez à la demande.'
+                  : 'Inclus dans votre plan : 200 SMS par mois.',
+              style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted),
+            ),
+            const SizedBox(height: 14),
+            _buildSmsToggle(
+              'SMS de confirmation au client',
+              settings['clientConfirmation'] != false,
+              (v) => _saveSmsToggle(clientConfirmation: v),
+            ),
+            _buildSmsToggle(
+              'SMS rappel (la veille)',
+              settings['clientReminder'] != false,
+              (v) => _saveSmsToggle(clientReminder: v),
+            ),
+            const SizedBox(height: 14),
+          ],
+          ElevatedButton.icon(
+            onPressed: () async {
+              final uri = Uri.parse('${ApiService.currentServerUrl}/pro');
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            },
+            icon: const Icon(Icons.sms_rounded, size: 18),
+            label: const Text('Gérer / Recharger mes SMS'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary.withAlpha(26),
+              foregroundColor: AppTheme.primary,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmsToggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(label,
+              style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textPrimary)),
+        ),
+        Switch(
+          value: value,
+          onChanged: onChanged,
+          activeThumbColor: AppTheme.primary,
+          activeTrackColor: AppTheme.primary.withAlpha(77),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _saveSmsToggle({bool? clientConfirmation, bool? clientReminder}) async {
+    final settings = (_smsStatus?['settings'] as Map?)?.cast<String, dynamic>() ??
+        {'clientConfirmation': true, 'clientReminder': true};
+    // Optimistic local update so the switch flips immediately.
+    final newSettings = {
+      'clientConfirmation': clientConfirmation ?? (settings['clientConfirmation'] != false),
+      'clientReminder': clientReminder ?? (settings['clientReminder'] != false),
+      'ownerNotification': settings['ownerNotification'] == true,
+      'ownerPhone': settings['ownerPhone'] ?? '',
+    };
+    setState(() => _smsStatus = {...?_smsStatus, 'settings': newSettings});
+    final ok = await ApiService.updateSmsSettings(newSettings);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur lors de la sauvegarde des préférences SMS')));
+    }
   }
 
   Widget _buildBrandingCard() {
