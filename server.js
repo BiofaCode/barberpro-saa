@@ -595,7 +595,11 @@ route('POST', '/api/admin/salons', async (req, res) => {
             vendredi: { open: '09:00', close: '19:00' },
             samedi: { open: '09:00', close: '18:00' },
         },
-        subscription: { plan: body.subscription?.plan || 'pro', status: 'active', price: 49.90 },
+        subscription: {
+            plan: body.subscription?.plan || 'pro',
+            status: 'active',
+            price: (PLAN_PRICES[body.subscription?.plan || 'pro']?.amount || 4900) / 100,
+        },
         smsReminders: { enabled: false, status: 'En développement' },
         rating: 0,
         reviewCount: 0,
@@ -683,7 +687,7 @@ route('PUT', '/api/admin/salons/:id/notes', async (req, res, params) => {
 route('GET', '/api/admin/salons/export-csv', async (req, res) => {
     const salons = await db.findSalons({});
     const rows = [['Nom', 'Email', 'Slug', 'Plan', 'Statut', 'Date création', 'MRR estimé (CHF)']];
-    const MRR = { starter: 29.9, pro: 49.9, premium: 89.9 };
+    const MRR = { starter: 39, pro: 49, premium: 89 };
     for (const s of salons) {
         const plan = s.subscription?.plan || 'starter';
         const status = s.subscription?.status || 'unknown';
