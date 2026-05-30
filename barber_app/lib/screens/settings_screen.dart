@@ -997,6 +997,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
             try { return Color(int.parse('FF$h', radix: 16)); } catch (_) { return AppTheme.primary; }
           }
 
+          const colorThemes = [
+            {'name': 'Ardoise',  'primary': '#6366F1', 'accent': '#818CF8', 'bg': '#0A0A0F', 'text': '#F5F0E8'},
+            {'name': 'Or & Noir','primary': '#C9A227', 'accent': '#E6C757', 'bg': '#121212', 'text': '#F5F0E8'},
+            {'name': 'Océan',    'primary': '#2563EB', 'accent': '#38BDF8', 'bg': '#0B1220', 'text': '#E8EEF7'},
+            {'name': 'Émeraude', 'primary': '#10B981', 'accent': '#34D399', 'bg': '#0C1512', 'text': '#E8F2EC'},
+            {'name': 'Rosé',     'primary': '#E11D6B', 'accent': '#F472B6', 'bg': '#FFF7FA', 'text': '#2B2B2B'},
+            {'name': 'Bordeaux', 'primary': '#9B1C31', 'accent': '#C84B5A', 'bg': '#1A0F12', 'text': '#F3E9E0'},
+          ];
+
+          Widget buildThemeSelector() {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Thèmes prédéfinis',
+                    style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted)),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: colorThemes.map((t) {
+                    final isActive =
+                        primaryColorCtrl.text.trim().toLowerCase() == t['primary']!.toLowerCase() &&
+                        accentColorCtrl.text.trim().toLowerCase() == t['accent']!.toLowerCase() &&
+                        backgroundColorCtrl.text.trim().toLowerCase() == t['bg']!.toLowerCase() &&
+                        textColorCtrl.text.trim().toLowerCase() == t['text']!.toLowerCase();
+                    return GestureDetector(
+                      onTap: () => setSheetState(() {
+                        primaryColorCtrl.text = t['primary']!;
+                        accentColorCtrl.text = t['accent']!;
+                        backgroundColorCtrl.text = t['bg']!;
+                        textColorCtrl.text = t['text']!;
+                      }),
+                      child: Container(
+                        width: 76,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bgDark,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isActive ? Colors.white : Colors.white.withAlpha(20),
+                            width: isActive ? 2 : 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 40, height: 24,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(6),
+                                gradient: LinearGradient(
+                                  colors: [hexToColor(t['primary']!), hexToColor(t['accent']!)],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(t['name']!,
+                                style: GoogleFonts.dmSans(
+                                    fontSize: 11, color: AppTheme.textPrimary)),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            );
+          }
+
           Widget buildColorPicker(String label, TextEditingController ctrl) {
             const palette = [
               '#6366F1', '#818CF8', '#9333EA', '#7C3AED',
@@ -1250,6 +1318,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   previewField('Titre principal', titleCtrl),
                   const SizedBox(height: 16),
                   previewField('Sous-titre', subtitleCtrl),
+                  const SizedBox(height: 16),
+                  buildThemeSelector(),
                   const SizedBox(height: 16),
                   buildColorPicker('Couleur Primaire', primaryColorCtrl),
                   const SizedBox(height: 16),
