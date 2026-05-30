@@ -1749,7 +1749,7 @@ route('PUT', '/api/pro/salon/:salonId/sms-settings', async (req, res, params) =>
 
 // Buy SMS credits via Stripe checkout
 route('POST', '/api/pro/sms/buy', async (req, res) => {
-    const user = verifySalonAccess(req, params.salonId);
+    const user = verifyToken(req);
     if (!user || user.role === 'employee') return json(res, 403, { success: false });
 
     const body = await parseBody(req);
