@@ -540,6 +540,45 @@ class ApiService {
     return false;
   }
 
+  // ---- SMS ----
+  /// Récupère le solde de crédits SMS + packs + réglages.
+  /// Retourne { credits, packs, configured, settings } ou null.
+  static Future<Map<String, dynamic>?> getSmsStatus() async {
+    if (_salonId == null) return null;
+    try {
+      final res = await _get(
+        Uri.parse('$_url/api/pro/salon/$_salonId/sms-status'),
+        headers: _authHeaders,
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true) {
+          return Map<String, dynamic>.from(data['data'] ?? {});
+        }
+      }
+    } catch (e) {
+      debugPrint('API Error (getSmsStatus): $e');
+    }
+    return null;
+  }
+
+  /// Met à jour les préférences d'envoi SMS (confirmation / rappel).
+  static Future<bool> updateSmsSettings(Map<String, dynamic> settings) async {
+    if (_salonId == null) return false;
+    try {
+      final res = await _put(
+        Uri.parse('$_url/api/pro/salon/$_salonId/sms-settings'),
+        headers: _authHeaders,
+        body: jsonEncode(settings),
+      );
+      final data = jsonDecode(res.body);
+      return data['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (updateSmsSettings): $e');
+    }
+    return false;
+  }
+
   // ---- Testimonials ----
   static Future<bool> addTestimonial(Map<String, dynamic> data) async {
     if (_salonId == null) return false;
