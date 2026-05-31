@@ -372,29 +372,51 @@ function toggleServices(extra) {
 
 function initTestimonialCarousel(grid) {
   let isHovered = false;
+  let index = 0;
 
   grid.addEventListener('mouseenter', () => isHovered = true);
   grid.addEventListener('mouseleave', () => isHovered = false);
 
-  // Recalculate dimensions dynamically inside the interval
+  const cards = () => Array.from(grid.children);
+
+  // Garde les dots synchronisés quand l'utilisateur scrolle à la main.
+  const syncDotsToScroll = () => {
+    const list = cards();
+    if (list.length === 0) return;
+    const center = grid.scrollLeft + grid.clientWidth / 2;
+    let nearest = 0, best = Infinity;
+    list.forEach((card, i) => {
+      const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+      const d = Math.abs(cardCenter - center);
+      if (d < best) { best = d; nearest = i; }
+    });
+    index = nearest;
+    updateDots(nearest);
+  };
+  grid.addEventListener('scroll', () => {
+    window.clearTimeout(grid._scrollSyncT);
+    grid._scrollSyncT = window.setTimeout(syncDotsToScroll, 120);
+  });
+
   setInterval(() => {
     if (isHovered) return;
+    const list = cards();
+    if (list.length <= 1) return;
+    index = (index + 1) % list.length;
+    const target = list[index];
+    // Centre la carte cible dans le viewport du carrousel.
+    grid.scrollTo({ left: target.offsetLeft - (grid.clientWidth - target.offsetWidth) / 2, behavior: 'smooth' });
+    updateDots(index);
+  }, 4000);
+}
 
-    const scrollMax = grid.scrollWidth - grid.clientWidth;
-    // Scroll by roughly one card width (assuming 3 cards visible)
-    const scrollStep = grid.clientWidth / 3;
-
-    if (scrollMax <= 0) return; // Not enough items to scroll
-
-    let newScroll = grid.scrollLeft + scrollStep;
-
-    // If we've hit the end (with a tiny threshold for rounding errors), reset to start
-    if (newScroll >= scrollMax - 5) {
-      setTimeout(() => { grid.scrollTo({ left: 0, behavior: 'smooth' }); }, 2000);
-    } else {
-      grid.scrollTo({ left: newScroll, behavior: 'smooth' });
-    }
-  }, 4000); // 4 seconds delay
+// Met à jour la classe .active sur les dots (no-op si pas de dots).
+function updateDots(activeIndex) {
+  const dotsEl = document.getElementById('testimonialsDots');
+  if (!dotsEl) return;
+  Array.from(dotsEl.children).forEach((dot, i) => {
+    dot.classList.toggle('active', i === activeIndex);
+  });
 }
 
 function updateFooter(salon) {
