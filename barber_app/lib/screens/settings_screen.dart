@@ -849,7 +849,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Text(
               plan == 'starter'
                   ? 'Plan Essentiel — aucun SMS inclus, rechargez à la demande.'
-                  : 'Inclus dans votre plan : 200 SMS par mois.',
+                  : plan == 'premium'
+                      ? 'Inclus dans votre plan : 400 SMS par mois.'
+                      : 'Inclus dans votre plan : 200 SMS par mois.',
               style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted),
             ),
             const SizedBox(height: 14),
