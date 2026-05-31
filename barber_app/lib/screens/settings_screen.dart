@@ -1305,7 +1305,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Personnalisation', style: GoogleFonts.bricolageGrotesque(fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Personnalisation',
+                        style: GoogleFonts.bricolageGrotesque(
+                            fontSize: 24, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+                    IconButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      icon: Icon(Icons.close_rounded, color: AppTheme.textMuted),
+                      tooltip: 'Fermer',
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 14),
                 previewCard,
                 const SizedBox(height: 16),
