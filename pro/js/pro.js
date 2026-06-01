@@ -2644,7 +2644,7 @@ async function loadSettings() {
                     </div>
                     <div id="colorPreview" style="border-radius:14px;overflow:hidden;margin-bottom:16px;background:${salon.branding?.backgroundColor || '#0a0a0f'}">
                         <div style="padding:20px 16px;text-align:center">
-                            <div id="previewTitle" style="font-size:.95rem;font-weight:700;margin-bottom:4px;color:${salon.branding?.textColor || '#F5F0E8'}">${currentSalon?.name || 'Votre Salon'}</div>
+                            <div id="previewTitle" style="font-size:.95rem;font-weight:700;margin-bottom:4px;color:${salon.branding?.textColor || '#F5F0E8'}">Votre Salon</div>
                             <div id="previewSub" style="font-size:.75rem;margin-bottom:14px;opacity:.6;color:${salon.branding?.textColor || '#F5F0E8'}">Votre site de réservation</div>
                             <div id="previewBtn" style="display:inline-block;padding:8px 22px;border-radius:20px;background:linear-gradient(90deg,${salon.branding?.primaryColor || '#6366F1'},${salon.branding?.accentColor || '#818CF8'});color:${salon.branding?.textColor || '#F5F0E8'};font-size:.82rem;font-weight:700;cursor:default">Réserver →</div>
                         </div>
@@ -2911,6 +2911,10 @@ async function loadSettings() {
                 </div>
             </div>
         `;
+
+        // Set preview title via textContent (safe — avoids XSS in template literal)
+        const _pt = document.getElementById('previewTitle');
+        if (_pt) _pt.textContent = salon.name || 'Votre Salon';
 
         // Appelé APRÈS le rendu HTML — l'élément #stripeConnectBody existe maintenant
         loadStripeConnect(salon.subscription?.plan);
