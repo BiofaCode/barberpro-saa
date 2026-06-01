@@ -712,7 +712,7 @@ route('GET', '/api/admin/salons/export-csv', async (req, res) => {
     res.writeHead(200, {
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="salons-${new Date().toISOString().split('T')[0]}.csv"`,
-        'Access-Control-Allow-Origin': '*',
+        ...getCORSHeaders(req.headers.origin),
     });
     res.end('\uFEFF' + csv); // BOM for Excel UTF-8
 });
@@ -1569,15 +1569,14 @@ route('PUT', '/api/pro/salon/:salonId/bookings/:bookingId', async (req, res, par
 
 // Manual booking creation (from pro panel)
 route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     const body = await parseBody(req);
     if (!body.clientName) return json(res, 400, { success: false, error: 'Nom du client requis' });
 
     const client = await db.findOrCreateClient(params.salonId, {
-        name: body.clientName, email: body.clientEmail || '', phone: body.clientPhone || '', price: body.price || 0
+        name: body.clientName, email: body.clientEmail || '', phone: body.clientPhone || '',
     });
-
-    const user = verifySalonAccess(req, params.salonId);
-    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
 
     // Determine employee defaults if not provided in the payload and an employee creates it
     let employeeId = body.employeeId || null;
@@ -1631,6 +1630,8 @@ route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
 
 // Blocks (indisponibilités pro)
 route('GET', '/api/pro/salon/:salonId/blocks', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     const url = new URL(req.url, 'http://localhost');
     const from = url.searchParams.get('from');
     const to = url.searchParams.get('to');
@@ -1728,6 +1729,8 @@ route('PUT', '/api/pro/salon/:salonId/clients/:clientId/notes', async (req, res,
 
 // SMS Status
 route('GET', '/api/pro/salon/:salonId/sms-status', async (req, res, params) => {
+    const user = verifySalonAccess(req, params.salonId);
+    if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return json(res, 404, { success: false });
     json(res, 200, {
@@ -2154,11 +2157,11 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
 
 // Stripe Webhook - activate subscription after payment
 route('POST', '/api/stripe/webhook', async (req, res) => {
-    // Get raw body for Stripe signature verification
+    // Get raw body as Buffer for Stripe signature verification
     const rawBody = await new Promise((resolve, reject) => {
-        let data = '';
-        req.on('data', chunk => data += chunk);
-        req.on('end', () => resolve(data));
+        const chunks = [];
+        req.on('data', chunk => chunks.push(chunk));
+        req.on('end', () => resolve(Buffer.concat(chunks)));
         req.on('error', reject);
     });
 
@@ -2864,22 +2867,28 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
         return json(res, 429, { success: false, error: 'Trop de requêtes, veuillez réessayer plus tard.' });
     }
     const salon = await db.findSalonBySlug(params.slug);
-    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    if (!salon || !salon.active) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
 
     if (await hasConflict(salon._id, body.employeeId || null, body.date, body.time, body.duration || 30)) {
         return json(res, 409, { success: false, error: 'Ce créneau n\'est plus disponible. Veuillez choisir un autre horaire.' });
     }
 
+    // Look up price and duration server-side — never trust client-supplied values
+    const service = (salon.services || []).find(s => s.name === body.serviceName && s.active !== false);
+    const price = service?.price ?? 0;
+    const duration = service?.duration ?? 30;
+    const serviceIcon = service?.icon || '✂️';
+
     const client = await db.findOrCreateClient(salon._id, {
-        name: body.clientName, email: body.clientEmail, phone: body.clientPhone, price: body.price || 0
+        name: body.clientName, email: body.clientEmail, phone: body.clientPhone,
     });
 
     const booking = await db.createBooking({
         salon: salon._id, client: client._id,
         clientName: body.clientName, clientEmail: body.clientEmail, clientPhone: body.clientPhone,
-        serviceName: body.serviceName, serviceIcon: body.serviceIcon || '✂️',
-        price: body.price || 0, duration: body.duration || 30,
+        serviceName: body.serviceName, serviceIcon,
+        price, duration,
         date: body.date, time: body.time, notes: body.notes || '',
         employeeId: body.employeeId || null, employeeName: body.employeeName || null,
         status: 'confirmed', source: 'website',
@@ -3019,10 +3028,10 @@ route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
     const email = (body.email || '').trim().toLowerCase();
     if (!email) return json(res, 400, { success: false, error: 'Email requis' });
 
-    // Generate 6 digit code
+    // Generate 6 digit code — keyed by email+salonId to prevent cross-salon reuse
     const code = crypto.randomInt(100000, 1000000).toString();
     const expires = Date.now() + 10 * 60 * 1000; // 10 minutes valid
-    otpStore.set(email, { code, expires });
+    otpStore.set(`${email}:${salon._id}`, { code, expires });
 
     // Send via email if SMTP is configured. 
     const emailResult = await sendOTPEmail(email, code, salon.name).catch(e => ({ success: false, error: e.message }));
@@ -3054,13 +3063,14 @@ route('POST', '/api/salon/:slug/my-bookings', async (req, res, params) => {
     if (!email || !code) return json(res, 400, { success: false, error: 'Email et code requis' });
 
     // Verify OTP
-    const stored = otpStore.get(email);
+    const otpKey = `${email}:${salon._id}`;
+    const stored = otpStore.get(otpKey);
     if (!stored || stored.code !== code || stored.expires < Date.now()) {
         return json(res, 401, { success: false, error: 'Code invalide ou expiré' });
     }
 
     // Clear OTP after successful use
-    otpStore.delete(email);
+    otpStore.delete(otpKey);
 
     const bookings = await db.findBookings({ salon: salon._id, clientEmail: email });
     bookings.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
@@ -3422,12 +3432,12 @@ tr+tr td{border-top:1px solid #f0f0f0}
     <div class="receipt-num">N° ${receiptNum} · ${new Date().toLocaleDateString('fr-FR')}</div>
     <div class="badge${booking.paymentStatus === 'pending_payment' ? ' pending' : ''}">${payStatusLabel}</div>
     <table>
-      <tr><td>Client</td><td><strong>${booking.clientName}</strong></td></tr>
-      <tr><td>Service</td><td>${booking.serviceIcon || '✂️'} ${booking.serviceName || '—'}</td></tr>
+      <tr><td>Client</td><td><strong>${escHtml(booking.clientName)}</strong></td></tr>
+      <tr><td>Service</td><td>${escHtml(booking.serviceIcon || '✂️')} ${escHtml(booking.serviceName || '—')}</td></tr>
       <tr><td>Date</td><td>${dateFR}</td></tr>
-      <tr><td>Heure</td><td>${booking.time || '—'}</td></tr>
+      <tr><td>Heure</td><td>${escHtml(booking.time || '—')}</td></tr>
       <tr><td>Durée</td><td>${booking.duration || 30} min</td></tr>
-      ${booking.employeeName ? `<tr><td>Avec</td><td>${booking.employeeName}</td></tr>` : ''}
+      ${booking.employeeName ? `<tr><td>Avec</td><td>${escHtml(booking.employeeName)}</td></tr>` : ''}
       ${booking.amountPaid ? `<tr><td>Acompte versé</td><td>${booking.amountPaid} CHF</td></tr>` : ''}
       <tr class="total"><td>Total</td><td>${booking.price || 0} CHF</td></tr>
     </table>
