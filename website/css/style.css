@@ -1725,9 +1725,12 @@ h3 {
   }
   .testimonials-grid::-webkit-scrollbar { display: none; }
   .testimonials-grid .testimonial-card {
-    /* Full viewport width minus the symmetric 20px padding on each side so the
-       card is always horizontally centred, including the first and last. */
-    flex: 0 0 calc(100% - 40px);
+    /* Card fills the scrollport content box (viewport minus the symmetric 20px
+       padding). At rest its centre lands exactly on the scrollport centre — so
+       every card, including the first, is perfectly centred. A narrower card
+       (e.g. 100% - 40px) cannot centre the first card because that would need a
+       negative scroll offset, leaving it stuck against the left edge. */
+    flex: 0 0 100%;
     scroll-snap-align: center;
     max-width: none;
   }
