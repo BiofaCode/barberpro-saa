@@ -2584,6 +2584,34 @@ async function loadSettings() {
             <div class="card" style="margin-bottom:20px">
                 <div class="card-header"><h3>🎨 Personnalisation du site</h3></div>
                 <div class="card-body">
+                    <div style="margin-bottom:16px">
+                        <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;font-weight:600;margin-bottom:10px">Thèmes prédéfinis</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px">
+                            ${[
+                                { name:'Ardoise',   primary:'#6366F1', accent:'#818CF8', bg:'#0A0A0F', text:'#F5F0E8' },
+                                { name:'Or & Noir', primary:'#C9A227', accent:'#E6C757', bg:'#121212', text:'#F5F0E8' },
+                                { name:'Océan',     primary:'#2563EB', accent:'#38BDF8', bg:'#0B1220', text:'#E8EEF7' },
+                                { name:'Émeraude',  primary:'#10B981', accent:'#34D399', bg:'#0C1512', text:'#E8F2EC' },
+                                { name:'Rosé',      primary:'#E11D6B', accent:'#F472B6', bg:'#FFF7FA', text:'#2B2B2B' },
+                                { name:'Bordeaux',  primary:'#9B1C31', accent:'#C84B5A', bg:'#1A0F12', text:'#F3E9E0' },
+                            ].map(t => {
+                                const isActive =
+                                    (salon.branding?.primaryColor    || '#6366F1').toLowerCase() === t.primary.toLowerCase() &&
+                                    (salon.branding?.accentColor     || '#818CF8').toLowerCase() === t.accent.toLowerCase()  &&
+                                    (salon.branding?.backgroundColor || '#0a0a0f').toLowerCase() === t.bg.toLowerCase()      &&
+                                    (salon.branding?.textColor       || '#F5F0E8').toLowerCase() === t.text.toLowerCase();
+                                return `<button type="button"
+                                    data-theme-chip
+                                    data-primary="${t.primary}" data-accent="${t.accent}"
+                                    data-bg="${t.bg}" data-text="${t.text}"
+                                    onclick="applyColorTheme({primary:'${t.primary}',accent:'${t.accent}',bg:'${t.bg}',text:'${t.text}'})"
+                                    style="border:2px solid ${isActive ? 'rgba(255,255,255,.8)' : 'var(--border)'};border-radius:10px;padding:8px 6px;background:${isActive ? 'rgba(255,255,255,.08)' : 'var(--bg)'};cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:68px;transition:border-color .15s,background .15s">
+                                    <div style="width:46px;height:20px;border-radius:5px;background:linear-gradient(90deg,${t.primary},${t.accent})"></div>
+                                    <span style="font-size:.7rem;color:var(--text-sec);white-space:nowrap">${t.name}</span>
+                                </button>`;
+                            }).join('')}
+                        </div>
+                    </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
                         <div class="form-group" style="margin-bottom:0">
                             <label class="form-label">Couleur principale</label>
@@ -2614,10 +2642,12 @@ async function loadSettings() {
                             </div>
                         </div>
                     </div>
-                    <div id="colorPreview" style="padding:16px;border-radius:12px;margin-bottom:16px;text-align:center;font-weight:700;font-size:1rem;background:linear-gradient(135deg,${salon.branding?.primaryColor || '#6366F1'},${salon.branding?.accentColor || '#818CF8'});color:${salon.branding?.textColor || '#F5F0E8'}">
-                        <span style="font-size:.8rem;opacity:.7;display:block;font-weight:400">Fond:</span>
-                        <span id="previewBgDot" style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${salon.branding?.backgroundColor || '#0a0a0f'};border:2px solid rgba(255,255,255,.3);margin-right:6px;vertical-align:middle"></span>
-                        Aperçu de vos couleurs
+                    <div id="colorPreview" style="border-radius:14px;overflow:hidden;margin-bottom:16px;background:${salon.branding?.backgroundColor || '#0a0a0f'}">
+                        <div style="padding:20px 16px;text-align:center">
+                            <div id="previewTitle" style="font-size:.95rem;font-weight:700;margin-bottom:4px;color:${salon.branding?.textColor || '#F5F0E8'}">${currentSalon?.name || 'Votre Salon'}</div>
+                            <div id="previewSub" style="font-size:.75rem;margin-bottom:14px;opacity:.6;color:${salon.branding?.textColor || '#F5F0E8'}">Votre site de réservation</div>
+                            <div id="previewBtn" style="display:inline-block;padding:8px 22px;border-radius:20px;background:linear-gradient(90deg,${salon.branding?.primaryColor || '#6366F1'},${salon.branding?.accentColor || '#818CF8'});color:${salon.branding?.textColor || '#F5F0E8'};font-size:.82rem;font-weight:700;cursor:default">Réserver →</div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Icône du salon (emoji)</label>
@@ -3040,20 +3070,46 @@ async function manageSubscription() {
     }
 }
 
+function applyColorTheme(t) {
+    document.getElementById('set-color1').value     = t.primary;
+    document.getElementById('set-color2').value     = t.accent;
+    document.getElementById('set-color-text').value = t.text;
+    document.getElementById('set-color-bg').value   = t.bg;
+    updateColorPreview();
+}
+
 function updateColorPreview() {
-    const c1 = document.getElementById('set-color1').value;
-    const c2 = document.getElementById('set-color2').value;
-    const cText = document.getElementById('set-color-text').value;
-    const cBg = document.getElementById('set-color-bg')?.value;
-    document.getElementById('colorLabel1').textContent = c1;
-    document.getElementById('colorLabel2').textContent = c2;
-    document.getElementById('colorLabelText').textContent = cText;
-    if (cBg) document.getElementById('colorLabelBg').textContent = cBg;
-    const prev = document.getElementById('colorPreview');
-    prev.style.background = `linear-gradient(135deg,${c1},${c2})`;
-    prev.style.color = cText;
-    const dot = document.getElementById('previewBgDot');
-    if (dot && cBg) dot.style.background = cBg;
+    const c1   = document.getElementById('set-color1').value;
+    const c2   = document.getElementById('set-color2').value;
+    const cTxt = document.getElementById('set-color-text').value;
+    const cBg  = document.getElementById('set-color-bg')?.value || '#0a0a0f';
+    // hex labels
+    document.getElementById('colorLabel1').textContent    = c1;
+    document.getElementById('colorLabel2').textContent    = c2;
+    document.getElementById('colorLabelText').textContent = cTxt;
+    const lblBg = document.getElementById('colorLabelBg');
+    if (lblBg) lblBg.textContent = cBg;
+    // mini-card
+    const card = document.getElementById('colorPreview');
+    if (card) card.style.background = cBg;
+    const previewTitle = document.getElementById('previewTitle');
+    if (previewTitle) previewTitle.style.color = cTxt;
+    const previewSub = document.getElementById('previewSub');
+    if (previewSub) previewSub.style.color = cTxt;
+    const previewBtn = document.getElementById('previewBtn');
+    if (previewBtn) {
+        previewBtn.style.background = `linear-gradient(90deg,${c1},${c2})`;
+        previewBtn.style.color = cTxt;
+    }
+    // active state on theme chips
+    document.querySelectorAll('[data-theme-chip]').forEach(chip => {
+        const active = chip.dataset.primary.toLowerCase() === c1.toLowerCase()
+            && chip.dataset.accent.toLowerCase() === c2.toLowerCase()
+            && chip.dataset.bg.toLowerCase()     === cBg.toLowerCase()
+            && chip.dataset.text.toLowerCase()   === cTxt.toLowerCase();
+        chip.style.borderColor = active ? 'rgba(255,255,255,0.8)' : 'var(--border)';
+        chip.style.background  = active ? 'rgba(255,255,255,0.08)' : 'var(--bg)';
+    });
 }
 
 // ---- Save Hours ----
