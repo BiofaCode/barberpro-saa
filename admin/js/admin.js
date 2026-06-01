@@ -423,16 +423,26 @@ function openCreateSalonModal() {
         </div>
 
         <hr style="border-color:var(--border);margin:20px 0" />
-        <h4 style="color:var(--primary);margin-bottom:10px;font-size:.85rem;text-transform:uppercase;letter-spacing:1px">🎨 Couleur du site</h4>
-        <div class="form-row">
-            <div class="form-group">
-                <label class="form-label">Couleur principale</label>
-                <input type="color" class="form-input" id="mColor" value="#6366F1" style="height:42px;width:100%" />
-            </div>
-            <div class="form-group">
-                <label class="form-label">Aperçu</label>
-                <div id="colorPreview" style="height:42px;border-radius:8px;background:#6366F1;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.85rem">Kreno</div>
-            </div>
+        <h4 style="color:var(--primary);margin-bottom:10px;font-size:.85rem;text-transform:uppercase;letter-spacing:1px">🏷️ Type de salon</h4>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="sectorGrid">
+            ${[
+              { value:'coiffure', label:'Coiffure', icon:'✂️', color:'#4F46E5' },
+              { value:'beaute',   label:'Institut beauté', icon:'✨', color:'#BE185D' },
+              { value:'epilation',label:'Épilation', icon:'🌿', color:'#7C3AED' },
+              { value:'ongles',   label:'Ongles', icon:'💅', color:'#E11D6B' },
+              { value:'massage',  label:'Massage', icon:'💆', color:'#059669' },
+              { value:'autre',    label:'Autre', icon:'🏪', color:'#6366F1' },
+            ].map(s => `
+              <button type="button" data-sector="${s.value}" data-color="${s.color}"
+                onclick="selectSector('${s.value}','${s.color}')"
+                style="border:2px solid var(--border);border-radius:10px;padding:10px 6px;background:var(--bg);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:.78rem;color:var(--text-sec);transition:all .15s" id="sector-${s.value}">
+                <span style="font-size:1.4rem">${s.icon}</span>
+                <span>${s.label}</span>
+              </button>`).join('')}
+        </div>
+        <input type="hidden" id="mSector" value="coiffure" />
+        <div id="sectorPreview" style="margin-top:10px;border-radius:10px;padding:10px 14px;background:#4F46E5;color:#fff;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:8px">
+            <span>✂️</span><span>Coiffure — thème indigo · services coiffure pré-remplis</span>
         </div>
     `, async () => {
     const data = {
@@ -446,7 +456,7 @@ function openCreateSalonModal() {
       ownerPhone: document.getElementById('mOwnerPhone').value,
       ownerPassword: document.getElementById('mOwnerPass').value,
       subscription: { plan: document.getElementById('mPlan').value },
-      branding: { primaryColor: document.getElementById('mColor').value }
+      sector: document.getElementById('mSector').value,
     };
 
     if (!data.name || !data.ownerName || !data.ownerEmail) {
@@ -464,16 +474,33 @@ function openCreateSalonModal() {
     }
   });
 
-  // Color preview live update
-  setTimeout(() => {
-    const colorInput = document.getElementById('mColor');
-    const preview = document.getElementById('colorPreview');
-    if (colorInput && preview) {
-      colorInput.addEventListener('input', () => {
-        preview.style.background = colorInput.value;
-      });
-    }
-  }, 100);
+  // Pre-select first sector button on open
+  setTimeout(() => selectSector('coiffure', '#4F46E5'), 100);
+}
+
+const SECTOR_LABELS = {
+  coiffure:  { icon:'✂️',  label:'Coiffure',       desc:'thème indigo · services coiffure pré-remplis' },
+  beaute:    { icon:'✨',  label:'Institut beauté', desc:'thème rose · soins & maquillage pré-remplis' },
+  epilation: { icon:'🌿', label:'Épilation',        desc:'thème violet · services épilation pré-remplis' },
+  ongles:    { icon:'💅', label:'Ongles',           desc:'thème fuchsia · manucure & nail art pré-remplis' },
+  massage:   { icon:'💆', label:'Massage',          desc:'thème émeraude · bien-être pré-rempli' },
+  autre:     { icon:'🏪', label:'Autre',            desc:'thème indigo neutre · services génériques' },
+};
+
+function selectSector(sector, color) {
+  document.getElementById('mSector').value = sector;
+  document.querySelectorAll('#sectorGrid button').forEach(btn => {
+    const active = btn.dataset.sector === sector;
+    btn.style.borderColor = active ? color : 'var(--border)';
+    btn.style.background  = active ? color + '22' : 'var(--bg)';
+    btn.style.color       = active ? color : 'var(--text-sec)';
+  });
+  const info = SECTOR_LABELS[sector] || SECTOR_LABELS.autre;
+  const preview = document.getElementById('sectorPreview');
+  if (preview) {
+    preview.style.background = color;
+    preview.innerHTML = `<span>${info.icon}</span><span>${info.label} — ${info.desc}</span>`;
+  }
 }
 
 function copySalonInfo(salonId) {

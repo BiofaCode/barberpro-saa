@@ -2687,8 +2687,8 @@ async function loadSettings() {
                 </div>
             </div>
 
-            <!-- PARRAINAGE -->
-            <div class="card" style="margin-bottom:20px" id="referralCard">
+            <!-- PARRAINAGE (hidden for now) -->
+            <div class="card" style="margin-bottom:20px;display:none" id="referralCard">
                 <div class="card-header"><h3>🎁 Parrainage</h3></div>
                 <div class="card-body" id="referralBody">
                     <div style="color:var(--text-muted);font-size:.85rem">Chargement…</div>

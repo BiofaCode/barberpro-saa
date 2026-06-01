@@ -568,6 +568,11 @@ route('POST', '/api/admin/salons', async (req, res) => {
     const body = await parseBody(req);
     const slug = await makeUniqueSlug(body.name || 'salon');
 
+    const tpl = SECTOR_TEMPLATES[body.sector] || SECTOR_TEMPLATES.autre;
+    const sectorServices = tpl.services.map(s => ({
+        _id: crypto.randomBytes(12).toString('hex'), ...s, description: '', active: true,
+    }));
+
     const salon = await db.createSalon({
         slug,
         name: body.name,
@@ -576,17 +581,16 @@ route('POST', '/api/admin/salons', async (req, res) => {
         phone: body.phone || '',
         email: body.email || '',
         logo: '',
+        sector: body.sector || 'autre',
         branding: {
-            primaryColor: body.branding?.primaryColor || '#6366F1',
-            accentColor: body.branding?.accentColor || '#818CF8',
-            heroTitle: body.branding?.heroTitle || `Bienvenue chez ${body.name}`,
-            heroSubtitle: body.branding?.heroSubtitle || 'Votre salon de coiffure premium',
+            primaryColor:    tpl.primaryColor,
+            accentColor:     tpl.accentColor,
+            backgroundColor: tpl.backgroundColor,
+            textColor:       tpl.textColor,
+            heroTitle:       `Bienvenue chez ${body.name}`,
+            heroSubtitle:    tpl.heroSubtitle,
         },
-        services: [
-            { _id: crypto.randomBytes(12).toString('hex'), name: 'Coupe Classique', icon: '✂️', price: 25, duration: 30, description: 'Coupe sur-mesure', active: true },
-            { _id: crypto.randomBytes(12).toString('hex'), name: 'Taille de Barbe', icon: '🪒', price: 15, duration: 20, description: 'Barbe soignée', active: true },
-            { _id: crypto.randomBytes(12).toString('hex'), name: 'Pack Premium', icon: '💎', price: 55, duration: 60, description: 'Coupe + barbe + soin', active: true },
-        ],
+        services: sectorServices,
         hours: {
             lundi: { open: '09:00', close: '19:00' },
             mardi: { open: '09:00', close: '19:00' },
