@@ -354,7 +354,9 @@ async function sendPendingReviewRequests() {
             if (now < twoHoursAfter) continue; // appointment not done + 2h yet
             const salon = await db.findSalonById(booking.salon);
             if (!salon) continue;
-            const reviewUrl = `${baseUrl}/review/${booking._id}`;
+            const reviewUrl = booking.cancelToken
+                ? `${baseUrl}/review/${booking._id}?t=${booking.cancelToken}`
+                : `${baseUrl}/review/${booking._id}`;
             await sendReviewRequestEmail(booking, salon, reviewUrl);
             await db.updateBooking(booking._id, { reviewEmailSent: true });
             sent++;
@@ -448,7 +450,7 @@ if (!ADMIN_PASSWORD) {
 }
 
 route('POST', '/api/admin/login', async (req, res) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIP(req);
     if (rateLimit(ip, 'admin_login', 10, 15 * 60 * 1000)) { // 10 attempts per 15 min per IP
         return json(res, 429, { success: false, error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' });
     }
@@ -749,7 +751,7 @@ route('GET', '/api/admin/salons/:id/magic-link', async (req, res, params) => {
 // ==========================
 
 route('POST', '/api/pro/login', async (req, res) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIP(req);
     if (rateLimit(ip, 'pro_login', 10, 15 * 60 * 1000)) {
         return json(res, 429, { success: false, error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
     }
@@ -823,7 +825,7 @@ route('POST', '/api/pro/login', async (req, res) => {
 
 // Forgot password — always returns 200 to avoid email enumeration
 route('POST', '/api/pro/forgot-password', async (req, res) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIP(req);
     if (rateLimit(ip, 'forgot', 5, 15 * 60 * 1000)) {
         return json(res, 429, { success: false, error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
     }
@@ -1996,7 +1998,7 @@ const SECTOR_TEMPLATES = {
 
 // Register + Checkout in one step
 route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIP(req);
     if (rateLimit(ip, 'register', 5, 10 * 60 * 1000)) {
         return json(res, 429, { success: false, error: 'Trop de tentatives. Veuillez réessayer dans 10 minutes.' });
     }
@@ -2862,7 +2864,7 @@ route('GET', '/api/salon/:slug/available-slots', async (req, res, params) => {
 });
 
 route('POST', '/api/salon/:slug/book', async (req, res, params) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIP(req);
     if (rateLimit(ip, 'book', 10, 60 * 60 * 1000)) { // 10 bookings/hour per IP
         return json(res, 429, { success: false, error: 'Trop de requêtes, veuillez réessayer plus tard.' });
     }
@@ -3017,7 +3019,7 @@ const otpStore = new Map();
 
 // Client: generate OTP for my bookings
 route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
+    const ip = getClientIP(req);
     if (rateLimit(ip, 'otp', 5, 15 * 60 * 1000)) { // 5 OTP requests per 15 min per IP
         return json(res, 429, { success: false, error: 'Trop de requêtes, veuillez réessayer dans quelques minutes.' });
     }
@@ -3050,7 +3052,7 @@ route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
 
 // Client: verify OTP and lookup my bookings
 route('POST', '/api/salon/:slug/my-bookings', async (req, res, params) => {
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown';
+    const ip = getClientIP(req);
     if (rateLimit(ip, 'otp_verify', 10, 15 * 60 * 1000)) {
         return json(res, 429, { success: false, error: 'Trop de tentatives. Réessayez dans 15 minutes.' });
     }
@@ -3229,9 +3231,18 @@ route('GET', '/api/review/:bookingId', async (req, res, params) => {
 });
 
 route('POST', '/api/review/:bookingId', async (req, res, params) => {
+    const ip = getClientIP(req);
+    if (rateLimit(ip, 'review', 10, 60 * 60 * 1000)) { // 10 review submissions/hour per IP
+        return json(res, 429, { success: false, error: 'Trop de requêtes, veuillez réessayer plus tard.' });
+    }
     const body = await parseBody(req);
     const booking = await db.findBookingById(params.bookingId);
     if (!booking) return json(res, 404, { success: false, error: 'Introuvable' });
+    // Ownership proof: the review link carries the booking's cancelToken.
+    // Only enforce when the booking has one (legacy bookings without a token still work).
+    if (booking.cancelToken && body.token !== booking.cancelToken) {
+        return json(res, 403, { success: false, error: 'Lien invalide' });
+    }
     if (booking.reviewed) return json(res, 409, { success: false, error: 'Avis déjà soumis' });
     const rating = Math.min(5, Math.max(1, parseInt(body.rating) || 5));
     const comment = (body.comment || '').trim().slice(0, 500);
@@ -3362,7 +3373,9 @@ const server = http.createServer(async (req, res) => {
     }
     else if (pathname.startsWith('/review/')) {
         const bookingId = pathname.split('/review/')[1]?.split('?')[0] || '';
-        const reviewHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Votre avis</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#0a0a14;color:#f0f0f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{background:#13131f;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;max-width:420px;width:100%;text-align:center}.logo{font-size:40px;margin-bottom:16px}.title{font-size:22px;font-weight:700;margin-bottom:8px}.sub{color:#9ca3af;font-size:.9rem;margin-bottom:28px;line-height:1.5}.stars{display:flex;justify-content:center;gap:12px;margin-bottom:24px;font-size:36px;cursor:pointer}.star{opacity:.3;transition:all .15s;user-select:none}.star.active{opacity:1}.textarea{width:100%;background:#1e1e2e;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f0f0f0;font-family:inherit;font-size:.9rem;padding:12px;resize:none;margin-bottom:16px}.btn{width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:12px;padding:14px;font-size:1rem;font-weight:600;cursor:pointer}.success{color:#22c55e;font-size:1.2rem;font-weight:700;margin-top:16px}</style></head><body><div class="card"><div class="logo">⭐</div><div id="content"><div class="title">Votre avis compte !</div><div class="sub" id="subText">Chargement...</div><div class="stars" id="stars">${[1,2,3,4,5].map(i=>`<span class="star" data-v="${i}" onclick="setRating(${i})">★</span>`).join('')}</div><textarea class="textarea" id="comment" rows="3" placeholder="Partagez votre expérience (optionnel)..."></textarea><button class="btn" onclick="submitReview()">Envoyer mon avis</button></div></div><script>let rating=5;const id="${bookingId}";fetch('/api/review/'+id).then(r=>r.json()).then(d=>{if(d.success&&!d.data.reviewed){document.getElementById('subText').textContent=d.data.salonName+' · '+d.data.serviceName+' du '+d.data.date}else if(d.data?.reviewed){document.getElementById('content').innerHTML='<div class="success">✅ Merci pour votre avis !</div><p style="color:#9ca3af;margin-top:12px;font-size:.9rem">Votre retour a bien été enregistré.</p>'}else{document.getElementById('subText').textContent='Lien invalide ou expiré.'}});setRating(5);function setRating(v){rating=v;document.querySelectorAll('.star').forEach(s=>{s.classList.toggle('active',parseInt(s.dataset.v)<=v)})}async function submitReview(){const comment=document.getElementById('comment').value;const r=await fetch('/api/review/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rating,comment})});const d=await r.json();if(d.success){document.getElementById('content').innerHTML='<div class="success">✅ Merci pour votre avis !</div><p style="color:#9ca3af;margin-top:12px;font-size:.9rem">Votre retour a bien été enregistré.</p>'}else{alert(d.error||'Erreur')}}</script></body></html>`;
+        const rawTok = (pathname.split('?')[1] || '').match(/(?:^|&)t=([0-9a-f]{32})(?:&|$)/)?.[1] || '';
+        const token = rawTok; // validated hex (cancelToken format), safe to inline
+        const reviewHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Votre avis</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,sans-serif;background:#0a0a14;color:#f0f0f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{background:#13131f;border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:32px;max-width:420px;width:100%;text-align:center}.logo{font-size:40px;margin-bottom:16px}.title{font-size:22px;font-weight:700;margin-bottom:8px}.sub{color:#9ca3af;font-size:.9rem;margin-bottom:28px;line-height:1.5}.stars{display:flex;justify-content:center;gap:12px;margin-bottom:24px;font-size:36px;cursor:pointer}.star{opacity:.3;transition:all .15s;user-select:none}.star.active{opacity:1}.textarea{width:100%;background:#1e1e2e;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#f0f0f0;font-family:inherit;font-size:.9rem;padding:12px;resize:none;margin-bottom:16px}.btn{width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:12px;padding:14px;font-size:1rem;font-weight:600;cursor:pointer}.success{color:#22c55e;font-size:1.2rem;font-weight:700;margin-top:16px}</style></head><body><div class="card"><div class="logo">⭐</div><div id="content"><div class="title">Votre avis compte !</div><div class="sub" id="subText">Chargement...</div><div class="stars" id="stars">${[1,2,3,4,5].map(i=>`<span class="star" data-v="${i}" onclick="setRating(${i})">★</span>`).join('')}</div><textarea class="textarea" id="comment" rows="3" placeholder="Partagez votre expérience (optionnel)..."></textarea><button class="btn" onclick="submitReview()">Envoyer mon avis</button></div></div><script>let rating=5;const id="${bookingId}";const tok="${token}";fetch('/api/review/'+id).then(r=>r.json()).then(d=>{if(d.success&&!d.data.reviewed){document.getElementById('subText').textContent=d.data.salonName+' · '+d.data.serviceName+' du '+d.data.date}else if(d.data?.reviewed){document.getElementById('content').innerHTML='<div class="success">✅ Merci pour votre avis !</div><p style="color:#9ca3af;margin-top:12px;font-size:.9rem">Votre retour a bien été enregistré.</p>'}else{document.getElementById('subText').textContent='Lien invalide ou expiré.'}});setRating(5);function setRating(v){rating=v;document.querySelectorAll('.star').forEach(s=>{s.classList.toggle('active',parseInt(s.dataset.v)<=v)})}async function submitReview(){const comment=document.getElementById('comment').value;const r=await fetch('/api/review/'+id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rating,comment,token:tok})});const d=await r.json();if(d.success){document.getElementById('content').innerHTML='<div class="success">✅ Merci pour votre avis !</div><p style="color:#9ca3af;margin-top:12px;font-size:.9rem">Votre retour a bien été enregistré.</p>'}else{alert(d.error||'Erreur')}}</script></body></html>`;
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', ...SECURITY_HEADERS });
         res.end(reviewHtml);
         return;
