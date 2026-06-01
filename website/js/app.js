@@ -963,7 +963,7 @@ async function submitBooking() {
             name: bmState.service?.name || '',
             dur: bmState.service?.duration || 60,
             emp: bmState.employee?.name || '',
-            salon: salon?.name || '',
+            salon: SALON_DATA?.name || '',
           }));
         } catch (e) { /* sessionStorage unavailable — non-blocking */ }
         window.location.href = data.data.checkoutUrl;
@@ -1017,9 +1017,9 @@ function buildCalendarButtons() {
   const [h, mn] = bmState.time.split(':').map(Number);
   const start = new Date(bmState.date);
   start.setHours(h, mn, 0, 0);
-  const title = `${bmState.service?.name || 'RDV'} @ ${salon?.name || ''}`;
+  const title = `${bmState.service?.name || 'RDV'} @ ${SALON_DATA?.name || ''}`;
   const desc = bmState.employee ? `avec ${bmState.employee.name}` : '';
-  return calendarButtonsHtml(start, bmState.service?.duration || 60, title, desc, salon?.name || '');
+  return calendarButtonsHtml(start, bmState.service?.duration || 60, title, desc, SALON_DATA?.name || '');
 }
 
 function showBookingSuccess() {
