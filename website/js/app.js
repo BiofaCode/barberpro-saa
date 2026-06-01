@@ -134,8 +134,8 @@ function applySalonBranding(salon) {
     document.documentElement.style.setProperty('--color-primary-dark', b.accentColor || '#A88B52');
     if (b.textColor) {
       document.documentElement.style.setProperty('--color-text-primary', b.textColor);
-      document.documentElement.style.setProperty('--color-text-secondary', b.textColor.startsWith('#') ?
-        b.textColor + '99' : b.textColor);
+      document.documentElement.style.setProperty('--color-text-secondary', b.textColor.startsWith('#') ? b.textColor + '99' : b.textColor);
+      document.documentElement.style.setProperty('--color-text-muted',    b.textColor.startsWith('#') ? b.textColor + '66' : b.textColor);
     }
     if (b.backgroundColor) {
       document.documentElement.style.setProperty('--color-bg', b.backgroundColor);
@@ -999,12 +999,13 @@ function calendarButtonsHtml(start, durMin, title, desc, location) {
       `UID:${Date.now()}@kreno.ch`,'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');
     const icsUrl = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
     const gcUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmtLocal(start)}/${fmtLocal(end)}&details=${encodeURIComponent(desc)}&location=${encodeURIComponent(location || '')}`;
-    const btnStyle = `display:inline-flex;align-items:center;gap:5px;padding:9px 16px;background:rgba(0,0,0,0.06);border-radius:10px;text-decoration:none;color:var(--color-text-primary);font-size:0.82rem;font-weight:500`;
+    const btnStyle = `display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:var(--color-bg-elevated,rgba(255,255,255,0.08));border:1px solid var(--badge-border,rgba(255,255,255,0.15));border-radius:10px;text-decoration:none;color:var(--color-text-primary);font-size:0.82rem;font-weight:500`;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isAndroid = /Android/.test(navigator.userAgent);
-    if (isIOS) return `<a href="${icsUrl}" download="rdv.ics" style="${btnStyle}">📅 Ajouter au calendrier</a>`;
-    if (isAndroid) return `<a href="${gcUrl}" target="_blank" style="${btnStyle}">📅 Google Calendar</a>`;
-    return `<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+    // iOS Safari: open data URI directly (download attribute not supported)
+    if (isIOS) return `<div style="margin-bottom:0.5rem"><a href="${icsUrl}" target="_blank" style="${btnStyle}">📅 Ajouter au calendrier iPhone</a></div>`;
+    if (isAndroid) return `<div style="margin-bottom:0.5rem"><a href="${gcUrl}" target="_blank" style="${btnStyle}">📅 Google Calendar</a></div>`;
+    return `<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:0.5rem">
       <a href="${icsUrl}" download="rdv.ics" style="${btnStyle}">📅 Apple / iCal</a>
       <a href="${gcUrl}" target="_blank" style="${btnStyle}">📅 Google Calendar</a>
     </div>`;
@@ -1022,34 +1023,55 @@ function buildCalendarButtons() {
 }
 
 function showBookingSuccess() {
-  document.getElementById('bookingModalBody').style.display = 'none';
-  document.querySelector('.booking-modal-steps').style.display = 'none';
-  document.querySelector('.booking-modal-footer').style.display = 'none';
+  const bodyEl = document.getElementById('bookingModalBody');
+  const stepsEl = document.querySelector('.booking-modal-steps');
+  const footerEl = document.querySelector('.booking-modal-footer');
+  if (bodyEl)  bodyEl.style.display  = 'none';
+  if (stepsEl) stepsEl.style.display = 'none';
+  if (footerEl) footerEl.style.display = 'none';
 
   const successView = document.getElementById('bmSuccessView');
+  if (!successView) return;
   successView.style.display = 'flex';
-  const clientEmail = document.getElementById('bmEmail')?.value || '';
-  successView.innerHTML = `
-    <div style="text-align:center;padding:2rem 1rem">
-      <span class="bm-success-icon">🎉</span>
-      <h3 style="margin-bottom:0.5rem;font-size:1.3rem;color:var(--color-text-primary)">Rendez-vous confirmé !</h3>
-      <p style="color:var(--color-text-secondary);margin-bottom:0.25rem;font-size:0.9rem;font-weight:500">
-        ${bmState.service?.name || 'Prestation'}
-      </p>
-      <p style="color:var(--color-text-muted);font-size:0.85rem;margin-bottom:0.25rem">
-        ${bmState.date ? bmState.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : ''}${bmState.date && bmState.time ? ' à ' : ''}${bmState.time || ''}
-      </p>
-      ${bmState.employee ? `<p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:1.25rem">avec ${bmState.employee.name}</p>` : '<div style="margin-bottom:1rem"></div>'}
-      ${clientEmail
-        ? `<div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px 16px;margin-bottom:1.25rem;font-size:0.82rem;color:var(--color-text-secondary);line-height:1.6">
-            📧 Confirmation envoyée à<br><strong style="color:var(--color-primary)">${clientEmail}</strong>
-           </div>`
-        : `<p style="color:var(--color-text-muted);font-size:0.82rem;margin-bottom:1.5rem">Vous recevrez une confirmation par email.</p>`
-      }
-      ${buildCalendarButtons()}
-      <button class="btn btn-primary" onclick="closeBooking()" style="margin:0.75rem auto 0">Super, merci !</button>
-    </div>
-  `;
+
+  try {
+    const _e = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const clientEmail = document.getElementById('bmEmail')?.value || '';
+    const dateStr = bmState.date instanceof Date
+      ? bmState.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+      : '';
+    successView.innerHTML = `
+      <div style="text-align:center;padding:2rem 1.5rem;width:100%">
+        <span class="bm-success-icon">🎉</span>
+        <h3 style="margin-bottom:0.5rem;font-size:1.3rem;color:var(--color-text-primary)">Rendez-vous confirmé !</h3>
+        <p style="color:var(--color-text-secondary);margin-bottom:0.25rem;font-size:0.9rem;font-weight:500">
+          ${_e(bmState.service?.name)}
+        </p>
+        <p style="color:var(--color-text-secondary);font-size:0.85rem;margin-bottom:0.25rem">
+          ${_e(dateStr)}${dateStr && bmState.time ? ' à ' : ''}${_e(bmState.time)}
+        </p>
+        ${bmState.employee ? `<p style="color:var(--color-text-secondary);font-size:0.82rem;margin-bottom:1.25rem">avec ${_e(bmState.employee.name)}</p>` : '<div style="margin-bottom:1rem"></div>'}
+        ${clientEmail
+          ? `<div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:12px 16px;margin-bottom:1.25rem;font-size:0.82rem;color:var(--color-text-primary);line-height:1.6">
+              📧 Confirmation envoyée à<br><strong style="color:var(--color-primary)">${_e(clientEmail)}</strong>
+             </div>`
+          : `<p style="color:var(--color-text-secondary);font-size:0.82rem;margin-bottom:1.5rem">Vous recevrez une confirmation par email.</p>`
+        }
+        ${buildCalendarButtons()}
+        <button class="btn btn-primary" onclick="closeBooking()" style="margin:1rem auto 0;display:block">Super, merci !</button>
+      </div>
+    `;
+  } catch (err) {
+    // Fallback si la construction du HTML échoue
+    successView.innerHTML = `
+      <div style="text-align:center;padding:2rem 1.5rem;width:100%">
+        <span class="bm-success-icon">🎉</span>
+        <h3 style="color:var(--color-text-primary);margin-bottom:1rem">Rendez-vous confirmé !</h3>
+        <p style="color:var(--color-text-secondary);margin-bottom:1.5rem">Vous recevrez une confirmation par email.</p>
+        <button class="btn btn-primary" onclick="closeBooking()" style="display:block;margin:0 auto">Super, merci !</button>
+      </div>
+    `;
+  }
 }
 
 /* ---- Toast ---- */
