@@ -2664,13 +2664,13 @@ async function loadSettings() {
                     <div class="form-group"><label class="form-label">Titre principal du site (hero)</label><input class="form-input form-input-full" id="set-heroTitle" value="${salon.branding?.heroTitle || ''}" placeholder="L'Art de la Coiffure Masculine"></div>
                     <div class="form-group"><label class="form-label">Sous-titre du site</label><input class="form-input form-input-full" id="set-heroSubtitle" value="${salon.branding?.heroSubtitle || ''}" placeholder="Excellence, style et précision"></div>
                     <div class="form-group" style="margin-bottom:12px">
-                        <label class="form-label">🖼 Photo de fond du hero</label>
-                        ${salon.branding?.heroImage ? `<div style="margin-bottom:10px"><img src="${salon.branding.heroImage}" alt="Hero" style="width:100%;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--border)"><button class="btn btn-sm" onclick="deleteHeroImage()" style="margin-top:6px;border-color:var(--error);color:var(--error);background:transparent;width:100%">🗑 Supprimer la photo de fond</button></div>` : ''}
+                        <label class="form-label">🖼 Photo du hero (mise en avant)</label>
+                        ${salon.branding?.heroImage ? `<div style="margin-bottom:10px"><img src="${salon.branding.heroImage}" alt="Hero" style="width:100%;height:120px;object-fit:cover;border-radius:10px;border:1px solid var(--border)"><button class="btn btn-sm" onclick="deleteHeroImage()" style="margin-top:6px;border-color:var(--error);color:var(--error);background:transparent;width:100%">🗑 Supprimer la photo</button></div>` : ''}
                         <div style="display:flex;align-items:center;gap:10px">
                             <input type="file" id="heroImageFile" accept="image/*" class="form-input" style="flex:1">
                             <button class="btn btn-primary btn-sm" onclick="uploadHeroImage()">📤 Uploader</button>
                         </div>
-                        <div style="font-size:.75rem;color:var(--text-muted);margin-top:6px">Image affichée en fond de la section hero de votre page publique. JPG/PNG/WebP, max 5 Mo.</div>
+                        <div style="font-size:.75rem;color:var(--text-muted);margin-top:6px">Affichée en grand à côté de votre titre, sur la page publique. Idéalement une photo verticale (portrait) de votre salon ou de votre travail. Sans photo, un joli dégradé de vos couleurs s'affiche. JPG/PNG/WebP, max 5 Mo.</div>
                     </div>
                     
                     <div id="advancedBrandingToggle" style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">

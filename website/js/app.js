@@ -173,14 +173,19 @@ function applySalonBranding(salon) {
     return (r*299 + g*587 + b*114) / 1000 > 150;
   }
 
-  // Apply hero background image if set
+  // Hero media card: show the salon photo if set, otherwise a gradient fallback
   const heroBgImg = document.getElementById('heroBgImage');
-  if (heroBgImg) {
-    const heroImg = salon.branding?.heroImage;
-    if (heroImg) {
-      heroBgImg.src = heroImg;
-      heroBgImg.style.display = 'block';
-    }
+  const heroFallback = document.getElementById('heroMediaFallback');
+  const heroImg = salon.branding?.heroImage;
+  if (heroBgImg && heroImg) {
+    heroBgImg.src = heroImg;
+    heroBgImg.style.display = 'block';
+    if (heroFallback) heroFallback.style.display = 'none';
+  } else {
+    if (heroBgImg) heroBgImg.style.display = 'none';
+    if (heroFallback) heroFallback.style.display = 'flex';
+    const heroIcon = document.getElementById('heroMediaIcon');
+    if (heroIcon) heroIcon.textContent = salon.branding?.icon || '✨';
   }
 
   const logoEl = document.querySelector('.nav-logo-text');
