@@ -102,6 +102,19 @@ async function sendSMSCancellation(booking, salon) {
     return sendSMS(booking.clientPhone, body);
 }
 
+// ---- SMS Reprogrammation (booking porte la NOUVELLE date/heure) ----
+async function sendSMSReschedule(booking, salon) {
+    if (!booking.clientPhone) return { success: false, reason: 'no_phone' };
+    const salonName = salon.name || 'Kreno';
+    const body =
+        `🔄 RDV reprogrammé chez ${salonName}\n` +
+        `📅 Nouvelle date : ${formatDateFR(booking.date)} à ${booking.time}\n` +
+        `✂️ ${booking.serviceName}` +
+        (salon.address ? `\n📍 ${salon.address}` : '') +
+        `\nÀ bientôt !`;
+    return sendSMS(booking.clientPhone, body);
+}
+
 // ---- SMS Notification propriétaire nouveau RDV ----
 async function sendSMSOwnerNotification(booking, salon, ownerPhone) {
     if (!ownerPhone) return { success: false, reason: 'no_phone' };
@@ -113,4 +126,4 @@ async function sendSMSOwnerNotification(booking, salon, ownerPhone) {
     return sendSMS(ownerPhone, body);
 }
 
-module.exports = { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS };
+module.exports = { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSReschedule, sendSMSOwnerNotification, SMS_PACKS };

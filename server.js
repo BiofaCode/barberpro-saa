@@ -9,10 +9,10 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
-const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail, sendEmail } = require('./email');
+const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendRescheduleEmail, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail, sendEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
-const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
+const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSReschedule, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
 const { sendToSalon: sendFcmToSalon, init: initFcm } = require('./push');
 initFcm(); // eager init so the log appears at startup
 const { getCORSHeaders, SECURITY_HEADERS, getClientIP } = require('./lib/security');
@@ -1567,6 +1567,32 @@ route('PUT', '/api/pro/salon/:salonId/bookings/:bookingId', async (req, res, par
     const booking = await db.updateBooking(params.bookingId, updates);
     if (!booking) return json(res, 404, { success: false });
     json(res, 200, { success: true, data: booking });
+
+    // ---- Non-blocking client notifications ----
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return;
+    const smsOn = salon.smsSettings?.clientConfirmation !== false;
+
+    // Reschedule → notify the client of the new slot (booking holds the new date/time)
+    if (isReschedule && willBeActive) {
+        if (booking.clientEmail) sendRescheduleEmail(booking, salon);
+        if (smsOn && booking.clientPhone && (salon.smsCredits || 0) > 0) {
+            sendSMSReschedule(booking, salon).then(r => {
+                if (r.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
+            });
+        }
+    }
+
+    // Salon-initiated cancellation → notify the client
+    const justCancelled = updates.status === 'cancelled' && existing.status !== 'cancelled';
+    if (justCancelled) {
+        if (booking.clientEmail) sendCancellationConfirmation(booking, salon);
+        if (smsOn && booking.clientPhone && (salon.smsCredits || 0) > 0) {
+            sendSMSCancellation(booking, salon).then(r => {
+                if (r.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
+            });
+        }
+    }
 });
 
 // Manual booking creation (from pro panel)
@@ -3108,6 +3134,23 @@ route('PUT', '/api/salon/:slug/bookings/:bookingId/cancel', async (req, res, par
     const updated = await db.updateBooking(params.bookingId, { status: 'cancelled' });
     console.log(`  ❌ RDV annulé par client: ${booking.clientName} - ${booking.serviceName} @ ${booking.date}`);
     json(res, 200, { success: true, data: updated });
+
+    // ---- Non-blocking: alert the salon that a client cancelled ----
+    // Web Push (pro portal)
+    sendPushToSalon(salon._id, {
+        title: `❌ Annulation — ${salon.name}`,
+        body: `${booking.clientName} · ${booking.serviceName} · ${booking.date} à ${booking.time}`,
+        url: '/pro', tag: 'cancellation',
+    });
+    // FCM (mobile app) — deep-links to the booking detail
+    sendFcmToSalon(salon._id, {
+        title: '❌ Rendez-vous annulé',
+        body: `${booking.clientName} · ${booking.serviceName} · ${booking.date} à ${booking.time}`,
+        data: { type: 'cancellation', bookingId: String(booking._id) },
+    }).catch(err => console.error('FCM cancellation error:', err.message));
+    // Email to the owner
+    const owner = await db.findOwnerBySalon(salon._id);
+    if (owner?.email) sendCancellationAlertToOwner(booking, salon, owner.email);
 });
 
 // ---- Push Notifications ----

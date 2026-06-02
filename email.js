@@ -557,6 +557,65 @@ async function sendCancellationAlertToOwner(booking, salon, ownerEmail) {
   } catch(e) { console.error('Cancellation alert owner email critical:', e.message); }
 }
 
+// Client email when the salon reschedules an appointment (booking carries the NEW date/time)
+async function sendRescheduleEmail(booking, salon) {
+  if (!booking.clientEmail) return;
+  const fromName = process.env.SMTP_FROM_NAME || salon.name || 'Kreno';
+  const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+  const primaryColor = salon.branding?.primaryColor || '#6366F1';
+  const salonName = salon.name || 'Kreno';
+  const cancelUrl = booking.cancelToken ? `${process.env.BASE_URL || 'https://kreno.ch'}/cancel/${booking.cancelToken}` : null;
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: [booking.clientEmail],
+      subject: `🔄 RDV reprogrammé — ${booking.serviceName} le ${formatDateFR(booking.date)} à ${booking.time}`,
+      html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Roboto,Arial,sans-serif;">
+  <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+    <div style="background:${primaryColor};padding:32px 28px;text-align:center">
+      <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">🔄 Rendez-vous reprogrammé</h1>
+      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${salonName}</p>
+    </div>
+    <div style="padding:28px">
+      <p style="font-size:15px;color:#27272a;margin:0 0 20px">
+        Bonjour <strong>${booking.clientName}</strong>,<br>
+        Votre rendez-vous a été déplacé. Voici les <strong>nouveaux horaires</strong> :
+      </p>
+      <div style="background:#fafafa;border-radius:12px;padding:20px;border:1px solid #e4e4e7">
+        <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3f3f46">
+          <tr>
+            <td style="padding:8px 0;color:#71717a;width:120px">Service</td>
+            <td style="padding:8px 0;font-weight:600">${booking.serviceIcon || '✂️'} ${booking.serviceName}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Nouvelle date</td>
+            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">📅 ${formatDateFR(booking.date)}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Nouvelle heure</td>
+            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">🕐 ${booking.time}</td>
+          </tr>
+        </table>
+      </div>
+      ${cancelUrl ? `<p style="font-size:13px;color:#71717a;margin:20px 0 0;line-height:1.6">
+        Un empêchement ? <a href="${cancelUrl}" style="color:${primaryColor}">Annuler ce rendez-vous</a>.
+      </p>` : ''}
+    </div>
+    <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
+      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par Kreno</p>
+    </div>
+  </div>
+</body>
+</html>`
+    });
+    if (error) { console.error('Reschedule email error:', error.message); return; }
+    console.log(`  📧 Email reprogrammation envoyé à ${booking.clientEmail}`);
+  } catch(e) { console.error('Reschedule email critical:', e.message); }
+}
+
 // Send admin notification when a new paying salon subscribes
 async function sendAdminNewSubscriptionEmail(adminEmail, { salonName, ownerEmail, plan, salonId, baseUrl }) {
   const fromName = process.env.SMTP_FROM_NAME || 'Kreno';
@@ -657,7 +716,7 @@ async function sendEmail({ to, subject, html }) {
   }
 }
 
-module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail, sendEmail };
+module.exports = { sendBookingConfirmation, sendOTPEmail, sendWelcomeEmail, sendPasswordResetEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendRescheduleEmail, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail, sendEmail };
 
 // ---- Referral reward email (sent to parrain when filleul pays first month) ----
 async function sendReferralRewardEmail(parrainEmail, parrainName, filleulSalonName) {
