@@ -123,6 +123,32 @@ function updateMetaTags(salon) {
 /* ============================================
    SALON BRANDING
    ============================================ */
+
+// --- Safe rendering helpers (salon name/logo/services are owner-controlled) ---
+function _esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function _isSafeImgUrl(u) {
+  return /^(https?:\/\/|data:image\/)/i.test((u || '').trim());
+}
+// Renders "Word0 <span>Word1</span> <span>Word2</span>" without HTML injection.
+function _renderSalonName(el, name) {
+  el.textContent = '';
+  const words = String(name || '').split(' ');
+  words.forEach((w, i) => {
+    if (i > 0) el.appendChild(document.createTextNode(' '));
+    if (i === 0) {
+      el.appendChild(document.createTextNode(w));
+    } else {
+      const span = document.createElement('span');
+      span.textContent = w;
+      el.appendChild(span);
+    }
+  });
+}
+
 function applySalonBranding(salon) {
   if (salon.branding) {
     const b = salon.branding;
@@ -207,11 +233,18 @@ function applySalonBranding(salon) {
   const logoEl = document.querySelector('.nav-logo-text');
   const salonIcon = salon.branding?.icon || '✨';
   document.querySelectorAll('.nav-logo-icon').forEach(el => {
-    el.innerHTML = salon.logo
-      ? `<img src="${salon.logo}" alt="${salon.name}" style="width:36px;height:36px;object-fit:cover;border-radius:8px">`
-      : salonIcon;
+    el.textContent = '';
+    if (salon.logo && _isSafeImgUrl(salon.logo)) {
+      const img = document.createElement('img');
+      img.src = salon.logo.trim();
+      img.alt = salon.name || '';
+      img.style.cssText = 'width:36px;height:36px;object-fit:cover;border-radius:8px';
+      el.appendChild(img);
+    } else {
+      el.textContent = salonIcon;
+    }
   });
-  if (logoEl) logoEl.innerHTML = salon.name.split(' ').map((w, i) => i === 0 ? w : `<span>${w}</span>`).join(' ');
+  if (logoEl) _renderSalonName(logoEl, salon.name);
 
   // Update booking CTA button icon
   const ctaBtn = document.querySelector('.booking-cta-card .btn');
@@ -272,12 +305,12 @@ function applySalonBranding(salon) {
       const MAX_VISIBLE = 6;
       const makeCard = (s, hidden, svcIdx) => `
         <div class="service-card reveal active${hidden ? ' service-card-hidden' : ''}" style="${hidden ? 'display:none' : ''}">
-          <div class="service-icon">${s.icon || '✂️'}</div>
-          <h3>${s.name}</h3>
-          <p>${s.description || ''}</p>
+          <div class="service-icon">${_esc(s.icon || '✂️')}</div>
+          <h3>${_esc(s.name)}</h3>
+          <p>${_esc(s.description || '')}</p>
           <div class="service-meta">
-            <span class="service-price">${s.price} CHF</span>
-            <span class="service-duration">⏱ ${s.duration} min</span>
+            <span class="service-price">${_esc(s.price)} CHF</span>
+            <span class="service-duration">⏱ ${_esc(s.duration)} min</span>
           </div>
           <button class="btn btn-outline service-book-btn" onclick="openBookingWithService(${svcIdx})">Réserver →</button>
         </div>`;
@@ -306,8 +339,8 @@ function applySalonBranding(salon) {
       if (galleryGrid) {
         galleryGrid.innerHTML = salon.gallery.map(p => `
           <div class="gallery-item">
-            <img src="${p.url}" alt="${p.title || 'Photo'}" style="width:100%;height:100%;object-fit:cover">
-            <div class="gallery-item-overlay"><span>${p.title || ''}</span></div>
+            <img src="${_isSafeImgUrl(p.url) ? _esc(p.url) : ''}" alt="${_esc(p.title || 'Photo')}" style="width:100%;height:100%;object-fit:cover">
+            <div class="gallery-item-overlay"><span>${_esc(p.title || '')}</span></div>
           </div>
         `).join('');
       }
@@ -346,14 +379,14 @@ function applySalonBranding(salon) {
           testimonialsGrid.innerHTML = allCards.map(t => `
             <div class="testimonial-card reveal active">
               <div class="testimonial-stars">${stars(t.stars)}</div>
-              <p class="testimonial-text">"${t.text}"</p>
+              <p class="testimonial-text">"${_esc(t.text)}"</p>
               <div class="testimonial-author">
                 <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--color-bg-dark);">
-                  ${t.name ? t.name[0].toUpperCase() : '?'}
+                  ${t.name ? _esc(t.name[0].toUpperCase()) : '?'}
                 </div>
                 <div>
-                  <div class="testimonial-name">${t.name}</div>
-                  <div class="testimonial-role">${t.role}</div>
+                  <div class="testimonial-name">${_esc(t.name)}</div>
+                  <div class="testimonial-role">${_esc(t.role)}</div>
                 </div>
               </div>
             </div>
@@ -442,7 +475,7 @@ function updateDots(activeIndex) {
 
 function updateFooter(salon) {
   const footerLogo = document.querySelector('.footer-brand .nav-logo-text');
-  if (footerLogo) footerLogo.innerHTML = salon.name.split(' ').map((w, i) => i === 0 ? w : `<span>${w}</span>`).join(' ');
+  if (footerLogo) _renderSalonName(footerLogo, salon.name);
   const footerDesc = document.querySelector('.footer-brand > p');
   if (footerDesc) footerDesc.textContent = salon.description || `${salon.name} — Votre salon premium.`;
 
@@ -465,7 +498,7 @@ function updateFooter(salon) {
   }
 
   const footerSvc = document.getElementById('footerServices');
-  if (footerSvc && salon.services) footerSvc.innerHTML = `<h4>Services</h4><ul>${salon.services.map(s => `<li><a href="#services">${s.name}</a></li>`).join('')}</ul>`;
+  if (footerSvc && salon.services) footerSvc.innerHTML = `<h4>Services</h4><ul>${salon.services.map(s => `<li><a href="#services">${_esc(s.name)}</a></li>`).join('')}</ul>`;
 
   const footerHours = document.getElementById('footerHours');
   if (footerHours && salon.hours) {
@@ -627,9 +660,9 @@ function populateEmployees() {
 
   grid.innerHTML = emps.map(e => `
     <div class="bm-service-card" onclick="selectEmployee('${e._id.replace(/'/g,"\\'")}','${(e.name||'').replace(/'/g,"\\'")}',this)">
-      <div class="bm-service-icon" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--color-bg-dark);font-weight:700">${(e.name || '?')[0].toUpperCase()}</div>
-      <div class="bm-service-name">${e.name}</div>
-      <div class="bm-service-dur">${(e.specialties || []).join(', ') || 'Tous services'}</div>
+      <div class="bm-service-icon" style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-dark));display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;color:var(--color-bg-dark);font-weight:700">${_esc((e.name || '?')[0].toUpperCase())}</div>
+      <div class="bm-service-name">${_esc(e.name)}</div>
+      <div class="bm-service-dur">${_esc((e.specialties || []).join(', ') || 'Tous services')}</div>
     </div>
   `).join('');
 }
@@ -664,10 +697,10 @@ function populateServices() {
       : '';
     return `
     <div class="bm-service-card" onclick="selectService(${idx},this)">
-      <div class="bm-service-icon">${s.icon || '✂️'}</div>
-      <div class="bm-service-name">${s.name}</div>
-      <div class="bm-service-price">${s.price} CHF</div>
-      <div class="bm-service-dur">${s.duration} min</div>
+      <div class="bm-service-icon">${_esc(s.icon || '✂️')}</div>
+      <div class="bm-service-name">${_esc(s.name)}</div>
+      <div class="bm-service-price">${_esc(s.price)} CHF</div>
+      <div class="bm-service-dur">${_esc(s.duration)} min</div>
       ${payBadge}
     </div>
   `}).join('');
@@ -1319,18 +1352,18 @@ function renderTeamSection(salon) {
   if (!grid) return;
 
   grid.innerHTML = employees.map(emp => {
-    const initials = (emp.name || '?')[0].toUpperCase();
-    const avatarHtml = emp.photo
-      ? `<img src="${emp.photo}" alt="${emp.name}" loading="lazy">`
+    const initials = _esc((emp.name || '?')[0].toUpperCase());
+    const avatarHtml = emp.photo && _isSafeImgUrl(emp.photo)
+      ? `<img src="${_esc(emp.photo)}" alt="${_esc(emp.name)}" loading="lazy">`
       : initials;
     const specialtiesHtml = (emp.specialties || []).length > 0
-      ? emp.specialties.map(s => `<span class="team-specialty-tag">${s}</span>`).join('')
+      ? emp.specialties.map(s => `<span class="team-specialty-tag">${_esc(s)}</span>`).join('')
       : '<span class="team-specialties">Tous services</span>';
 
     return `
       <div class="team-card reveal active">
         <div class="team-avatar">${avatarHtml}</div>
-        <div class="team-name">${emp.name || 'Professionnel'}</div>
+        <div class="team-name">${_esc(emp.name || 'Professionnel')}</div>
         <div class="team-specialties">${specialtiesHtml}</div>
       </div>
     `;

@@ -3040,8 +3040,25 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
     }
 });
 
-// OTP Store (in memory) - email -> { code, expires }
+// OTP Store (in memory) - `${email}:${salonId}` -> { code, expires }
 const otpStore = new Map();
+const OTP_STORE_MAX = 50000;
+// Purge expired OTPs periodically so the map can't grow unbounded (H5).
+setInterval(() => {
+    const now = Date.now();
+    for (const [k, v] of otpStore) { if (now > v.expires) otpStore.delete(k); }
+}, 10 * 60 * 1000);
+// Hard cap against a flood: drop expired, then the oldest entries if still full.
+function otpStoreGuard() {
+    if (otpStore.size < OTP_STORE_MAX) return;
+    const now = Date.now();
+    for (const [k, v] of otpStore) { if (now > v.expires) otpStore.delete(k); }
+    while (otpStore.size >= OTP_STORE_MAX) {
+        const oldest = otpStore.keys().next().value;
+        if (oldest === undefined) break;
+        otpStore.delete(oldest);
+    }
+}
 
 // Client: generate OTP for my bookings
 route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
@@ -3059,6 +3076,7 @@ route('POST', '/api/salon/:slug/my-bookings/otp', async (req, res, params) => {
     // Generate 6 digit code — keyed by email+salonId to prevent cross-salon reuse
     const code = crypto.randomInt(100000, 1000000).toString();
     const expires = Date.now() + 10 * 60 * 1000; // 10 minutes valid
+    otpStoreGuard();
     otpStore.set(`${email}:${salon._id}`, { code, expires });
 
     // Send via email if SMTP is configured. 
