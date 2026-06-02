@@ -2592,8 +2592,12 @@ async function loadSettings() {
                                 { name:'Or & Noir', primary:'#C9A227', accent:'#E6C757', bg:'#121212', text:'#F5F0E8' },
                                 { name:'Océan',     primary:'#2563EB', accent:'#38BDF8', bg:'#0B1220', text:'#E8EEF7' },
                                 { name:'Émeraude',  primary:'#10B981', accent:'#34D399', bg:'#0C1512', text:'#E8F2EC' },
-                                { name:'Rosé',      primary:'#E11D6B', accent:'#F472B6', bg:'#FFF7FA', text:'#2B2B2B' },
                                 { name:'Bordeaux',  primary:'#9B1C31', accent:'#C84B5A', bg:'#1A0F12', text:'#F3E9E0' },
+                                { name:'Rosé',      primary:'#E11D6B', accent:'#F472B6', bg:'#FFF7FA', text:'#2B2B2B' },
+                                { name:'Sable',     primary:'#C2680C', accent:'#F59E0B', bg:'#FFFAF3', text:'#3A2A18' },
+                                { name:'Menthe',    primary:'#0E9F6E', accent:'#34D399', bg:'#F1FBF6', text:'#14342A' },
+                                { name:'Lavande',   primary:'#7C3AED', accent:'#A78BFA', bg:'#F8F5FF', text:'#2E1A47' },
+                                { name:'Ciel',      primary:'#2563EB', accent:'#60A5FA', bg:'#F1F7FF', text:'#16314F' },
                             ].map(t => {
                                 const isActive =
                                     (salon.branding?.primaryColor    || '#6366F1').toLowerCase() === t.primary.toLowerCase() &&
