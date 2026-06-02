@@ -186,9 +186,18 @@ function applySalonBranding(salon) {
     if (heroFallback) heroFallback.style.display = 'flex';
     const heroIcon = document.getElementById('heroMediaIcon');
     if (heroIcon) {
-      // No hero photo → show the salon logo if uploaded, else the sector emoji icon
-      if (salon.logo) {
-        heroIcon.innerHTML = `<img src="${salon.logo}" alt="${salon.name || ''}" style="width:140px;height:140px;max-width:55%;object-fit:contain;border-radius:22px;box-shadow:0 10px 30px rgba(0,0,0,.35)">`;
+      // No hero photo → show the salon logo if uploaded, else the sector emoji icon.
+      // Build via DOM APIs (not innerHTML) so salon-controlled name/logo can't
+      // inject markup, and only allow http(s)/data:image logo URLs.
+      const logo = (salon.logo || '').trim();
+      const logoOk = /^(https?:\/\/|data:image\/)/i.test(logo);
+      if (logoOk) {
+        heroIcon.textContent = '';
+        const img = document.createElement('img');
+        img.src = logo;
+        img.alt = salon.name || '';
+        img.style.cssText = 'width:140px;height:140px;max-width:55%;object-fit:contain;border-radius:22px;box-shadow:0 10px 30px rgba(0,0,0,.35)';
+        heroIcon.appendChild(img);
       } else {
         heroIcon.textContent = salon.branding?.icon || '✨';
       }
