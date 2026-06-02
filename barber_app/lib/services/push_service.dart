@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import '../models/booking_model.dart';
 import '../screens/booking_detail_screen.dart';
 import '../screens/reviews_screen.dart';
 import '../theme/app_theme.dart';
@@ -167,11 +168,25 @@ class PushService {
 
       // For booking events, fetch the booking and open the detail sheet.
       if ((type == 'booking' || type == 'cancellation') &&
-          bookingId != null && bookingId.isNotEmpty &&
-          ApiService.isLoggedIn) {
-        // Give the fetch a moment so the user sees the navigation happen.
-        await Future.delayed(const Duration(milliseconds: 200));
-        final booking = await ApiService.getBookingById(bookingId);
+          bookingId != null && bookingId.isNotEmpty) {
+        // Cold start: the persisted session may still be loading when the tap
+        // is handled. Wait briefly for it before giving up.
+        for (int i = 0; i < 10 && !ApiService.isLoggedIn; i++) {
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
+        if (!ApiService.isLoggedIn) return;
+
+        // Fetch with retries: at cold start the Render server can be waking up,
+        // so the first request may fail/timeout. Retry with backoff before
+        // showing an error.
+        BookingModel? booking;
+        for (int attempt = 1; attempt <= 3 && booking == null; attempt++) {
+          booking = await ApiService.getBookingById(bookingId);
+          if (booking == null && attempt < 3) {
+            await Future.delayed(Duration(milliseconds: 600 * attempt));
+          }
+        }
+
         final ctx = navigatorKey.currentContext;
         if (ctx == null || !ctx.mounted) return;
         if (booking == null) {
