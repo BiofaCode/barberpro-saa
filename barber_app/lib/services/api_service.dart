@@ -661,6 +661,40 @@ class ApiService {
     return false;
   }
 
+  // ---- Hero image upload / delete ----
+  static Future<String?> uploadHeroImage(File image) async {
+    if (_salonId == null || _token == null) return null;
+    try {
+      final request = http.MultipartRequest(
+        'POST', Uri.parse('$_url/api/pro/salon/$_salonId/hero-image'),
+      );
+      request.headers['Authorization'] = 'Bearer $_token';
+      request.files.add(await http.MultipartFile.fromPath('image', image.path));
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      final decoded = jsonDecode(response.body);
+      if (decoded['success'] == true) return decoded['data']['heroImage'] as String?;
+    } catch (e) {
+      debugPrint('API Error (uploadHeroImage): $e');
+    }
+    return null;
+  }
+
+  static Future<bool> deleteHeroImage() async {
+    if (_salonId == null) return false;
+    try {
+      final res = await _delete(
+        Uri.parse('$_url/api/pro/salon/$_salonId/hero-image'),
+        headers: _authHeaders,
+      );
+      final decoded = jsonDecode(res.body);
+      return decoded['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (deleteHeroImage): $e');
+    }
+    return false;
+  }
+
   // ---- Créer un RDV ----
   static Future<Map<String, dynamic>?> createBooking(Map<String, dynamic> bookingData) async {
     if (_salonId == null) return null;

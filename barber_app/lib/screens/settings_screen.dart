@@ -977,6 +977,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final accentColorCtrl = TextEditingController(text: branding['accentColor'] ?? '#818CF8');
     final backgroundColorCtrl = TextEditingController(text: branding['backgroundColor'] ?? '#0A0A0F');
     final textColorCtrl = TextEditingController(text: branding['textColor'] ?? '#F5F0E8');
+    String? heroImageUrl = branding['heroImage'] as String?;
 
     final heroStats = branding['heroStats'] as Map<String, dynamic>? ?? {};
     final stat1ValCtrl = TextEditingController(text: heroStats['stat1Value']?.toString() ?? '2500+');
@@ -1338,7 +1339,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   previewField('Titre principal', titleCtrl),
                   const SizedBox(height: 16),
                   previewField('Sous-titre', subtitleCtrl),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+
+                  // ---- Hero image ----
+                  Text('Photo du hero', style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted)),
+                  const SizedBox(height: 10),
+                  if (heroImageUrl != null && heroImageUrl!.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        heroImageUrl!,
+                        height: 130,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context2, error, stack) => const SizedBox.shrink(),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final picker = ImagePicker();
+                            final file = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1920, imageQuality: 85);
+                            if (file == null) return;
+                            final url = await ApiService.uploadHeroImage(File(file.path));
+                            if (url != null) setSheetState(() => heroImageUrl = url);
+                          },
+                          icon: const Icon(Icons.photo_camera_outlined, size: 16),
+                          label: Text('Changer', style: GoogleFonts.dmSans(fontSize: 13)),
+                          style: OutlinedButton.styleFrom(foregroundColor: AppTheme.primary, side: BorderSide(color: AppTheme.primary)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final ok = await ApiService.deleteHeroImage();
+                            if (ok) setSheetState(() => heroImageUrl = null);
+                          },
+                          icon: const Icon(Icons.delete_outline, size: 16),
+                          label: Text('Supprimer', style: GoogleFonts.dmSans(fontSize: 13)),
+                          style: OutlinedButton.styleFrom(foregroundColor: AppTheme.error, side: BorderSide(color: AppTheme.error)),
+                        ),
+                      ),
+                    ]),
+                  ] else
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final picker = ImagePicker();
+                          final file = await picker.pickImage(source: ImageSource.gallery, maxWidth: 1920, imageQuality: 85);
+                          if (file == null) return;
+                          final url = await ApiService.uploadHeroImage(File(file.path));
+                          if (url != null) setSheetState(() => heroImageUrl = url);
+                        },
+                        icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                        label: Text('Ajouter une photo du hero', style: GoogleFonts.dmSans(fontSize: 14)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primary,
+                          side: BorderSide(color: AppTheme.primary.withAlpha(120)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+
                   buildThemeSelector(),
                   const SizedBox(height: 16),
                   buildColorPicker('Couleur Primaire', primaryColorCtrl),
