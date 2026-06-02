@@ -185,7 +185,14 @@ function applySalonBranding(salon) {
     if (heroBgImg) heroBgImg.style.display = 'none';
     if (heroFallback) heroFallback.style.display = 'flex';
     const heroIcon = document.getElementById('heroMediaIcon');
-    if (heroIcon) heroIcon.textContent = salon.branding?.icon || '✨';
+    if (heroIcon) {
+      // No hero photo → show the salon logo if uploaded, else the sector emoji icon
+      if (salon.logo) {
+        heroIcon.innerHTML = `<img src="${salon.logo}" alt="${salon.name || ''}" style="width:140px;height:140px;max-width:55%;object-fit:contain;border-radius:22px;box-shadow:0 10px 30px rgba(0,0,0,.35)">`;
+      } else {
+        heroIcon.textContent = salon.branding?.icon || '✨';
+      }
+    }
   }
 
   const logoEl = document.querySelector('.nav-logo-text');
