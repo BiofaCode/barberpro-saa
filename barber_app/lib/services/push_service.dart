@@ -160,6 +160,26 @@ class PushService {
       // Always return to root first so the detail sheet stacks on a clean state.
       navigator.popUntil((r) => r.isFirst);
 
+      // ===== TEMP DIAGNOSTIC — retirer avant la soumission finale App Store =====
+      // Montre, directement dans l'app, ce que la notif a transmis. Permet de
+      // diagnostiquer sans Xcode : si le bandeau ne s'affiche pas du tout, le
+      // handler de tap ne se déclenche pas ; s'il affiche type=∅, les données
+      // n'arrivent pas ; s'il affiche des valeurs mais que le RDV ne s'ouvre
+      // pas, c'est le fetch.
+      final ctxDiag = navigatorKey.currentContext;
+      if (ctxDiag != null && ctxDiag.mounted) {
+        ScaffoldMessenger.of(ctxDiag).showSnackBar(SnackBar(
+          content: Text(
+            '🔔 Notif reçue — type=${type ?? "∅"} · id=${bookingId ?? "∅"} · login=${ApiService.isLoggedIn}',
+            style: GoogleFonts.dmSans(color: Colors.white, fontSize: 12),
+          ),
+          backgroundColor: Colors.blueGrey.shade800,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 6),
+        ));
+      }
+      // ===== FIN DIAGNOSTIC =====
+
       // A new review notification opens the moderation screen.
       if (type == 'review' && ApiService.isLoggedIn) {
         navigator.push(MaterialPageRoute(builder: (_) => const ReviewsScreen()));
