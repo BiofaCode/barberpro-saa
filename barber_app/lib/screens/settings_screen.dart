@@ -1473,6 +1473,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         setState(() => _loading = true);
                         final newBranding = {
                           ...branding,
+                          // heroImageUrl tracks any upload/delete done in this sheet session.
+                          // Must be included explicitly — the spread uses the snapshot taken
+                          // at sheet-open time and would otherwise overwrite the new value.
+                          'heroImage': heroImageUrl ?? '',
                           'heroTitle': titleCtrl.text.trim(),
                           'heroSubtitle': subtitleCtrl.text.trim(),
                           'primaryColor': primaryColorCtrl.text.trim(),
