@@ -3614,6 +3614,21 @@ tr+tr td{border-top:1px solid #f0f0f0}
                         const pageUrl = `${baseUrl}/s/${salonSlug}`;
                         const img = salon.logo || '';
 
+                        const dayMap = { lundi:'Monday', mardi:'Tuesday', mercredi:'Wednesday', jeudi:'Thursday', vendredi:'Friday', samedi:'Saturday', dimanche:'Sunday' };
+                        const openingHoursSpec = salon.hours
+                            ? Object.entries(salon.hours).filter(([,h]) => h && h.open && h.close).map(([day, h]) => ({ '@type':'OpeningHoursSpecification', dayOfWeek:`https://schema.org/${dayMap[day]||day}`, opens:h.open, closes:h.close }))
+                            : null;
+                        const activeSvcs = (salon.services || []).filter(s => s.active !== false);
+                        const prices = activeSvcs.map(s => s.price).filter(Boolean);
+                        const priceRange = prices.length ? `CHF ${Math.min(...prices)}–${Math.max(...prices)}` : null;
+                        const aggregateRating = (salon.rating && salon.reviewCount)
+                            ? { '@type':'AggregateRating', ratingValue: salon.rating, reviewCount: salon.reviewCount, bestRating: 5 }
+                            : null;
+                        const hasOfferCatalog = activeSvcs.length ? {
+                            '@type':'OfferCatalog', name:'Services',
+                            itemListElement: activeSvcs.map(s => ({ '@type':'Offer', itemOffered:{ '@type':'Service', name:s.name, ...(s.description && { description:s.description }) }, price:s.price, priceCurrency:'CHF' })),
+                        } : null;
+
                         const seoHead = [
                             `<title>${safeName} | Réservation en ligne</title>`,
                             `<meta name="description" content="${safeDesc}">`,
@@ -3627,10 +3642,15 @@ tr+tr td{border-top:1px solid #f0f0f0}
                                 '@context': 'https://schema.org',
                                 '@type': 'LocalBusiness',
                                 name,
+                                description: desc,
                                 url: pageUrl,
                                 ...(img && { image: img }),
                                 ...(salon.phone && { telephone: salon.phone }),
-                                ...(salon.address && { address: { '@type': 'PostalAddress', streetAddress: salon.address } }),
+                                ...(salon.address && { address: { '@type':'PostalAddress', streetAddress:salon.address, addressCountry:'CH' } }),
+                                ...(openingHoursSpec?.length && { openingHoursSpecification: openingHoursSpec }),
+                                ...(aggregateRating && { aggregateRating }),
+                                ...(priceRange && { priceRange }),
+                                ...(hasOfferCatalog && { hasOfferCatalog }),
                             })}</script>`,
                         ].filter(Boolean).join('\n  ');
 
