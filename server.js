@@ -367,6 +367,33 @@ async function sendPendingReviewRequests() {
 setInterval(sendPendingReviewRequests, 60 * 60 * 1000); // every hour
 setTimeout(sendPendingReviewRequests, 90000); // startup check after 1.5 min
 
+// ---- Auto-complete past bookings: confirmed/in_progress → completed ----
+async function autoCompletePastBookings() {
+    try {
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const yesterdayStr = new Date(now - 86400000).toISOString().split('T')[0];
+        const bookings = await db.findBookings({
+            date: { $in: [todayStr, yesterdayStr] },
+            status: { $in: ['confirmed', 'in_progress'] },
+        });
+        let count = 0;
+        for (const b of bookings) {
+            if (!b.time) continue;
+            const [hh, mm] = b.time.split(':').map(Number);
+            const apptEnd = new Date(`${b.date}T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00`);
+            apptEnd.setMinutes(apptEnd.getMinutes() + (b.duration || 30) + 2); // +2 min buffer
+            if (now > apptEnd) {
+                await db.updateBooking(b._id, { status: 'completed' });
+                count++;
+            }
+        }
+        if (count > 0) console.log(`✅ RDV auto-complétés: ${count}`);
+    } catch (e) { console.error('Auto-complete cron error:', e.message); }
+}
+setInterval(autoCompletePastBookings, 5 * 60 * 1000); // every 5 min
+setTimeout(autoCompletePastBookings, 60000); // startup check after 1 min
+
 // ---- Daily 8am push reminder (FCM mobile) ----
 const dailyPushSentFor = new Set(); // 'YYYY-MM-DD' guard against double-firing
 async function sendDailyPushReminder() {
