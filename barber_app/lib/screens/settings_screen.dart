@@ -1304,8 +1304,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           );
 
-          return Container(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 24),
+          return SafeArea(
+            top: true,
+            bottom: false,
+            child: Container(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 24, right: 24, top: 20),
             decoration: const BoxDecoration(
               color: AppTheme.bgCard,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -1522,6 +1525,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
               ],
             ),
+          ),
           );
         },
       ),

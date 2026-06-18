@@ -58,26 +58,48 @@ const CLIENTS = [
 ];
 
 // Rendez-vous : offset jour, heure, service, client (index), statut.
-// Pensé pour que la vue "Aujourd'hui" et l'agenda soient bien remplis.
 const BOOKINGS = [
+  // Semaine passée — terminés avec avis
+  { day: -6, time: '10:00', svc: 'Coloration',       cli: 0, emp: 0, status: 'completed' },
+  { day: -5, time: '14:00', svc: 'Coupe Homme',      cli: 1, emp: 1, status: 'completed' },
+  { day: -4, time: '11:00', svc: 'Balayage',         cli: 2, emp: 0, status: 'completed' },
+  { day: -3, time: '09:30', svc: 'Soin Profond',     cli: 3, emp: 2, status: 'completed' },
+  { day: -3, time: '15:00', svc: 'Taille de Barbe',  cli: 5, emp: 1, status: 'completed' },
+  { day: -2, time: '10:30', svc: 'Coupe & Brushing', cli: 6, emp: 2, status: 'completed' },
   // Hier — terminés
-  { day: -1, time: '10:00', svc: 'Coloration',      cli: 0, emp: 0, status: 'completed' },
-  { day: -1, time: '14:30', svc: 'Coupe Homme',     cli: 1, emp: 1, status: 'completed' },
-  // Aujourd'hui — mix réaliste
+  { day: -1, time: '09:00', svc: 'Coloration',       cli: 0, emp: 0, status: 'completed' },
+  { day: -1, time: '11:30', svc: 'Coupe Homme',      cli: 1, emp: 1, status: 'completed' },
+  { day: -1, time: '14:30', svc: 'Balayage',         cli: 4, emp: 0, status: 'completed' },
+  { day: -1, time: '16:30', svc: 'Taille de Barbe',  cli: 7, emp: 1, status: 'completed' },
+  // Aujourd'hui — agenda bien rempli
   { day: 0,  time: '09:00', svc: 'Coupe & Brushing', cli: 4, emp: 2, status: 'completed' },
-  { day: 0,  time: '10:30', svc: 'Taille de Barbe',  cli: 5, emp: 1, status: 'in_progress' },
-  { day: 0,  time: '11:30', svc: 'Balayage',         cli: 2, emp: 0, status: 'confirmed' },
-  { day: 0,  time: '14:00', svc: 'Coupe Homme',      cli: 7, emp: 1, status: 'confirmed' },
-  { day: 0,  time: '15:30', svc: 'Soin Profond',     cli: 6, emp: 2, status: 'pending' },
-  { day: 0,  time: '17:00', svc: 'Coloration',       cli: 0, emp: 0, status: 'confirmed' },
+  { day: 0,  time: '10:00', svc: 'Taille de Barbe',  cli: 5, emp: 1, status: 'completed' },
+  { day: 0,  time: '11:00', svc: 'Balayage',         cli: 2, emp: 0, status: 'in_progress' },
+  { day: 0,  time: '12:00', svc: 'Coupe Homme',      cli: 7, emp: 1, status: 'confirmed' },
+  { day: 0,  time: '13:30', svc: 'Soin Profond',     cli: 6, emp: 2, status: 'confirmed' },
+  { day: 0,  time: '15:00', svc: 'Coloration',       cli: 3, emp: 0, status: 'confirmed' },
+  { day: 0,  time: '16:30', svc: 'Coupe & Brushing', cli: 0, emp: 2, status: 'confirmed' },
+  { day: 0,  time: '17:30', svc: 'Taille de Barbe',  cli: 1, emp: 1, status: 'confirmed' },
   // Demain
   { day: 1,  time: '09:30', svc: 'Coupe & Brushing', cli: 3, emp: 2, status: 'confirmed' },
   { day: 1,  time: '11:00', svc: 'Taille de Barbe',  cli: 1, emp: 1, status: 'confirmed' },
-  { day: 1,  time: '16:00', svc: 'Balayage',         cli: 4, emp: 0, status: 'confirmed' },
+  { day: 1,  time: '14:00', svc: 'Balayage',         cli: 4, emp: 0, status: 'confirmed' },
+  { day: 1,  time: '16:00', svc: 'Coloration',       cli: 2, emp: 0, status: 'confirmed' },
   // Après-demain
   { day: 2,  time: '10:00', svc: 'Coupe Homme',      cli: 7, emp: 1, status: 'confirmed' },
-  { day: 2,  time: '13:30', svc: 'Coloration',       cli: 2, emp: 0, status: 'confirmed' },
-  { day: 3,  time: '15:00', svc: 'Soin Profond',     cli: 6, emp: 2, status: 'confirmed' },
+  { day: 2,  time: '13:30', svc: 'Soin Profond',     cli: 6, emp: 2, status: 'confirmed' },
+  { day: 3,  time: '09:00', svc: 'Coloration',       cli: 0, emp: 0, status: 'confirmed' },
+  { day: 3,  time: '15:00', svc: 'Coupe & Brushing', cli: 5, emp: 2, status: 'confirmed' },
+];
+
+// Avis clients — liés aux bookings passés (indices dans BOOKINGS ci-dessus)
+const REVIEWS = [
+  { bookingIdx: 0, rating: 5, comment: 'Coloration parfaite, exactement ce que je voulais ! Je reviendrai sans hésiter.', approved: true },
+  { bookingIdx: 1, rating: 5, comment: 'Super coupe, rapide et précise. Ambiance top.', approved: true },
+  { bookingIdx: 2, rating: 4, comment: 'Très bon balayage, résultat naturel et lumineux. Équipe professionnelle.', approved: true },
+  { bookingIdx: 3, rating: 5, comment: 'Excellent soin, mes cheveux sont transformés. Merci Léa !', approved: true },
+  { bookingIdx: 4, rating: 5, comment: 'Taille de barbe impeccable, je suis ravi du résultat.', approved: null },
+  { bookingIdx: 5, rating: 4, comment: 'Bonne prestation, coupe réussie. Je recommande.', approved: null },
 ];
 
 async function run() {
@@ -153,11 +175,12 @@ async function run() {
 
   // 6. Rendez-vous.
   let count = 0;
+  const createdBookings = [];
   for (const b of BOOKINGS) {
     const svc = SERVICES.find(s => s.name === b.svc);
     const cli = clients[b.cli];
     const emp = employees[b.emp];
-    await db.createBooking({
+    const booking = await db.createBooking({
       salon: salon._id,
       client: cli._id,
       clientName: cli.name,
@@ -177,8 +200,26 @@ async function run() {
       cancelToken: require('crypto').randomBytes(16).toString('hex'),
     });
     count++;
+    createdBookings.push(booking);
   }
   console.log(`📅 ${count} rendez-vous créés`);
+
+  // 7. Avis clients.
+  let reviewCount = 0;
+  for (const r of REVIEWS) {
+    const booking = createdBookings[r.bookingIdx];
+    if (!booking) continue;
+    await db.updateBooking(booking._id, {
+      reviewed: true,
+      reviewRating: r.rating,
+      reviewComment: r.comment,
+      reviewApproved: r.approved,
+      reviewDate: new Date(Date.now() - (BOOKINGS[r.bookingIdx].day * -1) * 86400000).toISOString(),
+      reviewEmailSent: true,
+    });
+    reviewCount++;
+  }
+  console.log(`⭐ ${reviewCount} avis créés`);
 
   console.log('\n✅ Seed démo terminé.');
   console.log(`   Connexion : ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
