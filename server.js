@@ -463,7 +463,8 @@ async function hasConflict(salonId, employeeId, date, time, duration, excludeId 
 const routes = [];
 function route(method, pattern, handler) {
     const regex = new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$');
-    routes.push({ method, regex, handler });
+    const paramCount = (pattern.match(/:\w+/g) || []).length;
+    routes.push({ method, regex, handler, paramCount });
 }
 
 // ==========================
@@ -2925,15 +2926,29 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     if (!salon || !salon.active) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
 
-    if (await hasConflict(salon._id, body.employeeId || null, body.date, body.time, body.duration || 30)) {
-        return json(res, 409, { success: false, error: 'Ce créneau n\'est plus disponible. Veuillez choisir un autre horaire.' });
+    if (!body.clientName || !String(body.clientName).trim()) {
+        return json(res, 400, { success: false, error: 'Nom requis' });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date || '') || !/^\d{2}:\d{2}$/.test(body.time || '')) {
+        return json(res, 400, { success: false, error: 'Date ou heure invalide' });
+    }
+    // Client sends its local (Swiss) date, which is never behind the UTC date.
+    if (body.date < new Date().toISOString().split('T')[0]) {
+        return json(res, 400, { success: false, error: 'Impossible de réserver dans le passé' });
     }
 
     // Look up price and duration server-side — never trust client-supplied values
     const service = (salon.services || []).find(s => s.name === body.serviceName && s.active !== false);
-    const price = service?.price ?? 0;
-    const duration = service?.duration ?? 30;
-    const serviceIcon = service?.icon || '✂️';
+    if (!service) return json(res, 400, { success: false, error: 'Prestation introuvable' });
+    const price = service.price ?? 0;
+    const duration = service.duration ?? 30;
+    const serviceIcon = service.icon || '✂️';
+
+    // Conflict check with the server-side duration: a client-supplied short
+    // duration would otherwise let a long service overlap the next booking.
+    if (await hasConflict(salon._id, body.employeeId || null, body.date, body.time, duration)) {
+        return json(res, 409, { success: false, error: 'Ce créneau n\'est plus disponible. Veuillez choisir un autre horaire.' });
+    }
 
     const client = await db.findOrCreateClient(salon._id, {
         name: body.clientName, email: body.clientEmail, phone: body.clientPhone,
@@ -2956,7 +2971,7 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     // Non-blocking: webhooks
     triggerWebhooks(salon, 'booking.created', {
         bookingId: String(booking._id), clientName: body.clientName,
-        service: body.serviceName, date: body.date, time: body.time, price: body.price || 0,
+        service: body.serviceName, date: body.date, time: body.time, price,
     });
 
     // Non-blocking: email + push + SMS
@@ -3001,8 +3016,11 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
 // Paiement en ligne avant réservation — crée booking pending + session Stripe
 route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
     if (!stripe) return json(res, 500, { success: false, error: 'Stripe non configuré' });
+    if (rateLimit(getClientIP(req), 'book', 10, 60 * 60 * 1000)) {
+        return json(res, 429, { success: false, error: 'Trop de requêtes, veuillez réessayer plus tard.' });
+    }
     const salon = await db.findSalonBySlug(params.slug);
-    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    if (!salon || !salon.active) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
     const connectId = salon.stripeConnect?.accountId;
     if (!connectId || salon.stripeConnect?.status !== 'connected') {
@@ -3015,6 +3033,20 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
 
     const paymentMode = service.paymentMode || 'none';
     if (paymentMode === 'none') return json(res, 400, { success: false, error: 'Pas de paiement en ligne pour ce service' });
+
+    if (!body.clientName || !String(body.clientName).trim()) {
+        return json(res, 400, { success: false, error: 'Nom requis' });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date || '') || !/^\d{2}:\d{2}$/.test(body.time || '')) {
+        return json(res, 400, { success: false, error: 'Date ou heure invalide' });
+    }
+    if (body.date < new Date().toISOString().split('T')[0]) {
+        return json(res, 400, { success: false, error: 'Impossible de réserver dans le passé' });
+    }
+    const duration = service.duration || 30;
+    if (await hasConflict(salon._id, body.employeeId || null, body.date, body.time, duration)) {
+        return json(res, 409, { success: false, error: 'Ce créneau n\'est plus disponible. Veuillez choisir un autre horaire.' });
+    }
 
     const amountCents = Math.round(service.price * 100);
     const amountCHF = service.price;
@@ -3030,7 +3062,7 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
         salon: salon._id, client: client._id,
         clientName: body.clientName, clientEmail: body.clientEmail, clientPhone: body.clientPhone,
         serviceName: body.serviceName, serviceIcon: body.serviceIcon || '✂️',
-        price: service.price, duration: body.duration || service.duration || 30,
+        price: service.price, duration,
         date: body.date, time: body.time, notes: body.notes || '',
         employeeId: body.employeeId || null, employeeName: body.employeeName || null,
         status: 'pending', source: 'website',
@@ -3397,7 +3429,12 @@ const server = http.createServer(async (req, res) => {
             }
         }
 
-        const match = routes.find(r => r.method === req.method && r.regex.test(pathname));
+        // Most specific route wins (fewest params), so a literal segment such as
+        // /bookings/ical is not swallowed by /bookings/:bookingId declared earlier.
+        let match = null;
+        for (const r of routes) {
+            if (r.method === req.method && r.regex.test(pathname) && (!match || r.paramCount < match.paramCount)) match = r;
+        }
         if (match) {
             const params = pathname.match(match.regex)?.groups || {};
             try { await match.handler(req, res, params); }
@@ -3593,6 +3630,10 @@ tr+tr td{border-top:1px solid #f0f0f0}
     }
     else if (pathname === '/privacy' || pathname === '/privacy.html') {
         filePath = path.join(__dirname, 'saas/privacy.html');
+    }
+    else if (pathname === '/terms' || pathname === '/cgu') {
+        // Public URL given to the App Store / Play Store listings
+        filePath = path.join(__dirname, 'saas/cgu.html');
     }
     else if (pathname === '/support' || pathname === '/support.html') {
         filePath = path.join(__dirname, 'saas/faq.html');
