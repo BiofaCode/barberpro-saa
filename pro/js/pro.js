@@ -2354,14 +2354,14 @@ async function loadSMSStatus() {
                 </div>
             </div>
             <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:14px">
-                Un crédit = 1 SMS envoyé. Les rappels J-1 et les confirmations de RDV consomment 1 crédit chacun.
+                Un crédit = 1 SMS envoyé. Par défaut, seul le rappel de la veille est envoyé par SMS (1 crédit par RDV) ; la confirmation part par email, gratuitement. Les crédits achetés n'expirent pas.
             </p>
             <div style="margin-bottom:20px;padding:16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px">
                 <div style="font-weight:600;font-size:.9rem;margin-bottom:12px">⚙️ Préférences d'envoi</div>
                 ${[
-                    { id: 'sms-toggle-confirm', label: 'SMS de confirmation au client', checked: settings.clientConfirmation === true },
+                    { id: 'sms-toggle-confirm', label: 'SMS de confirmation au client (en plus de l\'email)', checked: settings.clientConfirmation === true },
                     { id: 'sms-toggle-reminder', label: 'SMS rappel J-1 au client', checked: settings.clientReminder !== false },
-                    { id: 'sms-toggle-owner', label: 'SMS alerte nouveau RDV (vous)', checked: !!settings.ownerNotification },
+                    { id: 'sms-toggle-owner', label: 'SMS alerte nouveau RDV (vous) — 1 crédit par RDV', checked: !!settings.ownerNotification },
                 ].map(t => `
                 <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light,rgba(255,255,255,.06));cursor:pointer">
                     <span style="font-size:.85rem;color:var(--text-sec)">${t.label}</span>
