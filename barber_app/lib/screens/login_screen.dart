@@ -170,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     final ctrl = TextEditingController(text: ApiService.currentServerUrl);
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         backgroundColor: AppTheme.bgCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('URL du serveur', style: GoogleFonts.dmSans(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
@@ -199,11 +199,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.dmSans(color: AppTheme.textMuted))),
+          TextButton(onPressed: () => Navigator.pop(dialogCtx), child: Text('Annuler', style: GoogleFonts.dmSans(color: AppTheme.textMuted))),
           TextButton(
             onPressed: () async {
               await ApiService.saveServerUrl(ctrl.text);
-              if (context.mounted) Navigator.pop(context);
+              if (dialogCtx.mounted) Navigator.pop(dialogCtx);
             },
             child: Text('Enregistrer', style: GoogleFonts.dmSans(color: AppTheme.primary, fontWeight: FontWeight.w600)),
           ),

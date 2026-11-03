@@ -8,7 +8,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val keyPropertiesFile = rootProject.file("app/key.properties")
+// android/key.properties is the Flutter convention (and where codemagic.yaml
+// writes it); android/app/key.properties is kept for existing local setups.
+// Without either, release builds fall back to the debug key, which the Play
+// Store rejects.
+val keyPropertiesFile = listOf(rootProject.file("key.properties"), rootProject.file("app/key.properties"))
+    .firstOrNull { it.exists() } ?: rootProject.file("key.properties")
 val keyProperties = Properties()
 if (keyPropertiesFile.exists()) {
     keyProperties.load(keyPropertiesFile.inputStream())
