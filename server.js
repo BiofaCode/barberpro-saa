@@ -1458,10 +1458,10 @@ route('POST', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
 
     if (body.role !== 'owner') {
         if (plan === 'starter' && empCount >= 1) {
-            return json(res, 403, { success: false, error: 'Limite de 1 employé atteinte pour le pack Starter. Veuillez upgrader votre abonnement.' });
+            return json(res, 403, { success: false, error: 'Limite atteinte : le pack Starter inclut vous + 1 employé. Passez au pack Pro pour en ajouter.' });
         }
         if (plan === 'pro' && empCount >= 5) {
-            return json(res, 403, { success: false, error: 'Limite de 5 employés atteinte pour le pack Pro. Veuillez upgrader vers Premium.' });
+            return json(res, 403, { success: false, error: 'Limite atteinte : le pack Pro inclut vous + 5 employés. Passez au pack Premium pour en ajouter.' });
         }
     }
 
@@ -1885,7 +1885,7 @@ route('POST', '/api/pro/sms/buy', async (req, res) => {
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 
 const PLAN_PRICES = {
-    starter: { amount: 3900, name: 'Pack Starter', employees: 2 },
+    starter: { amount: 3900, name: 'Pack Starter', employees: 1 },
     pro: { amount: 4900, name: 'Pack Pro', employees: 5 },
     premium: { amount: 8900, name: 'Pack Premium', employees: 999 }
 };
@@ -1906,7 +1906,7 @@ route('POST', '/api/stripe/create-checkout', async (req, res) => {
             line_items: [{
                 price_data: {
                     currency: 'chf',
-                    product_data: { name: planInfo.name, description: `Kreno ${planInfo.name} — jusqu'à ${planInfo.employees === 999 ? 'illimité' : planInfo.employees} employés` },
+                    product_data: { name: planInfo.name, description: `Kreno ${planInfo.name} — ${planInfo.employees === 999 ? 'employés illimités' : `vous + ${planInfo.employees} employé${planInfo.employees > 1 ? 's' : ''}`}` },
                     unit_amount: planInfo.amount,
                     recurring: { interval: 'month' }
                 },
@@ -2198,7 +2198,7 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
                         currency: 'chf',
                         product_data: {
                             name: planInfo.name,
-                            description: `Kreno ${planInfo.name} — ${planInfo.employees === 999 ? 'employés illimités' : `jusqu'à ${planInfo.employees} employés`}`
+                            description: `Kreno ${planInfo.name} — ${planInfo.employees === 999 ? 'employés illimités' : `vous + ${planInfo.employees} employé${planInfo.employees > 1 ? 's' : ''}`}`
                         },
                         unit_amount: planInfo.amount,
                         recurring: { interval: 'month' }

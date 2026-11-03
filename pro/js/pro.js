@@ -1777,9 +1777,11 @@ async function loadEmployees() {
         const plan = currentSalon?.subscription?.plan || 'pro';
         const isOwner = currentUser?.role === 'owner';
 
+        // Limits count employees only: the owner is bookable on top (same rule as the server).
         let limit = 999;
-        if (plan === 'starter') limit = 2;
+        if (plan === 'starter') limit = 1;
         if (plan === 'pro') limit = 5;
+        const employeeCount = emps.filter(e => e.role !== 'owner').length;
 
         const addBtn = document.querySelector('#page-employees .page-header button');
         const headerTitle = document.querySelector('#page-employees .page-header h2');
@@ -1789,12 +1791,12 @@ async function loadEmployees() {
         }
 
         if (isOwner) {
-            if (emps.length >= limit) {
+            if (employeeCount >= limit) {
                 if (addBtn) {
                     addBtn.style.display = 'none';
                     // Optional: show a small info text next to title
                     if (!document.getElementById('upgradeMsg')) {
-                        headerTitle.insertAdjacentHTML('afterend', `<div id="upgradeMsg" style="color:var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Limite de ${limit} employés atteinte. Mettez à niveau votre pack pour en ajouter plus.</div>`);
+                        headerTitle.insertAdjacentHTML('afterend', `<div id="upgradeMsg" style="color:var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Limite atteinte : vous + ${limit} employé${limit > 1 ? 's' : ''} sur ce pack. Passez au pack supérieur pour en ajouter.</div>`);
                     }
                 }
             } else {
