@@ -125,6 +125,20 @@ async function submitEditSalon(salonId) {
   }
 }
 
+async function offerSms(salonId) {
+  const input = prompt('Nombre de SMS à offrir à ce salon :', '200');
+  if (input === null) return;
+  const credits = parseInt(input, 10);
+  if (!credits || credits < 1) return toast('Nombre invalide', 'error');
+  const res = await api(`/api/admin/salons/${salonId}/sms-credits`, 'POST', { credits, reason: 'offert par admin' });
+  if (res.success) {
+    toast(`${credits} SMS offerts — solde : ${res.data.smsCredits}`);
+    loadSalons();
+  } else {
+    toast(res.error || 'Erreur', 'error');
+  }
+}
+
 async function changePlan(salonId, newPlan) {
   const res = await api(`/api/admin/salons/${salonId}/plan`, 'PUT', { plan: newPlan });
   if (res.success) {
@@ -318,6 +332,9 @@ function renderSalonCards(salons) {
                 <div>📧 ${escapeHtml(s.owner?.email) || '—'}</div>
                 <div>📍 ${escapeHtml(s.address) || '—'}</div>
                 <div>📅 Créé le ${createdDate}</div>
+                <div>📱 ${s.smsCredits || 0} crédits SMS
+                    <button onclick="offerSms('${s._id}')" style="margin-left:6px;padding:2px 8px;border-radius:4px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-color);font-size:.75rem;cursor:pointer">+ Offrir</button>
+                </div>
             </div>
             <div class="salon-card-stats">
                 <div class="salon-card-stat">

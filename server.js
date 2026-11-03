@@ -688,6 +688,22 @@ route('PUT', '/api/admin/salons/:id', async (req, res, params) => {
     json(res, 200, { success: true, message: 'Salon mis à jour' });
 });
 
+// Admin: offer SMS credits (e.g. migration from another tool). Counted as
+// purchased, so they survive the monthly plan reset.
+route('POST', '/api/admin/salons/:id/sms-credits', async (req, res, params) => {
+    const body = await parseBody(req);
+    const credits = Number(body.credits);
+    if (!Number.isInteger(credits) || credits < 1 || credits > 5000) {
+        return json(res, 400, { success: false, error: 'Nombre de crédits invalide (1 à 5000)' });
+    }
+    const salon = await db.findSalonById(params.id);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    const smsCredits = (salon.smsCredits || 0) + credits;
+    await db.updateSalon(params.id, { smsCredits, smsPurchased: (salon.smsPurchased || 0) + credits });
+    await db.addSalonLog(params.id, 'sms_credits_offered', { credits, reason: String(body.reason || '').slice(0, 200) });
+    json(res, 200, { success: true, data: { smsCredits } });
+});
+
 route('PUT', '/api/admin/salons/:id/plan', async (req, res, params) => {
     const body = await parseBody(req);
     const salon = await db.findSalonById(params.id);
@@ -2275,7 +2291,8 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             const salon = await db.findSalonById(salonId);
             if (salon && credits > 0) {
                 const current = salon.smsCredits || 0;
-                await db.updateSalon(salonId, { smsCredits: current + credits });
+                // smsPurchased: credits paid for (or offered), kept across the monthly plan reset.
+                await db.updateSalon(salonId, { smsCredits: current + credits, smsPurchased: (salon.smsPurchased || 0) + credits });
                 console.log(`✅ +${credits} crédits SMS ajoutés au salon ${salonId} (total: ${current + credits})`);
             }
             json(res, 200, { received: true });
@@ -2336,9 +2353,11 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
                 const SMS_MONTHLY = { starter: 0, pro: 200, premium: 400 };
                 const monthlyCredits = SMS_MONTHLY[plan] || 0;
                 if (monthlyCredits > 0) {
-                    // Reset to the plan's monthly allowance — no rollover of unused credits.
-                    await db.updateSalon(salon._id, { smsCredits: monthlyCredits });
-                    console.log(`📱 Recharge SMS mensuelle: salon ${salon._id} → ${monthlyCredits} crédits (plan ${plan}, reset)`);
+                    // Unused plan credits don't roll over, but purchased/offered ones do
+                    // (plan credits are considered spent first).
+                    const purchasedLeft = Math.min(salon.smsCredits || 0, salon.smsPurchased || 0);
+                    await db.updateSalon(salon._id, { smsCredits: monthlyCredits + purchasedLeft, smsPurchased: purchasedLeft });
+                    console.log(`📱 Recharge SMS mensuelle: salon ${salon._id} → ${monthlyCredits} + ${purchasedLeft} achetés (plan ${plan})`);
                 }
             }
         }
