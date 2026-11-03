@@ -92,3 +92,25 @@ describe('router specificity', () => {
         expect(db.findBookingById).not.toHaveBeenCalled();
     });
 });
+
+describe('embed mode headers (/embed.js popup on a salon website)', () => {
+    test('/s/:slug?embed=1 may be framed by another site', async () => {
+        const res = await request(server).get('/s/demo?embed=1');
+        expect(res.status).toBe(200);
+        expect(res.headers['x-frame-options']).toBeUndefined();
+        expect(res.headers['content-security-policy']).toContain('frame-ancestors *');
+    });
+
+    test('/s/:slug without embed and the pro portal stay unframeable', async () => {
+        for (const path of ['/s/demo', '/pro/?embed=1']) {
+            const res = await request(server).get(path);
+            expect(res.headers['x-frame-options']).toBe('DENY');
+        }
+    });
+
+    test('/embed.js is served as JavaScript', async () => {
+        const res = await request(server).get('/embed.js');
+        expect(res.status).toBe(200);
+        expect(res.headers['content-type']).toMatch(/javascript/);
+    });
+});

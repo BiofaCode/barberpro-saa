@@ -3481,6 +3481,15 @@ const server = http.createServer(async (req, res) => {
     const mimeTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webp': 'image/webp', '.woff2': 'font/woff2' };
     let filePath;
     let salonSlug = null;
+    // Embed mode (/s/:slug?embed=1, opened by /embed.js on a client's own
+    // website): the booking page may be framed by any site. Every other page
+    // keeps X-Frame-Options: DENY.
+    const pageHeaders = (url.searchParams.get('embed') === '1' && pathname.startsWith('/s/'))
+        ? (({ 'X-Frame-Options': _xfo, ...rest }) => ({
+            ...rest,
+            'Content-Security-Policy': rest['Content-Security-Policy'] + '; frame-ancestors *',
+        }))(SECURITY_HEADERS)
+        : SECURITY_HEADERS;
 
     if (pathname.startsWith('/admin')) {
         const adminPath = pathname === '/admin' || pathname === '/admin/' ? '/admin/index.html' : pathname;
@@ -3736,11 +3745,11 @@ tr+tr td{border-top:1px solid #f0f0f0}
                         html = html.replace('<head>', `<head>\n  ${seoHead}`);
                     }
                     html = html.replace('</head>', `<script>window.SALON_SLUG="${salonSlug}";</script>\n</head>`);
-                    res.writeHead(200, { 'Content-Type': contentType, ...SECURITY_HEADERS });
+                    res.writeHead(200, { 'Content-Type': contentType, ...pageHeaders });
                     res.end(html);
                 }).catch(() => {
                     html = html.replace('</head>', `<script>window.SALON_SLUG="${salonSlug}";</script>\n</head>`);
-                    res.writeHead(200, { 'Content-Type': contentType, ...SECURITY_HEADERS });
+                    res.writeHead(200, { 'Content-Type': contentType, ...pageHeaders });
                     res.end(html);
                 });
             } else {
