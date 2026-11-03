@@ -11,7 +11,9 @@ beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     delete require.cache[require.resolve('../server.js')];
     const serverModule = require('../server.js');
-    app = serverModule.server;
+    // Listen once: otherwise supertest calls listen(0)/close() per request and
+    // concurrent requests race (ECONNRESET / ECONNREFUSED).
+    app = serverModule.server.listening ? serverModule.server : serverModule.server.listen(0);
     await new Promise(resolve => setTimeout(resolve, 1000));
 });
 
@@ -364,3 +366,5 @@ describe('Booking Routes', () => {
         });
     });
 });
+
+afterAll(done => { app && app.listening ? app.close(done) : done(); });

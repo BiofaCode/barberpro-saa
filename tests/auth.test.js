@@ -15,7 +15,9 @@ beforeAll(async () => {
 
     // Now require the server module
     const serverModule = require('../server.js');
-    app = serverModule.server;
+    // Listen once: otherwise supertest calls listen(0)/close() per request and
+    // concurrent requests race (ECONNRESET / ECONNREFUSED).
+    app = serverModule.server.listening ? serverModule.server : serverModule.server.listen(0);
 
     // Give the app time to connect to the test database
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -253,3 +255,5 @@ describe('Authentication Routes', () => {
         });
     });
 });
+
+afterAll(done => { app && app.listening ? app.close(done) : done(); });

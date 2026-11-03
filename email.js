@@ -6,9 +6,15 @@
 const { Resend } = require('resend');
 
 // Initialize Resend with the provided API key (from env)
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Without a key, `new Resend()` throws and would take the whole server down at
+// boot: fall back to a stub that reports an error on each send instead.
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : { emails: { send: async () => ({ data: null, error: { message: 'RESEND_API_KEY non configurée — email non envoyé' } }) } };
 
-console.log(`📧 Email configuré via API Resend`);
+console.log(process.env.RESEND_API_KEY
+  ? `📧 Email configuré via API Resend`
+  : `⚠️  RESEND_API_KEY absente — les emails ne seront pas envoyés`);
 
 // Beautiful HTML email template
 function buildConfirmationEmail(booking, salon, cancelUrl, receiptUrl) {
