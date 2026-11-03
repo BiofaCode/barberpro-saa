@@ -2316,7 +2316,7 @@ async function moderateReview(bookingId, approved) {
 // ---- Settings ----
 async function saveSMSSettings() {
     const settings = {
-        clientConfirmation: document.getElementById('sms-toggle-confirm')?.checked ?? true,
+        clientConfirmation: document.getElementById('sms-toggle-confirm')?.checked ?? false,
         clientReminder: document.getElementById('sms-toggle-reminder')?.checked ?? true,
         ownerNotification: document.getElementById('sms-toggle-owner')?.checked ?? false,
         ownerPhone: document.getElementById('sms-owner-phone')?.value?.trim() || '',
@@ -2359,7 +2359,7 @@ async function loadSMSStatus() {
             <div style="margin-bottom:20px;padding:16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px">
                 <div style="font-weight:600;font-size:.9rem;margin-bottom:12px">⚙️ Préférences d'envoi</div>
                 ${[
-                    { id: 'sms-toggle-confirm', label: 'SMS de confirmation au client', checked: settings.clientConfirmation !== false },
+                    { id: 'sms-toggle-confirm', label: 'SMS de confirmation au client', checked: settings.clientConfirmation === true },
                     { id: 'sms-toggle-reminder', label: 'SMS rappel J-1 au client', checked: settings.clientReminder !== false },
                     { id: 'sms-toggle-owner', label: 'SMS alerte nouveau RDV (vous)', checked: !!settings.ownerNotification },
                 ].map(t => `

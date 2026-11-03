@@ -312,11 +312,8 @@ async function sendPendingReminders() {
             // Email reminder
             if (booking.clientEmail) sendReminderEmail(booking, salon);
             // SMS reminder (if phone + credits + toggle on)
-            const smsOk = salon.smsSettings?.clientReminder !== false;
-            if (smsOk && booking.clientPhone && (salon.smsCredits || 0) > 0) {
-                sendSMSReminder(booking, salon).then(result => {
-                    if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
-                });
+            if (smsSettingsOf(salon).clientReminder && booking.clientPhone) {
+                sendPaidSMS(salon, () => sendSMSReminder(booking, salon));
             }
             await db.updateBooking(booking._id, { reminderSent: true });
         }
@@ -433,6 +430,25 @@ function timeToMinutes(t) {
     if (!t || typeof t !== 'string') return 0;
     const [h, m] = t.split(':').map(Number);
     return (h || 0) * 60 + (m || 0);
+}
+
+// ---- SMS (paid with the salon's prepaid credits) ----
+// Defaults: only the D-1 reminder is on. Confirmation, reschedule and
+// cancellation go by email (free); SMS for those are opt-in.
+const SMS_DEFAULTS = { clientConfirmation: false, clientReminder: true, ownerNotification: false, ownerPhone: '' };
+function smsSettingsOf(salon) {
+    return { ...SMS_DEFAULTS, ...(salon?.smsSettings || {}) };
+}
+// Every SMS goes through here, the owner alert included: one credit is
+// reserved atomically BEFORE sending and refunded if the send fails, so an
+// SMS is never sent without a credit paid for it. Fire-and-forget.
+function sendPaidSMS(salon, send) {
+    (async () => {
+        if (!(await db.consumeSmsCredit(salon._id))) return;
+        let r;
+        try { r = await send(); } catch (e) { r = { success: false, error: e.message }; }
+        if (!r || !r.success || r.test) await db.refundSmsCredit(salon._id);
+    })().catch(e => console.error('SMS error:', e.message));
 }
 
 async function hasConflict(salonId, employeeId, date, time, duration, excludeId = null) {
@@ -1615,27 +1631,19 @@ route('PUT', '/api/pro/salon/:salonId/bookings/:bookingId', async (req, res, par
     // ---- Non-blocking client notifications ----
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return;
-    const smsOn = salon.smsSettings?.clientConfirmation !== false;
+    const smsOn = smsSettingsOf(salon).clientConfirmation;
 
     // Reschedule → notify the client of the new slot (booking holds the new date/time)
     if (isReschedule && willBeActive) {
         if (booking.clientEmail) sendRescheduleEmail(booking, salon);
-        if (smsOn && booking.clientPhone && (salon.smsCredits || 0) > 0) {
-            sendSMSReschedule(booking, salon).then(r => {
-                if (r.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
-            });
-        }
+        if (smsOn && booking.clientPhone) sendPaidSMS(salon, () => sendSMSReschedule(booking, salon));
     }
 
     // Salon-initiated cancellation → notify the client
     const justCancelled = updates.status === 'cancelled' && existing.status !== 'cancelled';
     if (justCancelled) {
         if (booking.clientEmail) sendCancellationConfirmation(booking, salon);
-        if (smsOn && booking.clientPhone && (salon.smsCredits || 0) > 0) {
-            sendSMSCancellation(booking, salon).then(r => {
-                if (r.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
-            });
-        }
+        if (smsOn && booking.clientPhone) sendPaidSMS(salon, () => sendSMSCancellation(booking, salon));
     }
 });
 
@@ -1690,13 +1698,11 @@ route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
             if (emp?.email) sendEmployeeBookingNotification(booking, salon, emp.email);
         })();
     }
-    if (salon && salon.smsSettings?.clientConfirmation !== false && booking.clientPhone && (salon.smsCredits || 0) > 0) {
-        sendSMSConfirmation(booking, salon).then(result => {
-            if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
-        });
+    if (salon && smsSettingsOf(salon).clientConfirmation && booking.clientPhone) {
+        sendPaidSMS(salon, () => sendSMSConfirmation(booking, salon));
     }
-    if (salon && salon.smsSettings?.ownerNotification && salon.smsSettings?.ownerPhone) {
-        sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone);
+    if (salon && smsSettingsOf(salon).ownerNotification && salon.smsSettings?.ownerPhone) {
+        sendPaidSMS(salon, () => sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone));
     }
 });
 
@@ -1811,7 +1817,7 @@ route('GET', '/api/pro/salon/:salonId/sms-status', async (req, res, params) => {
             credits: salon.smsCredits || 0,
             packs: SMS_PACKS,
             configured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
-            settings: salon.smsSettings || { clientConfirmation: true, clientReminder: true, ownerNotification: false, ownerPhone: '' },
+            settings: smsSettingsOf(salon),
         }
     });
 });
@@ -1821,7 +1827,7 @@ route('PUT', '/api/pro/salon/:salonId/sms-settings', async (req, res, params) =>
     if (!user) return json(res, 401, { success: false });
     const body = await parseBody(req);
     const smsSettings = {
-        clientConfirmation: body.clientConfirmation !== false,
+        clientConfirmation: body.clientConfirmation === true,
         clientReminder: body.clientReminder !== false,
         ownerNotification: !!body.ownerNotification,
         ownerPhone: (body.ownerPhone || '').trim(),
@@ -3021,14 +3027,12 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     }).catch(err => console.error('FCM push error:', err.message));
 
     // SMS to client (if toggle on + phone + credits)
-    if (salon.smsSettings?.clientConfirmation !== false && booking.clientPhone && (salon.smsCredits || 0) > 0) {
-        sendSMSConfirmation(booking, salon).then(result => {
-            if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
-        });
+    if (smsSettingsOf(salon).clientConfirmation && booking.clientPhone) {
+        sendPaidSMS(salon, () => sendSMSConfirmation(booking, salon));
     }
-    // SMS notification to owner (if toggle on + ownerPhone configured)
-    if (salon.smsSettings?.ownerNotification && salon.smsSettings?.ownerPhone) {
-        sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone);
+    // SMS notification to owner (if toggle on + ownerPhone configured) — paid with a credit too
+    if (smsSettingsOf(salon).ownerNotification && salon.smsSettings?.ownerPhone) {
+        sendPaidSMS(salon, () => sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone));
     }
 });
 

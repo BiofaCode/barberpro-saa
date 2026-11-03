@@ -18,10 +18,13 @@ function getTwilioClient() {
 const FROM = process.env.TWILIO_PHONE_NUMBER || '';
 
 // ---- Packs de crédits SMS ----
+// Twilio CH ≈ 0.0725 USD (~0.07 CHF) per SMS + Stripe ~2.9% + 0.30 CHF per
+// purchase: >= 0.10 CHF/SMS keeps a margin even if the USD rises ~30%.
+// 1 credit = 1 SMS, and every template fits in one GSM-7 segment.
 const SMS_PACKS = {
-    starter:  { credits: 50,  priceChf: 5,  label: 'Pack Starter' },
-    pro:      { credits: 100, priceChf: 9,  label: 'Pack Pro' },
-    max:      { credits: 250, priceChf: 19, label: 'Pack Max' },
+    starter:  { credits: 100, priceChf: 12, label: 'Pack 100 SMS' },
+    pro:      { credits: 300, priceChf: 33, label: 'Pack 300 SMS' },
+    max:      { credits: 600, priceChf: 60, label: 'Pack 600 SMS' },
 };
 
 // ---- GSM-7 ----

@@ -167,6 +167,14 @@ const db = {
         await getDB().collection('salons').insertOne(salon);
         return salon;
     },
+    // Atomic: reserves one SMS credit only if the balance is > 0 (no race, no overdraft).
+    async consumeSmsCredit(salonId) {
+        const r = await getDB().collection('salons').updateOne({ _id: salonId, smsCredits: { $gt: 0 } }, { $inc: { smsCredits: -1 } });
+        return r.modifiedCount === 1;
+    },
+    async refundSmsCredit(salonId) {
+        await getDB().collection('salons').updateOne({ _id: salonId }, { $inc: { smsCredits: 1 } });
+    },
     async updateSalon(id, updates) {
         await getDB().collection('salons').updateOne({ _id: id }, { $set: updates });
         return await getDB().collection('salons').findOne({ _id: id });
