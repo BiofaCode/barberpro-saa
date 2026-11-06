@@ -4,7 +4,9 @@
 **Version:** 1.0.0  
 **Build Number:** 1  
 **API Endpoint:** https://kreno.ch  
-**Last Updated:** 2026-04-17
+**Last Updated:** 2026-11-06
+
+> Textes, captures et notes pour Apple prêts à copier : **`docs/appstore/FICHE_APP_STORE.md`**.
 
 ---
 
@@ -20,7 +22,7 @@ This document provides comprehensive guidance for submitting the Kreno mobile ap
 |----------|-------|
 | **App Name** | Kreno |
 | **App Tagline** | Gestion professionnelle de votre salon |
-| **Package Name (Android)** | ch.kreno.app |
+| **Package Name (Android)** | com.kreno.app |
 | **Bundle ID (iOS)** | ch.kreno.app |
 | **Version Number** | 1.0.0 |
 | **Build Number** | 1 |
@@ -87,7 +89,7 @@ This document provides comprehensive guidance for submitting the Kreno mobile ap
   - [ ] No tracking libraries without explicit consent
 
 - [ ] **Testing Instructions**
-  - [ ] Provide test account credentials (email: test@kreno.ch, password: test123)
+  - [ ] Provide test account credentials (email: demo@kreno.ch, password: demo1234 — créé par `node scripts/seed-demo.js`)
   - [ ] Document key user flows for reviewer testing
   - [ ] Specify minimum testing device recommendations
 
@@ -150,9 +152,8 @@ This document provides comprehensive guidance for submitting the Kreno mobile ap
 
 - [ ] **App Configuration**
   - [ ] Minimum iOS version: 14.0 (or higher based on Flutter support)
-  - [ ] Supported devices: iPhone, iPad
+  - [ ] Supported devices: iPhone only (v1 — `TARGETED_DEVICE_FAMILY = 1`)
   - [ ] Supported orientations: Portrait & Landscape
-  - [ ] iPad split-screen support enabled
 
 - [ ] **Permissions (Info.plist)**
   - [ ] Camera usage: `NSCameraUsageDescription`
@@ -174,7 +175,7 @@ This document provides comprehensive guidance for submitting the Kreno mobile ap
   - [ ] App Icon: 1024x1024 PNG (no alpha channel, no rounded corners)
   - [ ] Screenshots (minimum 2 per device type):
     - iPhone 6.7" and 5.5" screenshots
-    - iPad 12.9" screenshots (if supported)
+    - iPad screenshots: not needed (iPhone only)
   - [ ] App Preview (video): Optional but recommended (15-30 seconds)
   - [ ] Promotional text: Brief update highlights
 
@@ -435,7 +436,7 @@ flutter build ios --release
 
 - **pubspec.yaml:** Version 1.0.0, Flutter SDK ^3.11.0
 - **android/app/build.gradle.kts:** Minimum SDK 21, Target SDK 34+
-- **ios/Runner.xcodeproj:** Bundle ID ch.kreno.app, Deployment Target iOS 14.0
+- **ios/Runner.xcodeproj:** Bundle ID ch.kreno.app, Deployment Target iOS 13.0
 
 ---
 

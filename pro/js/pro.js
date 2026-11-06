@@ -1777,9 +1777,11 @@ async function loadEmployees() {
         const plan = currentSalon?.subscription?.plan || 'pro';
         const isOwner = currentUser?.role === 'owner';
 
+        // Limits count employees only: the owner is bookable on top (same rule as the server).
         let limit = 999;
-        if (plan === 'starter') limit = 2;
+        if (plan === 'starter') limit = 1;
         if (plan === 'pro') limit = 5;
+        const employeeCount = emps.filter(e => e.role !== 'owner').length;
 
         const addBtn = document.querySelector('#page-employees .page-header button');
         const headerTitle = document.querySelector('#page-employees .page-header h2');
@@ -1789,12 +1791,12 @@ async function loadEmployees() {
         }
 
         if (isOwner) {
-            if (emps.length >= limit) {
+            if (employeeCount >= limit) {
                 if (addBtn) {
                     addBtn.style.display = 'none';
                     // Optional: show a small info text next to title
                     if (!document.getElementById('upgradeMsg')) {
-                        headerTitle.insertAdjacentHTML('afterend', `<div id="upgradeMsg" style="color:var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Limite de ${limit} employés atteinte. Mettez à niveau votre pack pour en ajouter plus.</div>`);
+                        headerTitle.insertAdjacentHTML('afterend', `<div id="upgradeMsg" style="color:var(--text-muted); font-size: 0.9rem; margin-top: 4px;">Limite atteinte : vous + ${limit} employé${limit > 1 ? 's' : ''} sur ce pack. Passez au pack supérieur pour en ajouter.</div>`);
                     }
                 }
             } else {
@@ -2316,7 +2318,7 @@ async function moderateReview(bookingId, approved) {
 // ---- Settings ----
 async function saveSMSSettings() {
     const settings = {
-        clientConfirmation: document.getElementById('sms-toggle-confirm')?.checked ?? true,
+        clientConfirmation: document.getElementById('sms-toggle-confirm')?.checked ?? false,
         clientReminder: document.getElementById('sms-toggle-reminder')?.checked ?? true,
         ownerNotification: document.getElementById('sms-toggle-owner')?.checked ?? false,
         ownerPhone: document.getElementById('sms-owner-phone')?.value?.trim() || '',
@@ -2354,14 +2356,14 @@ async function loadSMSStatus() {
                 </div>
             </div>
             <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:14px">
-                Un crédit = 1 SMS envoyé. Les rappels J-1 et les confirmations de RDV consomment 1 crédit chacun.
+                Un crédit = 1 SMS envoyé. Par défaut, seul le rappel de la veille est envoyé par SMS (1 crédit par RDV) ; la confirmation part par email, gratuitement. Les crédits achetés n'expirent pas.
             </p>
             <div style="margin-bottom:20px;padding:16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:12px">
                 <div style="font-weight:600;font-size:.9rem;margin-bottom:12px">⚙️ Préférences d'envoi</div>
                 ${[
-                    { id: 'sms-toggle-confirm', label: 'SMS de confirmation au client', checked: settings.clientConfirmation !== false },
+                    { id: 'sms-toggle-confirm', label: 'SMS de confirmation au client (en plus de l\'email)', checked: settings.clientConfirmation === true },
                     { id: 'sms-toggle-reminder', label: 'SMS rappel J-1 au client', checked: settings.clientReminder !== false },
-                    { id: 'sms-toggle-owner', label: 'SMS alerte nouveau RDV (vous)', checked: !!settings.ownerNotification },
+                    { id: 'sms-toggle-owner', label: 'SMS alerte nouveau RDV (vous) — 1 crédit par RDV', checked: !!settings.ownerNotification },
                 ].map(t => `
                 <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light,rgba(255,255,255,.06));cursor:pointer">
                     <span style="font-size:.85rem;color:var(--text-sec)">${t.label}</span>

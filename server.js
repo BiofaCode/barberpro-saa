@@ -312,11 +312,8 @@ async function sendPendingReminders() {
             // Email reminder
             if (booking.clientEmail) sendReminderEmail(booking, salon);
             // SMS reminder (if phone + credits + toggle on)
-            const smsOk = salon.smsSettings?.clientReminder !== false;
-            if (smsOk && booking.clientPhone && (salon.smsCredits || 0) > 0) {
-                sendSMSReminder(booking, salon).then(result => {
-                    if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
-                });
+            if (smsSettingsOf(salon).clientReminder && booking.clientPhone) {
+                sendPaidSMS(salon, () => sendSMSReminder(booking, salon));
             }
             await db.updateBooking(booking._id, { reminderSent: true });
         }
@@ -435,6 +432,31 @@ function timeToMinutes(t) {
     return (h || 0) * 60 + (m || 0);
 }
 
+// "2026-11-12" -> "jeu. 12 nov." for push notifications shown on the owner's phone.
+function pushDate(ymd) {
+    const d = new Date(`${ymd}T12:00:00`);
+    return isNaN(d) ? ymd : d.toLocaleDateString('fr-CH', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+// ---- SMS (paid with the salon's prepaid credits) ----
+// Defaults: only the D-1 reminder is on. Confirmation, reschedule and
+// cancellation go by email (free); SMS for those are opt-in.
+const SMS_DEFAULTS = { clientConfirmation: false, clientReminder: true, ownerNotification: false, ownerPhone: '' };
+function smsSettingsOf(salon) {
+    return { ...SMS_DEFAULTS, ...(salon?.smsSettings || {}) };
+}
+// Every SMS goes through here, the owner alert included: one credit is
+// reserved atomically BEFORE sending and refunded if the send fails, so an
+// SMS is never sent without a credit paid for it. Fire-and-forget.
+function sendPaidSMS(salon, send) {
+    (async () => {
+        if (!(await db.consumeSmsCredit(salon._id))) return;
+        let r;
+        try { r = await send(); } catch (e) { r = { success: false, error: e.message }; }
+        if (!r || !r.success || r.test) await db.refundSmsCredit(salon._id);
+    })().catch(e => console.error('SMS error:', e.message));
+}
+
 async function hasConflict(salonId, employeeId, date, time, duration, excludeId = null) {
     if (!date || !time) return false;
     const existing = await db.findBookings({ salon: salonId, date, status: { $in: ['confirmed', 'pending'] } });
@@ -463,7 +485,8 @@ async function hasConflict(salonId, employeeId, date, time, duration, excludeId 
 const routes = [];
 function route(method, pattern, handler) {
     const regex = new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$');
-    routes.push({ method, regex, handler });
+    const paramCount = (pattern.match(/:\w+/g) || []).length;
+    routes.push({ method, regex, handler, paramCount });
 }
 
 // ==========================
@@ -685,6 +708,22 @@ route('PUT', '/api/admin/salons/:id', async (req, res, params) => {
         await db.updateSalon(params.id, updates);
     }
     json(res, 200, { success: true, message: 'Salon mis à jour' });
+});
+
+// Admin: offer SMS credits (e.g. migration from another tool). Counted as
+// purchased, so they survive the monthly plan reset.
+route('POST', '/api/admin/salons/:id/sms-credits', async (req, res, params) => {
+    const body = await parseBody(req);
+    const credits = Number(body.credits);
+    if (!Number.isInteger(credits) || credits < 1 || credits > 5000) {
+        return json(res, 400, { success: false, error: 'Nombre de crédits invalide (1 à 5000)' });
+    }
+    const salon = await db.findSalonById(params.id);
+    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    const smsCredits = (salon.smsCredits || 0) + credits;
+    await db.updateSalon(params.id, { smsCredits, smsPurchased: (salon.smsPurchased || 0) + credits });
+    await db.addSalonLog(params.id, 'sms_credits_offered', { credits, reason: String(body.reason || '').slice(0, 200) });
+    json(res, 200, { success: true, data: { smsCredits } });
 });
 
 route('PUT', '/api/admin/salons/:id/plan', async (req, res, params) => {
@@ -1425,10 +1464,10 @@ route('POST', '/api/pro/salon/:salonId/employees', async (req, res, params) => {
 
     if (body.role !== 'owner') {
         if (plan === 'starter' && empCount >= 1) {
-            return json(res, 403, { success: false, error: 'Limite de 1 employé atteinte pour le pack Starter. Veuillez upgrader votre abonnement.' });
+            return json(res, 403, { success: false, error: 'Limite atteinte : le pack Starter inclut vous + 1 employé. Passez au pack Pro pour en ajouter.' });
         }
         if (plan === 'pro' && empCount >= 5) {
-            return json(res, 403, { success: false, error: 'Limite de 5 employés atteinte pour le pack Pro. Veuillez upgrader vers Premium.' });
+            return json(res, 403, { success: false, error: 'Limite atteinte : le pack Pro inclut vous + 5 employés. Passez au pack Premium pour en ajouter.' });
         }
     }
 
@@ -1598,27 +1637,19 @@ route('PUT', '/api/pro/salon/:salonId/bookings/:bookingId', async (req, res, par
     // ---- Non-blocking client notifications ----
     const salon = await db.findSalonById(params.salonId);
     if (!salon) return;
-    const smsOn = salon.smsSettings?.clientConfirmation !== false;
+    const smsOn = smsSettingsOf(salon).clientConfirmation;
 
     // Reschedule → notify the client of the new slot (booking holds the new date/time)
     if (isReschedule && willBeActive) {
         if (booking.clientEmail) sendRescheduleEmail(booking, salon);
-        if (smsOn && booking.clientPhone && (salon.smsCredits || 0) > 0) {
-            sendSMSReschedule(booking, salon).then(r => {
-                if (r.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
-            });
-        }
+        if (smsOn && booking.clientPhone) sendPaidSMS(salon, () => sendSMSReschedule(booking, salon));
     }
 
     // Salon-initiated cancellation → notify the client
     const justCancelled = updates.status === 'cancelled' && existing.status !== 'cancelled';
     if (justCancelled) {
         if (booking.clientEmail) sendCancellationConfirmation(booking, salon);
-        if (smsOn && booking.clientPhone && (salon.smsCredits || 0) > 0) {
-            sendSMSCancellation(booking, salon).then(r => {
-                if (r.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
-            });
-        }
+        if (smsOn && booking.clientPhone) sendPaidSMS(salon, () => sendSMSCancellation(booking, salon));
     }
 });
 
@@ -1673,13 +1704,11 @@ route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
             if (emp?.email) sendEmployeeBookingNotification(booking, salon, emp.email);
         })();
     }
-    if (salon && salon.smsSettings?.clientConfirmation !== false && booking.clientPhone && (salon.smsCredits || 0) > 0) {
-        sendSMSConfirmation(booking, salon).then(result => {
-            if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
-        });
+    if (salon && smsSettingsOf(salon).clientConfirmation && booking.clientPhone) {
+        sendPaidSMS(salon, () => sendSMSConfirmation(booking, salon));
     }
-    if (salon && salon.smsSettings?.ownerNotification && salon.smsSettings?.ownerPhone) {
-        sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone);
+    if (salon && smsSettingsOf(salon).ownerNotification && salon.smsSettings?.ownerPhone) {
+        sendPaidSMS(salon, () => sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone));
     }
 });
 
@@ -1794,7 +1823,7 @@ route('GET', '/api/pro/salon/:salonId/sms-status', async (req, res, params) => {
             credits: salon.smsCredits || 0,
             packs: SMS_PACKS,
             configured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
-            settings: salon.smsSettings || { clientConfirmation: true, clientReminder: true, ownerNotification: false, ownerPhone: '' },
+            settings: smsSettingsOf(salon),
         }
     });
 });
@@ -1804,7 +1833,7 @@ route('PUT', '/api/pro/salon/:salonId/sms-settings', async (req, res, params) =>
     if (!user) return json(res, 401, { success: false });
     const body = await parseBody(req);
     const smsSettings = {
-        clientConfirmation: body.clientConfirmation !== false,
+        clientConfirmation: body.clientConfirmation === true,
         clientReminder: body.clientReminder !== false,
         ownerNotification: !!body.ownerNotification,
         ownerPhone: (body.ownerPhone || '').trim(),
@@ -1862,7 +1891,7 @@ route('POST', '/api/pro/sms/buy', async (req, res) => {
 const stripe = process.env.STRIPE_SECRET_KEY ? require('stripe')(process.env.STRIPE_SECRET_KEY) : null;
 
 const PLAN_PRICES = {
-    starter: { amount: 3900, name: 'Pack Starter', employees: 2 },
+    starter: { amount: 3900, name: 'Pack Starter', employees: 1 },
     pro: { amount: 4900, name: 'Pack Pro', employees: 5 },
     premium: { amount: 8900, name: 'Pack Premium', employees: 999 }
 };
@@ -1883,7 +1912,7 @@ route('POST', '/api/stripe/create-checkout', async (req, res) => {
             line_items: [{
                 price_data: {
                     currency: 'chf',
-                    product_data: { name: planInfo.name, description: `Kreno ${planInfo.name} — jusqu'à ${planInfo.employees === 999 ? 'illimité' : planInfo.employees} employés` },
+                    product_data: { name: planInfo.name, description: `Kreno ${planInfo.name} — ${planInfo.employees === 999 ? 'employés illimités' : `vous + ${planInfo.employees} employé${planInfo.employees > 1 ? 's' : ''}`}` },
                     unit_amount: planInfo.amount,
                     recurring: { interval: 'month' }
                 },
@@ -2175,7 +2204,7 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
                         currency: 'chf',
                         product_data: {
                             name: planInfo.name,
-                            description: `Kreno ${planInfo.name} — ${planInfo.employees === 999 ? 'employés illimités' : `jusqu'à ${planInfo.employees} employés`}`
+                            description: `Kreno ${planInfo.name} — ${planInfo.employees === 999 ? 'employés illimités' : `vous + ${planInfo.employees} employé${planInfo.employees > 1 ? 's' : ''}`}`
                         },
                         unit_amount: planInfo.amount,
                         recurring: { interval: 'month' }
@@ -2274,7 +2303,8 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             const salon = await db.findSalonById(salonId);
             if (salon && credits > 0) {
                 const current = salon.smsCredits || 0;
-                await db.updateSalon(salonId, { smsCredits: current + credits });
+                // smsPurchased: credits paid for (or offered), kept across the monthly plan reset.
+                await db.updateSalon(salonId, { smsCredits: current + credits, smsPurchased: (salon.smsPurchased || 0) + credits });
                 console.log(`✅ +${credits} crédits SMS ajoutés au salon ${salonId} (total: ${current + credits})`);
             }
             json(res, 200, { received: true });
@@ -2335,9 +2365,11 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
                 const SMS_MONTHLY = { starter: 0, pro: 200, premium: 400 };
                 const monthlyCredits = SMS_MONTHLY[plan] || 0;
                 if (monthlyCredits > 0) {
-                    // Reset to the plan's monthly allowance — no rollover of unused credits.
-                    await db.updateSalon(salon._id, { smsCredits: monthlyCredits });
-                    console.log(`📱 Recharge SMS mensuelle: salon ${salon._id} → ${monthlyCredits} crédits (plan ${plan}, reset)`);
+                    // Unused plan credits don't roll over, but purchased/offered ones do
+                    // (plan credits are considered spent first).
+                    const purchasedLeft = Math.min(salon.smsCredits || 0, salon.smsPurchased || 0);
+                    await db.updateSalon(salon._id, { smsCredits: monthlyCredits + purchasedLeft, smsPurchased: purchasedLeft });
+                    console.log(`📱 Recharge SMS mensuelle: salon ${salon._id} → ${monthlyCredits} + ${purchasedLeft} achetés (plan ${plan})`);
                 }
             }
         }
@@ -2925,15 +2957,29 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     if (!salon || !salon.active) return json(res, 404, { success: false, error: 'Salon non trouvé' });
     const body = await parseBody(req);
 
-    if (await hasConflict(salon._id, body.employeeId || null, body.date, body.time, body.duration || 30)) {
-        return json(res, 409, { success: false, error: 'Ce créneau n\'est plus disponible. Veuillez choisir un autre horaire.' });
+    if (!body.clientName || !String(body.clientName).trim()) {
+        return json(res, 400, { success: false, error: 'Nom requis' });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date || '') || !/^\d{2}:\d{2}$/.test(body.time || '')) {
+        return json(res, 400, { success: false, error: 'Date ou heure invalide' });
+    }
+    // Client sends its local (Swiss) date, which is never behind the UTC date.
+    if (body.date < new Date().toISOString().split('T')[0]) {
+        return json(res, 400, { success: false, error: 'Impossible de réserver dans le passé' });
     }
 
     // Look up price and duration server-side — never trust client-supplied values
     const service = (salon.services || []).find(s => s.name === body.serviceName && s.active !== false);
-    const price = service?.price ?? 0;
-    const duration = service?.duration ?? 30;
-    const serviceIcon = service?.icon || '✂️';
+    if (!service) return json(res, 400, { success: false, error: 'Prestation introuvable' });
+    const price = service.price ?? 0;
+    const duration = service.duration ?? 30;
+    const serviceIcon = service.icon || '✂️';
+
+    // Conflict check with the server-side duration: a client-supplied short
+    // duration would otherwise let a long service overlap the next booking.
+    if (await hasConflict(salon._id, body.employeeId || null, body.date, body.time, duration)) {
+        return json(res, 409, { success: false, error: 'Ce créneau n\'est plus disponible. Veuillez choisir un autre horaire.' });
+    }
 
     const client = await db.findOrCreateClient(salon._id, {
         name: body.clientName, email: body.clientEmail, phone: body.clientPhone,
@@ -2956,7 +3002,7 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     // Non-blocking: webhooks
     triggerWebhooks(salon, 'booking.created', {
         bookingId: String(booking._id), clientName: body.clientName,
-        service: body.serviceName, date: body.date, time: body.time, price: body.price || 0,
+        service: body.serviceName, date: body.date, time: body.time, price,
     });
 
     // Non-blocking: email + push + SMS
@@ -2982,27 +3028,28 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     // Push notification to owner — FCM (mobile app)
     sendFcmToSalon(salon._id, {
         title: '📅 Nouvelle réservation',
-        body: `${body.clientName} · ${body.serviceName} · ${body.date} à ${body.time}`,
+        body: `${body.clientName} · ${body.serviceName} · ${pushDate(body.date)} à ${body.time}`,
         data: { type: 'booking', bookingId: String(booking._id) },
     }).catch(err => console.error('FCM push error:', err.message));
 
     // SMS to client (if toggle on + phone + credits)
-    if (salon.smsSettings?.clientConfirmation !== false && booking.clientPhone && (salon.smsCredits || 0) > 0) {
-        sendSMSConfirmation(booking, salon).then(result => {
-            if (result.success) db.updateSalon(salon._id, { smsCredits: Math.max(0, (salon.smsCredits || 0) - 1) });
-        });
+    if (smsSettingsOf(salon).clientConfirmation && booking.clientPhone) {
+        sendPaidSMS(salon, () => sendSMSConfirmation(booking, salon));
     }
-    // SMS notification to owner (if toggle on + ownerPhone configured)
-    if (salon.smsSettings?.ownerNotification && salon.smsSettings?.ownerPhone) {
-        sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone);
+    // SMS notification to owner (if toggle on + ownerPhone configured) — paid with a credit too
+    if (smsSettingsOf(salon).ownerNotification && salon.smsSettings?.ownerPhone) {
+        sendPaidSMS(salon, () => sendSMSOwnerNotification(booking, salon, salon.smsSettings.ownerPhone));
     }
 });
 
 // Paiement en ligne avant réservation — crée booking pending + session Stripe
 route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
     if (!stripe) return json(res, 500, { success: false, error: 'Stripe non configuré' });
+    if (rateLimit(getClientIP(req), 'book', 10, 60 * 60 * 1000)) {
+        return json(res, 429, { success: false, error: 'Trop de requêtes, veuillez réessayer plus tard.' });
+    }
     const salon = await db.findSalonBySlug(params.slug);
-    if (!salon) return json(res, 404, { success: false, error: 'Salon non trouvé' });
+    if (!salon || !salon.active) return json(res, 404, { success: false, error: 'Salon non trouvé' });
 
     const connectId = salon.stripeConnect?.accountId;
     if (!connectId || salon.stripeConnect?.status !== 'connected') {
@@ -3015,6 +3062,20 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
 
     const paymentMode = service.paymentMode || 'none';
     if (paymentMode === 'none') return json(res, 400, { success: false, error: 'Pas de paiement en ligne pour ce service' });
+
+    if (!body.clientName || !String(body.clientName).trim()) {
+        return json(res, 400, { success: false, error: 'Nom requis' });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date || '') || !/^\d{2}:\d{2}$/.test(body.time || '')) {
+        return json(res, 400, { success: false, error: 'Date ou heure invalide' });
+    }
+    if (body.date < new Date().toISOString().split('T')[0]) {
+        return json(res, 400, { success: false, error: 'Impossible de réserver dans le passé' });
+    }
+    const duration = service.duration || 30;
+    if (await hasConflict(salon._id, body.employeeId || null, body.date, body.time, duration)) {
+        return json(res, 409, { success: false, error: 'Ce créneau n\'est plus disponible. Veuillez choisir un autre horaire.' });
+    }
 
     const amountCents = Math.round(service.price * 100);
     const amountCHF = service.price;
@@ -3030,7 +3091,7 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
         salon: salon._id, client: client._id,
         clientName: body.clientName, clientEmail: body.clientEmail, clientPhone: body.clientPhone,
         serviceName: body.serviceName, serviceIcon: body.serviceIcon || '✂️',
-        price: service.price, duration: body.duration || service.duration || 30,
+        price: service.price, duration,
         date: body.date, time: body.time, notes: body.notes || '',
         employeeId: body.employeeId || null, employeeName: body.employeeName || null,
         status: 'pending', source: 'website',
@@ -3190,7 +3251,7 @@ route('PUT', '/api/salon/:slug/bookings/:bookingId/cancel', async (req, res, par
     // FCM (mobile app) — deep-links to the booking detail
     sendFcmToSalon(salon._id, {
         title: '❌ Rendez-vous annulé',
-        body: `${booking.clientName} · ${booking.serviceName} · ${booking.date} à ${booking.time}`,
+        body: `${booking.clientName} · ${booking.serviceName} · ${pushDate(booking.date)} à ${booking.time}`,
         data: { type: 'cancellation', bookingId: String(booking._id) },
     }).catch(err => console.error('FCM cancellation error:', err.message));
     // Email to the owner
@@ -3297,7 +3358,7 @@ route('POST', '/api/cancel-token/:token', async (req, res, params) => {
     // FCM push to mobile app
     sendFcmToSalon(booking.salon, {
         title: '❌ Annulation',
-        body: `${booking.clientName} a annulé son RDV du ${booking.date} à ${booking.time}`,
+        body: `${booking.clientName} a annulé son RDV du ${pushDate(booking.date)} à ${booking.time}`,
         data: { type: 'cancellation', bookingId: String(booking._id) },
     }).catch(err => console.error('FCM push error:', err.message));
 
@@ -3397,7 +3458,12 @@ const server = http.createServer(async (req, res) => {
             }
         }
 
-        const match = routes.find(r => r.method === req.method && r.regex.test(pathname));
+        // Most specific route wins (fewest params), so a literal segment such as
+        // /bookings/ical is not swallowed by /bookings/:bookingId declared earlier.
+        let match = null;
+        for (const r of routes) {
+            if (r.method === req.method && r.regex.test(pathname) && (!match || r.paramCount < match.paramCount)) match = r;
+        }
         if (match) {
             const params = pathname.match(match.regex)?.groups || {};
             try { await match.handler(req, res, params); }
@@ -3444,6 +3510,15 @@ const server = http.createServer(async (req, res) => {
     const mimeTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webp': 'image/webp', '.woff2': 'font/woff2' };
     let filePath;
     let salonSlug = null;
+    // Embed mode (/s/:slug?embed=1, opened by /embed.js on a client's own
+    // website): the booking page may be framed by any site. Every other page
+    // keeps X-Frame-Options: DENY.
+    const pageHeaders = (url.searchParams.get('embed') === '1' && pathname.startsWith('/s/'))
+        ? (({ 'X-Frame-Options': _xfo, ...rest }) => ({
+            ...rest,
+            'Content-Security-Policy': rest['Content-Security-Policy'] + '; frame-ancestors *',
+        }))(SECURITY_HEADERS)
+        : SECURITY_HEADERS;
 
     if (pathname.startsWith('/admin')) {
         const adminPath = pathname === '/admin' || pathname === '/admin/' ? '/admin/index.html' : pathname;
@@ -3594,6 +3669,10 @@ tr+tr td{border-top:1px solid #f0f0f0}
     else if (pathname === '/privacy' || pathname === '/privacy.html') {
         filePath = path.join(__dirname, 'saas/privacy.html');
     }
+    else if (pathname === '/terms' || pathname === '/cgu') {
+        // Public URL given to the App Store / Play Store listings
+        filePath = path.join(__dirname, 'saas/cgu.html');
+    }
     else if (pathname === '/support' || pathname === '/support.html') {
         filePath = path.join(__dirname, 'saas/faq.html');
     }
@@ -3695,11 +3774,11 @@ tr+tr td{border-top:1px solid #f0f0f0}
                         html = html.replace('<head>', `<head>\n  ${seoHead}`);
                     }
                     html = html.replace('</head>', `<script>window.SALON_SLUG="${salonSlug}";</script>\n</head>`);
-                    res.writeHead(200, { 'Content-Type': contentType, ...SECURITY_HEADERS });
+                    res.writeHead(200, { 'Content-Type': contentType, ...pageHeaders });
                     res.end(html);
                 }).catch(() => {
                     html = html.replace('</head>', `<script>window.SALON_SLUG="${salonSlug}";</script>\n</head>`);
-                    res.writeHead(200, { 'Content-Type': contentType, ...SECURITY_HEADERS });
+                    res.writeHead(200, { 'Content-Type': contentType, ...pageHeaders });
                     res.end(html);
                 });
             } else {

@@ -748,7 +748,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final sub = _salon?['subscription'];
     final plan = sub?['plan'] ?? 'pro';
     final status = sub?['status'] ?? 'active';
-    final price = sub?['price'] ?? 49.90;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -779,23 +778,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             'Pack ${plan.toString().toUpperCase()}',
             style: GoogleFonts.bricolageGrotesque(fontSize: 20, fontWeight: FontWeight.w700, color: AppTheme.primary),
           ),
-          Text('$price CHF / mois', style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textPrimary)),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () async {
-              final uri = Uri.parse('${ApiService.currentServerUrl}/pro');
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            },
-            icon: const Icon(Icons.credit_card_rounded, size: 18),
-            label: const Text('Gérer l\'abonnement'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white.withAlpha(10),
-              foregroundColor: AppTheme.textPrimary,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
         ],
       ),
     );
@@ -805,7 +787,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final configured = _smsStatus?['configured'] == true;
     final credits = (_smsStatus?['credits'] as num?)?.toInt() ?? 0;
     final settings = (_smsStatus?['settings'] as Map?)?.cast<String, dynamic>() ??
-        {'clientConfirmation': true, 'clientReminder': true};
+        {'clientConfirmation': false, 'clientReminder': true};
     final plan = (_salon?['subscription']?['plan'] ?? 'pro').toString();
 
     final Color creditColor = credits == 0
@@ -867,21 +849,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 14),
           ],
-          ElevatedButton.icon(
-            onPressed: () async {
-              final uri = Uri.parse('${ApiService.currentServerUrl}/pro');
-              await launchUrl(uri, mode: LaunchMode.externalApplication);
-            },
-            icon: const Icon(Icons.sms_rounded, size: 18),
-            label: const Text('Gérer / Recharger mes SMS'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primary.withAlpha(26),
-              foregroundColor: AppTheme.primary,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
         ],
       ),
     );
@@ -906,7 +873,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _saveSmsToggle({bool? clientConfirmation, bool? clientReminder}) async {
     final settings = (_smsStatus?['settings'] as Map?)?.cast<String, dynamic>() ??
-        {'clientConfirmation': true, 'clientReminder': true};
+        {'clientConfirmation': false, 'clientReminder': true};
     // Optimistic local update so the switch flips immediately.
     final newSettings = {
       'clientConfirmation': clientConfirmation ?? (settings['clientConfirmation'] != false),

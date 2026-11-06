@@ -47,9 +47,9 @@ class DashboardScreenState extends State<DashboardScreen> {
         final cachedBookings = (cached['todayBookings'] as List?) ?? [];
         final cachedStats = Map<String, dynamic>.from(cached['stats'] ?? {});
         setState(() {
-          _todayBookings = cachedBookings
+          _todayBookings = _chronological(cachedBookings
               .map((j) => BookingModel.fromApi(Map<String, dynamic>.from(j)))
-              .toList();
+              .toList());
           _stats = cachedStats;
           _loading = false;
           _firstLoadDone = true;
@@ -77,7 +77,7 @@ class DashboardScreenState extends State<DashboardScreen> {
       final stats = Map<String, dynamic>.from(payload['stats'] ?? {});
 
       setState(() {
-        _todayBookings = bookingsJson.map((j) => BookingModel.fromApi(Map<String, dynamic>.from(j))).toList();
+        _todayBookings = _chronological(bookingsJson.map((j) => BookingModel.fromApi(Map<String, dynamic>.from(j))).toList());
         _stats = stats;
         _loading = false;
         _firstLoadDone = true;
@@ -459,6 +459,11 @@ class DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+  // The API returns bookings latest-first: the day's planning must read in
+  // time order, and "next appointment" must be the earliest upcoming one.
+  static List<BookingModel> _chronological(List<BookingModel> list) =>
+      list..sort((a, b) => a.dateTime.compareTo(b.dateTime));
 
   Widget _buildNextAppointment() {
     final now = DateTime.now();

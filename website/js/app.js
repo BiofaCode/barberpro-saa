@@ -4,6 +4,15 @@
 
 let SALON_DATA = null;
 let _salonDataResolve;
+
+// Embed mode: page opened by /embed.js in a popup on the salon's own website.
+// Only the booking modal is shown; closing it and payment redirects are
+// handed to the parent page.
+const KRENO_EMBED = new URLSearchParams(window.location.search).get('embed') === '1' && window.parent !== window;
+if (KRENO_EMBED) document.documentElement.classList.add('kreno-embed');
+function notifyParent(msg) {
+  try { window.parent.postMessage(Object.assign({ source: 'kreno' }, msg), '*'); } catch (e) { /* ignore */ }
+}
 const salonDataReady = new Promise(resolve => { _salonDataResolve = resolve; });
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -26,6 +35,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMobileStickyBtn();
   initScrollTopBtn();
   initGalleryLightbox();
+
+  if (KRENO_EMBED) {
+    // ?service=<name> pre-selects a service (one button per service on the site)
+    window._krenoPresetService = (new URLSearchParams(window.location.search).get('service') || '').trim().toLowerCase();
+    await openBooking();
+    notifyParent({ type: 'ready' });
+  }
 
   // Retour depuis Stripe Checkout (paiement booking)
   const urlP = new URLSearchParams(window.location.search);
@@ -185,6 +201,9 @@ function applySalonBranding(salon) {
         document.documentElement.style.setProperty('--map-filter', 'grayscale(0.1)');
         // Slightly tinted text for secondary elements
         if (!b.textColor) {
+          // Default text colour is white (dark theme): on a light background
+          // titles and names were near-invisible.
+          document.documentElement.style.setProperty('--color-text-primary', '#1F2937');
           document.documentElement.style.setProperty('--color-text-secondary', 'rgba(0,0,0,0.5)');
           document.documentElement.style.setProperty('--color-text-muted', 'rgba(0,0,0,0.35)');
         }
@@ -647,6 +666,7 @@ async function openBooking() {
 function closeBooking() {
   document.getElementById('bookingModal').classList.remove('active');
   document.body.style.overflow = '';
+  if (KRENO_EMBED) notifyParent({ type: 'close' });
 }
 
 function populateEmployees() {
@@ -704,6 +724,12 @@ function populateServices() {
       ${payBadge}
     </div>
   `}).join('');
+  // Embed ?service=<name>: pre-select it whenever the service step is rendered
+  const preset = window._krenoPresetService;
+  if (preset && !bmState.service) {
+    const idx = services.findIndex(s => (s.name || '').toLowerCase() === preset);
+    if (idx >= 0) selectService(idx, grid.children[idx]);
+  }
 }
 
 function selectService(idx, el) {
@@ -1020,7 +1046,10 @@ async function submitBooking() {
             salon: SALON_DATA?.name || '',
           }));
         } catch (e) { /* sessionStorage unavailable — non-blocking */ }
-        window.location.href = data.data.checkoutUrl;
+        // Stripe Checkout refuses to load inside an iframe: the parent page
+        // (embed.js) navigates to it instead.
+        if (KRENO_EMBED) notifyParent({ type: 'redirect', url: data.data.checkoutUrl });
+        else window.location.href = data.data.checkoutUrl;
         return;
       }
       // Si erreur paiement (ex: Stripe non configuré), bascule sur réservation classique

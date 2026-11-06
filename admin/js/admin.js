@@ -125,6 +125,20 @@ async function submitEditSalon(salonId) {
   }
 }
 
+async function offerSms(salonId) {
+  const input = prompt('Nombre de SMS à offrir à ce salon :', '200');
+  if (input === null) return;
+  const credits = parseInt(input, 10);
+  if (!credits || credits < 1) return toast('Nombre invalide', 'error');
+  const res = await api(`/api/admin/salons/${salonId}/sms-credits`, 'POST', { credits, reason: 'offert par admin' });
+  if (res.success) {
+    toast(`${credits} SMS offerts — solde : ${res.data.smsCredits}`);
+    loadSalons();
+  } else {
+    toast(res.error || 'Erreur', 'error');
+  }
+}
+
 async function changePlan(salonId, newPlan) {
   const res = await api(`/api/admin/salons/${salonId}/plan`, 'PUT', { plan: newPlan });
   if (res.success) {
@@ -182,8 +196,8 @@ async function loadDashboard() {
     const s = statsRes.data;
     // Compute MRR from salon plans
     const salons = salonsRes.success ? salonsRes.data : [];
-    const planPrices = { starter: 29.9, pro: 49.9, premium: 89.9 };
-    const mrr = salons.reduce((sum, salon) => sum + (planPrices[salon.subscription?.plan || 'pro'] || 49.9), 0);
+    const planPrices = { starter: 39, pro: 49, premium: 89 };
+    const mrr = salons.reduce((sum, salon) => sum + (planPrices[salon.subscription?.plan || 'pro'] || 49), 0);
     const planCounts = salons.reduce((acc, salon) => {
       const p = salon.subscription?.plan || 'pro';
       acc[p] = (acc[p] || 0) + 1;
@@ -246,7 +260,7 @@ async function loadDashboard() {
 }
 
 // ============ SALONS (tes clients) ============
-const PLAN_PRICES = { starter: 29.9, pro: 49.9, premium: 89.9 };
+const PLAN_PRICES = { starter: 39, pro: 49, premium: 89 };
 const PLAN_LABELS = { starter: '🥉 Starter', pro: '🥈 Pro', premium: '🥇 Premium' };
 
 let _activePlanFilter = '';
@@ -295,7 +309,7 @@ function renderSalonCards(salons) {
   }
   container.innerHTML = salons.map(s => {
     const plan = s.subscription?.plan || 'pro';
-    const mrr = PLAN_PRICES[plan] || 49.9;
+    const mrr = PLAN_PRICES[plan] || 49;
     const createdDate = s.createdAt ? new Date(s.createdAt).toLocaleDateString('fr-CH', { day:'2-digit', month:'short', year:'2-digit' }) : '—';
     return `
         <div class="salon-card">
@@ -318,6 +332,9 @@ function renderSalonCards(salons) {
                 <div>📧 ${escapeHtml(s.owner?.email) || '—'}</div>
                 <div>📍 ${escapeHtml(s.address) || '—'}</div>
                 <div>📅 Créé le ${createdDate}</div>
+                <div>📱 ${s.smsCredits || 0} crédits SMS
+                    <button onclick="offerSms('${s._id}')" style="margin-left:6px;padding:2px 8px;border-radius:4px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-color);font-size:.75rem;cursor:pointer">+ Offrir</button>
+                </div>
             </div>
             <div class="salon-card-stats">
                 <div class="salon-card-stat">
@@ -416,9 +433,9 @@ function openCreateSalonModal() {
         <div class="form-group">
             <label class="form-label">Plan</label>
             <select class="form-input form-input-full" id="mPlan">
-                <option value="starter">Starter (29.90 CHF/mois)</option>
-                <option value="pro" selected>Pro (49.90 CHF/mois)</option>
-                <option value="premium">Premium (89.90 CHF/mois)</option>
+                <option value="starter">Starter (39 CHF/mois)</option>
+                <option value="pro" selected>Pro (49 CHF/mois)</option>
+                <option value="premium">Premium (89 CHF/mois)</option>
             </select>
         </div>
 
@@ -634,8 +651,8 @@ async function loadRevenuePage() {
   const res = await api('/api/admin/salons');
   if (!res.success) { el.innerHTML = '<div class="empty-state">Erreur de chargement</div>'; return; }
   const salons = res.data;
-  const prices = { starter: 29.9, pro: 49.9, premium: 89.9 };
-  const mrr = salons.reduce((s, x) => s + (prices[x.subscription?.plan || 'pro'] || 49.9), 0);
+  const prices = { starter: 39, pro: 49, premium: 89 };
+  const mrr = salons.reduce((s, x) => s + (prices[x.subscription?.plan || 'pro'] || 49), 0);
   const arr = mrr * 12;
   const counts = salons.reduce((a, x) => { const p = x.subscription?.plan || 'pro'; a[p] = (a[p] || 0) + 1; return a; }, {});
 
@@ -677,7 +694,7 @@ async function loadRevenuePage() {
                   <div style="font-size:.75rem;font-family:monospace;color:var(--text-muted)">/s/${s.slug}</div>
                 </td>
                 <td><span class="badge badge-${s.subscription?.plan === 'premium' ? 'active' : s.subscription?.plan === 'pro' ? 'pending' : 'cancelled'}">${s.subscription?.plan || 'pro'}</span></td>
-                <td style="font-weight:700;color:var(--primary)">${(prices[s.subscription?.plan || 'pro'] || 49.9).toFixed(2)}</td>
+                <td style="font-weight:700;color:var(--primary)">${(prices[s.subscription?.plan || 'pro'] || 49).toFixed(2)}</td>
                 <td>${s.stats?.bookings || 0}</td>
                 <td>${s.stats?.clients || 0}</td>
                 <td>

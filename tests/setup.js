@@ -6,18 +6,25 @@ const crypto = require('crypto');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const JWT_SECRET = process.env.JWT_SECRET || 'test_secret';
 
+// Set at load time: some suites require server.js at module top level
+// (before beforeAll runs), and server.js exits if these are missing.
+process.env.NODE_ENV = 'test';
+process.env.JWT_SECRET = JWT_SECRET;
+process.env.ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+
 // Setup test environment before running tests
 beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
-    process.env.JWT_SECRET = JWT_SECRET;
-    process.env.ADMIN_PASSWORD = 'admin123';
 
-    // Start in-memory MongoDB
-    const mongoServer = await MongoMemoryServer.create();
-    process.env.MONGODB_URI = mongoServer.getUri();
-
-    // Store globally for cleanup
-    global.__MONGO_SERVER__ = mongoServer;
+    // Use an external MongoDB when TEST_MONGODB_URI is set (e.g. a Docker
+    // container in CI), otherwise start an in-memory MongoDB.
+    if (process.env.TEST_MONGODB_URI) {
+        process.env.MONGODB_URI = process.env.TEST_MONGODB_URI;
+    } else {
+        const mongoServer = await MongoMemoryServer.create();
+        process.env.MONGODB_URI = mongoServer.getUri();
+        // Store globally for cleanup
+        global.__MONGO_SERVER__ = mongoServer;
+    }
 
     // Clear require cache to ensure new server instance with new DB URI
     delete require.cache[require.resolve('../db.js')];

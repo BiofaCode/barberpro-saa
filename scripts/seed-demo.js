@@ -138,10 +138,10 @@ async function run() {
       vendredi: { open: '09:00', close: '20:00' },
       samedi:   { open: '09:00', close: '18:00' },
     },
-    subscription: { plan: 'pro', status: 'active', price: 29.90 },
+    subscription: { plan: 'pro', status: 'active', price: 49 },
     smsCredits: 50,
     rating: 4.8,
-    reviewCount: 87,
+    reviewCount: 6,
     active: true,
   });
   console.log(`🏪 Salon créé : ${salon.name} (${salon.slug})`);
@@ -149,7 +149,7 @@ async function run() {
   // 3. Propriétaire (compte démo Apple).
   await db.createOwner({
     salon: salon._id,
-    name: 'Émma Laurent',
+    name: 'Emma Laurent',
     email: DEMO_EMAIL,
     password: DEMO_PASSWORD,
     phone: '079 000 11 22',
