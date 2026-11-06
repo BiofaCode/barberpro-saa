@@ -107,12 +107,12 @@ async function sendSMSConfirmation(booking, salon) {
 }
 
 // ---- SMS Rappel J-1 ----
-async function sendSMSReminder(booking, salon) {
+async function sendSMSReminder(booking, salon, { sameDay = false } = {}) {
     if (!booking.clientPhone) return { success: false, reason: 'no_phone' };
     const body = buildSMS([
-        `Rappel : RDV demain chez ${salon.name || 'Kreno'}`,
+        `Rappel : RDV ${sameDay ? "aujourd'hui" : 'demain'} chez ${salon.name || 'Kreno'}`,
         `${booking.time} - ${booking.serviceName}`,
-    ], [salon.address, 'À demain !']);
+    ], [salon.address, sameDay ? 'À tout à l\'heure !' : 'À demain !']);
     return sendSMS(booking.clientPhone, body);
 }
 

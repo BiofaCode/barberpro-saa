@@ -569,7 +569,7 @@ async function loadDashboard(_retry = 0) {
                 for (let i = 1; i <= 7; i++) {
                     const d = new Date(now);
                     d.setDate(d.getDate() + i);
-                    dates.push(d.toISOString().split('T')[0]);
+                    dates.push(localYMD(d));
                 }
                 const upcomingResults = await Promise.allSettled(
                     dates.map(date => apiFetch(`${API}/api/pro/salon/${salonId}/bookings?date=${date}`).then(r => r.json()))
@@ -763,7 +763,7 @@ function showBlockDetail(bl) {
 
 async function loadBlocks() {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = localYMD();
         const res = await apiFetch(`${API}/api/pro/salon/${salonId}/blocks?from=${today}`);
         if (!res.ok) return;
         const data = await res.json();
@@ -798,7 +798,7 @@ function renderBlocksList() {
 
 async function showAddBlock() {
     const isEmployee = currentUser?.role === 'employee';
-    const today = new Date().toISOString().split('T')[0];
+    const today = localYMD();
 
     let empSection = '';
     if (!isEmployee) {
@@ -3459,8 +3459,13 @@ function closeModal() {
     document.getElementById('modal').classList.remove('active');
 }
 
+// Local calendar date (YYYY-MM-DD). toISOString() gives the UTC date, i.e.
+// the previous day in Switzerland between midnight and 1-2 am.
+function localYMD(d = new Date()) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 function todayStr() {
-    return new Date().toISOString().split('T')[0];
+    return localYMD();
 }
 
 function statusLabel(status) {

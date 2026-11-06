@@ -779,6 +779,17 @@ async function editAdminNotes(salonId, currentNotes) {
 }
 
 // ============ EXPORT CSV ============
+async function seedDemoAccount() {
+  if (!confirm('Créer / réinitialiser le salon démo (demo@kreno.ch) ?\nSeul le salon « kreno-demo » est effacé puis recréé avec des RDV à jour.')) return;
+  const res = await api('/api/admin/demo-seed', 'POST', {});
+  if (res.success) {
+    toast(`Compte démo prêt : demo@kreno.ch / demo1234 (${res.data.bookings} RDV)`);
+    loadSalons();
+  } else {
+    toast(res.error || 'Erreur lors de la création du compte démo', 'error');
+  }
+}
+
 async function exportSalonsCSV() {
   const token = localStorage.getItem('adminToken');
   const res = await fetch('/api/admin/salons/export-csv', {
