@@ -369,7 +369,8 @@ async function sendPasswordResetEmail(email, ownerName, resetUrl) {
   }
 }
 
-async function sendReminderEmail(booking, salon) {
+async function sendReminderEmail(booking, salon, { sameDay = false } = {}) {
+  const when = sameDay ? "aujourd'hui" : 'demain';
   const fromName = process.env.SMTP_FROM_NAME || salon.name || 'Kreno';
   const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
   const primaryColor = salon.branding?.primaryColor || '#6366F1';
@@ -379,7 +380,7 @@ async function sendReminderEmail(booking, salon) {
     const { data, error } = await resend.emails.send({
       from: `${fromName} <${fromEmail}>`,
       to: [booking.clientEmail],
-      subject: `⏰ Rappel RDV demain — ${booking.serviceName} à ${booking.time}`,
+      subject: `⏰ Rappel RDV ${when} — ${booking.serviceName} à ${booking.time}`,
       html: `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -392,7 +393,7 @@ async function sendReminderEmail(booking, salon) {
     <div style="padding:28px">
       <p style="font-size:15px;color:#27272a;margin:0 0 20px">
         Bonjour <strong>${booking.clientName}</strong>,<br>
-        Nous vous rappelons votre rendez-vous de <strong>demain</strong> :
+        Nous vous rappelons votre rendez-vous ${sameDay ? "d'<strong>aujourd'hui</strong>" : 'de <strong>demain</strong>'} :
       </p>
       <div style="background:#fafafa;border-radius:12px;padding:20px;border:1px solid #e4e4e7">
         <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3f3f46">
@@ -419,7 +420,7 @@ async function sendReminderEmail(booking, salon) {
         </table>
       </div>
       <p style="font-size:13px;color:#71717a;margin:20px 0 0;line-height:1.6">
-        Nous vous attendons demain. À bientôt !
+        Nous vous attendons ${when}. À bientôt !
       </p>
       ${cancelUrl ? `
       <div style="text-align:center;margin:20px 0 0">

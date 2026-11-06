@@ -4,6 +4,9 @@
    ============================================ */
 
 require('dotenv').config();
+// All salons are in Switzerland: run on Swiss time (Render runs in UTC), so
+// getHours() and 'YYYY-MM-DDTHH:MM' booking times are Swiss local time.
+process.env.TZ = process.env.TZ || 'Europe/Zurich';
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -302,22 +305,34 @@ async function sendPendingReminders() {
     if (currentHour < 8 || currentHour >= 20) return;
 
     try {
-        const tomorrow = new Date();
+        const now = new Date();
+        const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowStr = tomorrow.toISOString().split('T')[0];
-        const bookings = await db.findBookings({ date: tomorrowStr, status: 'confirmed', reminderSent: { $ne: true } });
-        for (const booking of bookings) {
+        const todayStr = localDateStr(now);
+        const due = (await db.findBookings({ date: localDateStr(tomorrow), status: 'confirmed', reminderSent: { $ne: true } }))
+            .map(b => ({ booking: b, sameDay: false }));
+        // Catch-up: if the server was down/asleep the evening before (Render free
+        // plan), remind today's bookings that were made before today and are
+        // still >= 2 h away. Bookings made today already got their confirmation.
+        const startOfToday = new Date(now); startOfToday.setHours(0, 0, 0, 0);
+        const inTwoHours = now.getHours() * 60 + now.getMinutes() + 120;
+        for (const b of await db.findBookings({ date: todayStr, status: 'confirmed', reminderSent: { $ne: true } })) {
+            if (b.time && timeToMinutes(b.time) >= inTwoHours && b.createdAt && new Date(b.createdAt) < startOfToday) {
+                due.push({ booking: b, sameDay: true });
+            }
+        }
+        for (const { booking, sameDay } of due) {
             const salon = await db.findSalonById(booking.salon);
             if (!salon) continue;
             // Email reminder
-            if (booking.clientEmail) sendReminderEmail(booking, salon);
+            if (booking.clientEmail) sendReminderEmail(booking, salon, { sameDay });
             // SMS reminder (if phone + credits + toggle on)
             if (smsSettingsOf(salon).clientReminder && booking.clientPhone) {
-                sendPaidSMS(salon, () => sendSMSReminder(booking, salon));
+                sendPaidSMS(salon, () => sendSMSReminder(booking, salon, { sameDay }));
             }
             await db.updateBooking(booking._id, { reminderSent: true });
         }
-        if (bookings.length > 0) console.log(`⏰ Rappels J-1 envoyés: ${bookings.length} RDV (email + SMS si crédits)`);
+        if (due.length > 0) console.log(`⏰ Rappels envoyés: ${due.length} RDV (dont ${due.filter(d => d.sameDay).length} rattrapés le jour même)`);
     } catch(e) { console.error('Reminder cron error:', e.message); }
 }
 setInterval(sendPendingReminders, 60 * 60 * 1000);
@@ -330,8 +345,8 @@ async function sendPendingReviewRequests() {
     if (currentHour < 10 || currentHour >= 21) return; // only during reasonable hours
     try {
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        const yesterdayStr = new Date(now - 86400000).toISOString().split('T')[0];
+        const todayStr = localDateStr(now);
+        const yesterdayStr = localDateStr(new Date(now - 86400000));
         // Check today + yesterday to catch late evening appointments
         const bookings = await db.findBookings({
             date: { $in: [todayStr, yesterdayStr] },
@@ -368,8 +383,8 @@ setTimeout(sendPendingReviewRequests, 90000); // startup check after 1.5 min
 async function autoCompletePastBookings() {
     try {
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
-        const yesterdayStr = new Date(now - 86400000).toISOString().split('T')[0];
+        const todayStr = localDateStr(now);
+        const yesterdayStr = localDateStr(new Date(now - 86400000));
         const bookings = await db.findBookings({
             date: { $in: [todayStr, yesterdayStr] },
             status: { $in: ['confirmed', 'in_progress'] },
@@ -395,7 +410,7 @@ setTimeout(autoCompletePastBookings, 60000); // startup check after 1 min
 const dailyPushSentFor = new Set(); // 'YYYY-MM-DD' guard against double-firing
 async function sendDailyPushReminder() {
     if (new Date().getHours() !== 8) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     if (dailyPushSentFor.has(today)) return;
     dailyPushSentFor.add(today);
     // Keep set bounded
@@ -430,6 +445,12 @@ function timeToMinutes(t) {
     if (!t || typeof t !== 'string') return 0;
     const [h, m] = t.split(':').map(Number);
     return (h || 0) * 60 + (m || 0);
+}
+
+// Local (Swiss) calendar date, YYYY-MM-DD. toISOString() gives the UTC date,
+// which is still "yesterday" between 00:00 and 01:00/02:00 in Switzerland.
+function localDateStr(d = new Date()) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 // "2026-11-12" -> "jeu. 12 nov." for push notifications shown on the owner's phone.
@@ -710,6 +731,15 @@ route('PUT', '/api/admin/salons/:id', async (req, res, params) => {
     json(res, 200, { success: true, message: 'Salon mis à jour' });
 });
 
+// Admin: (re)create the demo salon used by App Review (demo@kreno.ch).
+// Same as `node scripts/seed-demo.js`, for when there is no shell (Render free).
+// Only touches the 'kreno-demo' salon, which it deletes and recreates.
+route('POST', '/api/admin/demo-seed', async (req, res) => {
+    const { seedDemo } = require('./scripts/seed-demo');
+    const result = await seedDemo();
+    json(res, 200, { success: true, data: result });
+});
+
 // Admin: offer SMS credits (e.g. migration from another tool). Counted as
 // purchased, so they survive the monthly plan reset.
 route('POST', '/api/admin/salons/:id/sms-credits', async (req, res, params) => {
@@ -949,7 +979,7 @@ route('GET', '/api/pro/salon/:salonId/bootstrap', async (req, res, params) => {
     const user = verifySalonAccess(req, params.salonId);
     if (!user) return json(res, 403, { success: false, error: 'Accès refusé' });
     const isEmployee = user.role === 'employee';
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
 
     const queryToday = { salon: params.salonId, date: today };
     const queryAll = { salon: params.salonId };
@@ -1154,7 +1184,7 @@ route('GET', '/api/pro/salon/:salonId/stats', async (req, res, params) => {
     if (!user) return json(res, 401, { success: false, error: 'Non autorisé' });
     const isEmployee = user?.role === 'employee';
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     const queryToday = { salon: params.salonId, date: today };
     const queryAll = { salon: params.salonId };
 
@@ -2963,9 +2993,11 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date || '') || !/^\d{2}:\d{2}$/.test(body.time || '')) {
         return json(res, 400, { success: false, error: 'Date ou heure invalide' });
     }
-    // Client sends its local (Swiss) date, which is never behind the UTC date.
-    if (body.date < new Date().toISOString().split('T')[0]) {
+    if (body.date < localDateStr()) {
         return json(res, 400, { success: false, error: 'Impossible de réserver dans le passé' });
+    }
+    if ((salon.closedDates || []).some(cd => cd && body.date >= cd.start && body.date <= cd.end)) {
+        return json(res, 400, { success: false, error: 'Le salon est fermé ce jour-là' });
     }
 
     // Look up price and duration server-side — never trust client-supplied values
@@ -3069,8 +3101,11 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(body.date || '') || !/^\d{2}:\d{2}$/.test(body.time || '')) {
         return json(res, 400, { success: false, error: 'Date ou heure invalide' });
     }
-    if (body.date < new Date().toISOString().split('T')[0]) {
+    if (body.date < localDateStr()) {
         return json(res, 400, { success: false, error: 'Impossible de réserver dans le passé' });
+    }
+    if ((salon.closedDates || []).some(cd => cd && body.date >= cd.start && body.date <= cd.end)) {
+        return json(res, 400, { success: false, error: 'Le salon est fermé ce jour-là' });
     }
     const duration = service.duration || 30;
     if (await hasConflict(salon._id, body.employeeId || null, body.date, body.time, duration)) {
@@ -3821,7 +3856,7 @@ async function start() {
 
 // Export for testing
 if (process.env.NODE_ENV === 'test') {
-    module.exports = { server, db, createToken, verifyToken };
+    module.exports = { server, db, createToken, verifyToken, _test: { sendPendingReminders, localDateStr } };
 } else {
     start();
 }

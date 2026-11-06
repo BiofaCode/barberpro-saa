@@ -838,7 +838,7 @@ const DAY_MAP = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 
 
 function isDateClosed(date) {
   const closedDates = SALON_DATA?.closedDates || [];
-  const dateStr = date.toISOString().split('T')[0];
+  const dateStr = localDateStr(date); // not toISOString(): local midnight is the previous UTC day
   return closedDates.some(cd => dateStr >= cd.start && dateStr <= cd.end);
 }
 
@@ -1449,7 +1449,7 @@ function updateAvailabilityBadge(salon) {
   const hours = salon.hours?.[dayName];
 
   // Check if today is a closed date
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = localDateStr(today);
   const isClosed = (salon.closedDates || []).some(cd => todayStr >= cd.start && todayStr <= cd.end);
 
   if (isClosed || !hours?.open) {

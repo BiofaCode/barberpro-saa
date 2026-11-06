@@ -12,6 +12,8 @@
 
    Usage :
        node scripts/seed-demo.js
+   ou, sans terminal : admin Kreno → bouton « Compte démo App Store »
+   (POST /api/admin/demo-seed, qui appelle seedDemo()).
    (lit MONGODB_URI depuis l'environnement / .env)
 */
 
@@ -102,7 +104,7 @@ const REVIEWS = [
   { bookingIdx: 5, rating: 4, comment: 'Bonne prestation, coupe réussie. Je recommande.', approved: null },
 ];
 
-async function run() {
+async function seedDemo() {
   await db.connectDB();
 
   // 1. Nettoyer l'ancien salon démo (idempotent).
@@ -223,10 +225,16 @@ async function run() {
 
   console.log('\n✅ Seed démo terminé.');
   console.log(`   Connexion : ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
-  process.exit(0);
+  return { slug: DEMO_SLUG, email: DEMO_EMAIL, bookings: count, reviews: reviewCount };
 }
 
-run().catch(err => {
-  console.error('❌ Seed démo échoué :', err);
-  process.exit(1);
-});
+module.exports = { seedDemo, DEMO_EMAIL, DEMO_SLUG };
+
+if (require.main === module) {
+  seedDemo()
+    .then(() => process.exit(0))
+    .catch(err => {
+      console.error('❌ Seed démo échoué :', err);
+      process.exit(1);
+    });
+}
