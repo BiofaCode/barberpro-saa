@@ -432,6 +432,12 @@ function timeToMinutes(t) {
     return (h || 0) * 60 + (m || 0);
 }
 
+// "2026-11-12" -> "jeu. 12 nov." for push notifications shown on the owner's phone.
+function pushDate(ymd) {
+    const d = new Date(`${ymd}T12:00:00`);
+    return isNaN(d) ? ymd : d.toLocaleDateString('fr-CH', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
 // ---- SMS (paid with the salon's prepaid credits) ----
 // Defaults: only the D-1 reminder is on. Confirmation, reschedule and
 // cancellation go by email (free); SMS for those are opt-in.
@@ -3022,7 +3028,7 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     // Push notification to owner — FCM (mobile app)
     sendFcmToSalon(salon._id, {
         title: '📅 Nouvelle réservation',
-        body: `${body.clientName} · ${body.serviceName} · ${body.date} à ${body.time}`,
+        body: `${body.clientName} · ${body.serviceName} · ${pushDate(body.date)} à ${body.time}`,
         data: { type: 'booking', bookingId: String(booking._id) },
     }).catch(err => console.error('FCM push error:', err.message));
 
@@ -3245,7 +3251,7 @@ route('PUT', '/api/salon/:slug/bookings/:bookingId/cancel', async (req, res, par
     // FCM (mobile app) — deep-links to the booking detail
     sendFcmToSalon(salon._id, {
         title: '❌ Rendez-vous annulé',
-        body: `${booking.clientName} · ${booking.serviceName} · ${booking.date} à ${booking.time}`,
+        body: `${booking.clientName} · ${booking.serviceName} · ${pushDate(booking.date)} à ${booking.time}`,
         data: { type: 'cancellation', bookingId: String(booking._id) },
     }).catch(err => console.error('FCM cancellation error:', err.message));
     // Email to the owner
@@ -3352,7 +3358,7 @@ route('POST', '/api/cancel-token/:token', async (req, res, params) => {
     // FCM push to mobile app
     sendFcmToSalon(booking.salon, {
         title: '❌ Annulation',
-        body: `${booking.clientName} a annulé son RDV du ${booking.date} à ${booking.time}`,
+        body: `${booking.clientName} a annulé son RDV du ${pushDate(booking.date)} à ${booking.time}`,
         data: { type: 'cancellation', bookingId: String(booking._id) },
     }).catch(err => console.error('FCM push error:', err.message));
 

@@ -34,6 +34,9 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
 
   DateTime _selectedDate = DateTime.now();       // pour la vue liste
   DateTime _calendarDayDate = DateTime.now();    // pour la vue jour
+  // The list-view date strip starts 7 days back: open it on yesterday so
+  // today is visible (item = 52 px + 8 px margin).
+  final ScrollController _dateStripController = ScrollController(initialScrollOffset: 6 * 60.0);
   static DateTime _getMondayOf(DateTime date) {
     final monday = date.subtract(Duration(days: date.weekday - 1));
     return DateTime(monday.year, monday.month, monday.day);
@@ -131,6 +134,7 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _dateStripController.dispose();
     super.dispose();
   }
 
@@ -269,6 +273,7 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
     return SizedBox(
       height: 88,
       child: ListView.builder(
+        controller: _dateStripController,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
         // ~3 months ahead (and 7 days back) so future bookings are reachable;

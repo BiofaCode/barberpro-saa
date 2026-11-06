@@ -378,7 +378,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '$visits visites',
+                      '$visits visite${visits == 1 ? '' : 's'}',
                       style: GoogleFonts.dmSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
