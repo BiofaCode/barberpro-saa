@@ -7,10 +7,7 @@
 `docs/appstore/screenshots/kreno-iphone-1.png` à `-6.png` — 1320 × 2868 px, format **iPhone 6,9"**
 (App Store Connect les réutilise pour les tailles plus petites). Faites de la vraie app avec le compte démo.
 
-**iPad** : l'app est actuellement déclarée compatible iPad (`TARGETED_DEVICE_FAMILY = "1,2"`).
-Apple exigera alors aussi des captures iPad 13" (2064 × 2752). Deux options :
-- limiter l'app à l'iPhone (recommandé pour la v1) ;
-- ou fournir des captures iPad.
+**iPad** : la v1 est **iPhone uniquement** (`TARGETED_DEVICE_FAMILY = 1`) : aucune capture iPad n'est demandée.
 
 ## Informations de l'app
 
