@@ -70,6 +70,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted && sms != null) setState(() => _smsStatus = sms);
   }
 
+  void _requestAccountDeletion() {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: AppTheme.bgCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Supprimer votre compte ?', style: GoogleFonts.dmSans(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+        content: Text(
+          'Votre demande sera traitée sous 30 jours et vous recevrez une confirmation par e-mail. '
+          'Pour un compte propriétaire, le salon, ses rendez-vous et ses clients seront supprimés '
+          'et l\'abonnement résilié. Vous serez déconnecté.',
+          style: GoogleFonts.dmSans(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text('Annuler', style: GoogleFonts.dmSans(color: AppTheme.textMuted)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogCtx);
+              final ok = await ApiService.requestAccountDeletion();
+              if (!mounted) return;
+              if (!ok) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Impossible d\'envoyer la demande. Vérifiez votre connexion.')));
+                return;
+              }
+              // Root-level messenger: grabbed before this screen is removed.
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
+              await ApiService.logout();
+              navigator.pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (_) => false,
+              );
+              messenger.showSnackBar(const SnackBar(
+                  content: Text('Demande de suppression envoyée. Confirmation par e-mail.')));
+            },
+            child: Text('Supprimer', style: GoogleFonts.dmSans(color: AppTheme.error, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _logout() {
     showDialog(
       context: context,
@@ -461,6 +507,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _autoConfirm, (v) => setState(() => _autoConfirm = v),
                       ),
                       const SizedBox(height: 24),
+
+                      // Account deletion (App Store guideline 5.1.1(v))
+                      Center(
+                        child: TextButton(
+                          onPressed: _requestAccountDeletion,
+                          child: Text('Supprimer mon compte',
+                              style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.error)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
 
                       // Version
                       Center(

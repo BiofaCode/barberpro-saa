@@ -157,6 +157,17 @@ class ApiService {
     await prefs.clear();
   }
 
+  // ---- Demande de suppression de compte (App Store 5.1.1(v)) ----
+  static Future<bool> requestAccountDeletion() async {
+    try {
+      final res = await _post(Uri.parse('$_url/api/pro/account/delete-request'), headers: _authHeaders, body: '{}');
+      return (jsonDecode(res.body) as Map)['success'] == true;
+    } catch (e) {
+      debugPrint('API Error (requestAccountDeletion): $e');
+      return false;
+    }
+  }
+
   // ---- Helper pour injecter le token ----
   static Map<String, String> get _authHeaders {
     return {

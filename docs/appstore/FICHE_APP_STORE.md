@@ -82,6 +82,7 @@ Demo account: demo@kreno.ch / demo1234 (pre-filled salon with bookings, clients 
 
 Things to try: Home (today's schedule), RDV tab (bookings; tap one for actions), "+" to add a booking, Clients, Salon (settings).
 Push notifications are sent when a customer books online on the salon's page: https://kreno.ch/s/kreno-demo
+Account deletion: Salon tab → scroll to the bottom → "Supprimer mon compte" (request processed within 30 days, confirmation by email).
 ```
 
 ## Confidentialité de l'app (App Privacy)
