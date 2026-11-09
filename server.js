@@ -731,6 +731,40 @@ route('PUT', '/api/admin/salons/:id', async (req, res, params) => {
     json(res, 200, { success: true, message: 'Salon mis à jour' });
 });
 
+// Account deletion request (App Store guideline 5.1.1(v)): started from the
+// app, recorded on the account and processed by the Kreno team within 30 days
+// (an owner's deletion also removes the salon, its data and its subscription,
+// so it is not done instantly on one tap).
+route('POST', '/api/pro/account/delete-request', async (req, res) => {
+    const user = verifyToken(req);
+    if (!user || !user.salonId) return json(res, 401, { success: false, error: 'Non autorisé' });
+    const isOwner = user.role === 'owner';
+    const account = isOwner ? await db.findOwnerById(user.ownerId) : await db.findEmployeeById(user.employeeId);
+    if (!account) return json(res, 404, { success: false, error: 'Compte introuvable' });
+    const requestedAt = new Date().toISOString();
+    if (isOwner) await db.updateOwner(account._id, { deletionRequestedAt: requestedAt });
+    else await db.updateEmployee(account._id, { deletionRequestedAt: requestedAt });
+    const salon = await db.findSalonById(user.salonId);
+    await db.addSalonLog(user.salonId, 'account_deletion_requested', { role: user.role, email: account.email });
+    const who = `${escHtml(account.name || '')} &lt;${escHtml(account.email || '')}&gt;`;
+    const adminTo = process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL;
+    if (adminTo) {
+        sendEmail({
+            to: adminTo,
+            subject: `[Kreno] Demande de suppression de compte — ${salon?.name || user.salonId}`,
+            html: `<p>${who} (${isOwner ? 'propriétaire' : 'employé'}) demande la suppression de son compte.</p><p>Salon : ${escHtml(salon?.name || '')} (${escHtml(String(user.salonId))})</p><p>À traiter sous 30 jours.${isOwner ? ' Propriétaire : supprimer le salon, ses données et résilier l\'abonnement Stripe.' : ''}</p>`,
+        }).catch(e => console.error('Deletion request email error:', e.message));
+    }
+    if (account.email) {
+        sendEmail({
+            to: account.email,
+            subject: 'Kreno — demande de suppression de compte reçue',
+            html: `<p>Bonjour ${escHtml(account.name || '')},</p><p>Nous avons bien reçu votre demande de suppression de compte Kreno. Elle sera traitée dans un délai de 30 jours et vous recevrez une confirmation.</p><p>Si vous n'êtes pas à l'origine de cette demande, répondez simplement à cet e-mail.</p>`,
+        }).catch(e => console.error('Deletion confirmation email error:', e.message));
+    }
+    json(res, 200, { success: true, data: { requestedAt } });
+});
+
 // Admin: (re)create the demo salon used by App Review (demo@kreno.ch).
 // Same as `node scripts/seed-demo.js`, for when there is no shell (Render free).
 // Only touches the 'kreno-demo' salon, which it deletes and recreates.

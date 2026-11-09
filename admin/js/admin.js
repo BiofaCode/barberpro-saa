@@ -332,6 +332,7 @@ function renderSalonCards(salons) {
                 <div>📧 ${escapeHtml(s.owner?.email) || '—'}</div>
                 <div>📍 ${escapeHtml(s.address) || '—'}</div>
                 <div>📅 Créé le ${createdDate}</div>
+                ${s.owner?.deletionRequestedAt ? `<div style="color:var(--danger,#ef4444);font-weight:600">⚠️ Suppression du compte demandée le ${new Date(s.owner.deletionRequestedAt).toLocaleDateString('fr-CH')} — à traiter sous 30 jours</div>` : ''}
                 <div>📱 ${s.smsCredits || 0} crédits SMS
                     <button onclick="offerSms('${s._id}')" style="margin-left:6px;padding:2px 8px;border-radius:4px;border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-color);font-size:.75rem;cursor:pointer">+ Offrir</button>
                 </div>
