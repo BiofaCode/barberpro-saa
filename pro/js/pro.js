@@ -2740,22 +2740,6 @@ async function loadSettings() {
             </div>
             <div id="advancedSectionsContent" style="display:none">
 
-            <!-- DOMAINE PERSONNALISÉ -->
-            <div class="card" style="margin-bottom:20px">
-                <div class="card-header"><h3>🌐 Domaine personnalisé</h3></div>
-                <div class="card-body">
-                    <div class="form-group">
-                        <label class="form-label">Sous-domaine de réservation (optionnel)</label>
-                        <input class="form-input form-input-full" id="set-customDomain" value="${salon.customDomain || ''}" placeholder="reservations.mon-salon.com">
-                        <div style="font-size:.8rem;color:var(--text-muted);margin-top:6px;line-height:1.6">
-                            Renseignez ici votre sous-domaine souhaité (ex: <code style="background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px">reservations.mon-salon.com</code>).<br>
-                            Ensuite, ajoutez un enregistrement CNAME chez votre registraire DNS :<br>
-                            <code style="background:rgba(99,102,241,.1);color:var(--primary);padding:4px 8px;border-radius:6px;display:inline-block;margin-top:6px;font-size:.78rem">reservations.mon-salon.com → ${window.location.hostname}</code>
-                        </div>
-                    </div>
-                    <button class="btn btn-outline" onclick="saveCustomDomain()" style="margin-top:8px">💾 Enregistrer le domaine</button>
-                </div>
-            </div>
 
             <!-- GALERIE PHOTOS -->
             ${salon.subscription?.plan === 'starter' ? `
@@ -3279,21 +3263,6 @@ async function deleteLogo() {
 }
 
 // ---- Custom Domain ----
-async function saveCustomDomain() {
-    const domain = document.getElementById('set-customDomain')?.value.trim() || '';
-    try {
-        const res = await apiFetch(`${API}/api/pro/salon/${salonId}`, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ customDomain: domain })
-        });
-        const data = await res.json();
-        if (data.success) {
-            currentSalon = data.data;
-            showToast(domain ? 'Domaine enregistré ✅' : 'Domaine supprimé');
-        } else { showToast('Erreur', 'error'); }
-    } catch (e) { showToast('Erreur de connexion', 'error'); }
-}
-
 // ---- Hero Image Upload ----
 async function uploadHeroImage() {
     const fileInput = document.getElementById('heroImageFile');
