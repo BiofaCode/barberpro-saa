@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **État actuel du projet et prochaines étapes : voir `docs/ETAT_DU_PROJET.md`** (à lire en début de session).
+
 ## Project Overview
 
 **Kreno** is a multi-tenant SaaS platform for barber shop / salon management. It serves three distinct user roles: super-admin (platform owner), salon owners (pro portal), and end customers (public booking). There is also a Flutter mobile app for staff.

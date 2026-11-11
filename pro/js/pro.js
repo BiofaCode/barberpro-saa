@@ -2323,12 +2323,17 @@ async function saveSMSSettings() {
         ownerNotification: document.getElementById('sms-toggle-owner')?.checked ?? false,
         ownerPhone: document.getElementById('sms-owner-phone')?.value?.trim() || '',
     };
+    const senderInput = document.getElementById('sms-sender-name');
+    if (senderInput) settings.senderName = senderInput.value.trim();
     try {
-        await apiFetch(`${API}/api/pro/salon/${salonId}/sms-settings`, {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}/sms-settings`, {
             method: 'PUT', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(settings)
         });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) return showToast(data.error || 'Erreur de sauvegarde', 'error');
         showToast('Paramètres SMS enregistrés ✅');
+        if (senderInput) loadSMSStatus();
     } catch { showToast('Erreur de sauvegarde', 'error'); }
 }
 
@@ -2336,7 +2341,17 @@ async function loadSMSStatus() {
     try {
         const res = await apiFetch(`${API}/api/pro/salon/${salonId}/sms-status`);
         const data = await res.json();
-        const { credits = 0, packs = {}, configured = false, settings = {} } = data.data || {};
+        const { credits = 0, packs = {}, configured = false, settings = {}, sender = {} } = data.data || {};
+        // Values are already limited to A-Z 0-9 and spaces by the server.
+        const senderField = sender.enabled ? `
+                <div style="margin-top:12px">
+                    <label for="sms-sender-name" style="font-size:.8rem;color:var(--text-muted);display:block;margin-bottom:4px">Nom affiché comme expéditeur des SMS</label>
+                    <input type="text" id="sms-sender-name" maxlength="11" value="${settings.senderName || ''}" placeholder="${sender.default || 'Kreno'}"
+                        class="form-input form-input-full" style="font-size:.85rem;padding:8px 12px">
+                    <div style="font-size:.75rem;color:var(--text-muted);margin-top:4px">
+                        Vos clients verront <strong>${sender.name || 'Kreno'}</strong> au lieu d'un numéro. 11 caractères max, lettres sans accents, chiffres et espaces. Laissez vide pour utiliser le nom du salon. Les clients ne peuvent pas répondre à ces SMS.
+                    </div>
+                </div>` : '';
         const el = document.getElementById('smsCardBody');
         if (!el) return;
 
@@ -2374,6 +2389,7 @@ async function loadSMSStatus() {
                     <input type="tel" id="sms-owner-phone" value="${settings.ownerPhone || ''}" placeholder="+41 79 000 00 00"
                         class="form-input form-input-full" style="font-size:.85rem;padding:8px 12px">
                 </div>
+                ${senderField}
                 <button class="btn btn-primary btn-sm" style="margin-top:10px;width:100%" onclick="saveSMSSettings()">Enregistrer les préférences</button>
             </div>
             <div style="display:grid;gap:10px">

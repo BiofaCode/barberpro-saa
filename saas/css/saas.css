@@ -1723,3 +1723,7 @@ h1, h2, h3, h4 {
   .contact-grid { grid-template-columns: 1fr; gap: 32px; }
   .cf-row { grid-template-columns: 1fr; }
 }
+
+/* Badge App Store (caché tant que saas/js/app-links.js n'a pas de lien) */
+.appstore-badge { display: inline-block; line-height: 0; }
+.appstore-badge[hidden] { display: none !important; }

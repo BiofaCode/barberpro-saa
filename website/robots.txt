@@ -1,7 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /admin/
-Disallow: /uploads/
-
-Sitemap: https://salonpro.osmodigital.ch/sitemap.xml

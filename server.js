@@ -15,7 +15,7 @@ const db = require('./db');
 const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendRescheduleEmail, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail, sendEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
-const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSReschedule, sendSMSOwnerNotification, SMS_PACKS } = require('./sms');
+const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSReschedule, sendSMSOwnerNotification, SMS_PACKS, smsSenderName, isProtectedSenderName, senderNameFor } = require('./sms');
 const { sendToSalon: sendFcmToSalon, init: initFcm } = require('./push');
 initFcm(); // eager init so the log appears at startup
 const { getCORSHeaders, SECURITY_HEADERS, getClientIP } = require('./lib/security');
@@ -462,7 +462,7 @@ function pushDate(ymd) {
 // ---- SMS (paid with the salon's prepaid credits) ----
 // Defaults: only the D-1 reminder is on. Confirmation, reschedule and
 // cancellation go by email (free); SMS for those are opt-in.
-const SMS_DEFAULTS = { clientConfirmation: false, clientReminder: true, ownerNotification: false, ownerPhone: '' };
+const SMS_DEFAULTS = { clientConfirmation: false, clientReminder: true, ownerNotification: false, ownerPhone: '', senderName: '' };
 function smsSettingsOf(salon) {
     return { ...SMS_DEFAULTS, ...(salon?.smsSettings || {}) };
 }
@@ -571,29 +571,39 @@ route('POST', '/api/contact', async (req, res) => {
     json(res, 200, { success: true });
 });
 
+// robots.txt and sitemap.xml always name the public domain (not the Host
+// header: the same server also answers on barberpro-saa.onrender.com).
+// These two routes are not under /api/: the static file handler calls them
+// (see "robots.txt / sitemap.xml" in createServer), otherwise stale files in website/ were served.
+const SITE_URL = (process.env.BASE_URL || 'https://kreno.ch').replace(/\/+$/, '');
 route('GET', '/robots.txt', async (req, res) => {
-    const file = path.join(__dirname, 'robots.txt');
-    fs.readFile(file, (err, data) => {
-        if (err) { res.writeHead(404); res.end(); return; }
-        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
-        res.end(data);
-    });
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=3600' });
+    res.end([
+        'User-agent: *',
+        'Allow: /',
+        'Disallow: /api/',
+        'Disallow: /pro/',
+        'Disallow: /admin/',
+        'Disallow: /uploads/',
+        '',
+        `Sitemap: ${SITE_URL}/sitemap.xml`,
+        '',
+    ].join('\n'));
 });
 
 // Dynamic sitemap.xml — generated from active salons in DB
 route('GET', '/sitemap.xml', async (req, res) => {
     try {
-        const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+        const baseUrl = SITE_URL;
         const salons = await db.findSalons({ active: true });
-        const now = new Date().toISOString().split('T')[0];
 
         const staticUrls = [
             `<url><loc>${baseUrl}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>`,
             `<url><loc>${baseUrl}/faq</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
         ];
 
-        const salonUrls = salons.map(s =>
-            `<url><loc>${baseUrl}/s/${s.slug}</loc><lastmod>${now}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>`
+        const salonUrls = salons.filter(s => s.slug).map(s =>
+            `<url><loc>${baseUrl}/s/${encodeURIComponent(s.slug)}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`
         );
 
         const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -1888,6 +1898,12 @@ route('GET', '/api/pro/salon/:salonId/sms-status', async (req, res, params) => {
             packs: SMS_PACKS,
             configured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
             settings: smsSettingsOf(salon),
+            // Name shown to clients instead of a phone number (TWILIO_ALPHA_SENDER).
+            sender: {
+                enabled: process.env.TWILIO_ALPHA_SENDER === 'true',
+                name: senderNameFor(salon),
+                default: senderNameFor(salon, { custom: false }),
+            },
         }
     });
 });
@@ -1896,13 +1912,35 @@ route('PUT', '/api/pro/salon/:salonId/sms-settings', async (req, res, params) =>
     const user = verifySalonAccess(req, params.salonId);
     if (!user) return json(res, 401, { success: false });
     const body = await parseBody(req);
-    const smsSettings = {
-        clientConfirmation: body.clientConfirmation === true,
-        clientReminder: body.clientReminder !== false,
-        ownerNotification: !!body.ownerNotification,
-        ownerPhone: (body.ownerPhone || '').trim(),
-    };
+    const salon = await db.findSalonById(params.salonId);
+    if (!salon) return json(res, 404, { success: false });
+    // Only the fields sent are changed: the mobile app sends the toggles only
+    // and must not wipe the sender name set on the web portal.
+    const smsSettings = smsSettingsOf(salon);
+    if ('clientConfirmation' in body) smsSettings.clientConfirmation = body.clientConfirmation === true;
+    if ('clientReminder' in body) smsSettings.clientReminder = body.clientReminder !== false;
+    if ('ownerNotification' in body) smsSettings.ownerNotification = !!body.ownerNotification;
+    if ('ownerPhone' in body) smsSettings.ownerPhone = String(body.ownerPhone || '').trim();
+    const previousSender = smsSettings.senderName || '';
+    if ('senderName' in body) {
+        const raw = String(body.senderName || '').trim();
+        const name = smsSenderName(raw);
+        if (raw && !name) return json(res, 400, { success: false, error: "Le nom d'expéditeur doit contenir au moins une lettre (11 caractères max, sans accents)." });
+        if (name && isProtectedSenderName(name)) return json(res, 400, { success: false, error: "Ce nom d'expéditeur n'est pas autorisé (nom de banque, d'opérateur ou de marque protégée)." });
+        smsSettings.senderName = name;
+    }
+    // Employees may flip the client SMS toggles (mobile app), not the owner's
+    // settings: sender name, alert phone, owner alert.
+    if (user.role === 'employee') {
+        const before = smsSettingsOf(salon);
+        if (['senderName', 'ownerPhone', 'ownerNotification'].some(k => smsSettings[k] !== before[k])) {
+            return json(res, 403, { success: false, error: 'Réservé au propriétaire du salon' });
+        }
+    }
     await db.updateSalon(params.salonId, { smsSettings });
+    if (smsSettings.senderName !== previousSender) {
+        await db.addSalonLog(params.salonId, 'sms_sender_changed', { from: previousSender, to: smsSettings.senderName, role: user.role });
+    }
     json(res, 200, { success: true, data: smsSettings });
 });
 
@@ -3575,6 +3613,12 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
+    // robots.txt / sitemap.xml: generated (routes declared above), not files.
+    if (req.method === 'GET' && (pathname === '/robots.txt' || pathname === '/sitemap.xml')) {
+        const r = routes.find(x => x.method === 'GET' && x.regex.test(pathname));
+        return r.handler(req, res, {});
+    }
+
     // Static files
     const mimeTypes = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webp': 'image/webp', '.woff2': 'font/woff2' };
     let filePath;
@@ -3742,7 +3786,7 @@ tr+tr td{border-top:1px solid #f0f0f0}
         // Public URL given to the App Store / Play Store listings
         filePath = path.join(__dirname, 'saas/cgu.html');
     }
-    else if (pathname === '/support' || pathname === '/support.html') {
+    else if (pathname === '/support' || pathname === '/support.html' || pathname === '/faq') {   // /faq is in the sitemap
         filePath = path.join(__dirname, 'saas/faq.html');
     }
     else if (pathname.startsWith('/saas/')) {
