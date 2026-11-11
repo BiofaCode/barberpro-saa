@@ -15,7 +15,33 @@ function getTwilioClient() {
     return twilioClient;
 }
 
-const FROM = process.env.TWILIO_PHONE_NUMBER || '';
+// ---- Sender ----
+// With TWILIO_ALPHA_SENDER=true the client sees the salon's name instead of a
+// phone number (alphanumeric sender ID: Switzerland supports it without
+// registration, same price, but the client cannot reply). Only used for Swiss
+// and Liechtenstein numbers; other countries keep TWILIO_PHONE_NUMBER.
+// Twilio rules: 1-11 chars, A-Z a-z 0-9 and space, at least one letter.
+const SENDER_MAX = 11;
+function smsSenderName(name) {
+    const clean = String(name || '')
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/['’‘`]/g, '')
+        .replace(/[^A-Za-z0-9 ]+/g, ' ')
+        .replace(/\s+/g, ' ').trim();
+    let out = clean;
+    if (out.length > SENDER_MAX) {
+        const cut = out.slice(0, SENDER_MAX + 1).lastIndexOf(' ');
+        out = (cut > 0 ? out.slice(0, cut) : out.slice(0, SENDER_MAX)).trim();
+    }
+    return /[A-Za-z]/.test(out) ? out : '';
+}
+function senderFor(phone, salon) {
+    const number = process.env.TWILIO_PHONE_NUMBER || '';
+    const alphaOk = process.env.TWILIO_ALPHA_SENDER === 'true' && /^\+(41|423)/.test(phone);
+    if (!alphaOk) return { from: number, fallback: '' };
+    const name = salon ? (smsSenderName(salon.smsSettings?.senderName) || smsSenderName(salon.name)) : '';
+    return { from: name || 'Kreno', fallback: number };
+}
 
 // ---- Packs de crédits SMS ----
 // Twilio CH ≈ 0.0725 USD (~0.07 CHF) per SMS + Stripe ~2.9% + 0.30 CHF per
@@ -55,7 +81,8 @@ function buildSMS(required, optional = []) {
 }
 
 // ---- Base send function ----
-async function sendSMS(to, body) {
+// `salon` sets the sender name (null = "Kreno", e.g. for the owner's alert).
+async function sendSMS(to, body, salon = null) {
     if (process.env.TWILIO_TEST_MODE === 'true') {
         console.log(`  [TEST] SMS skipped → ${to}: ${body.substring(0, 60)}`);
         return { success: true, test: true };
@@ -65,10 +92,6 @@ async function sendSMS(to, body) {
         console.warn(`  ⚠️ SMS non envoyé (Twilio non configuré): ${to}`);
         return { success: false, reason: 'not_configured' };
     }
-    if (!FROM) {
-        console.warn('  ⚠️ TWILIO_PHONE_NUMBER manquant');
-        return { success: false, reason: 'no_from' };
-    }
 
     // Clean phone number — ensure international format
     let phone = to.replace(/\s/g, '');
@@ -76,8 +99,24 @@ async function sendSMS(to, body) {
     else if (phone.startsWith('0')) phone = '+41' + phone.slice(1); // Swiss local format
     else if (!phone.startsWith('+')) phone = '+' + phone.replace(/\D/g, '');
 
+    const { from, fallback } = senderFor(phone, salon);
+    if (!from) {
+        console.warn('  ⚠️ TWILIO_PHONE_NUMBER manquant');
+        return { success: false, reason: 'no_from' };
+    }
+
+    const text = toGSM7(body);
     try {
-        const msg = await client.messages.create({ from: FROM, to: phone, body: toGSM7(body) });
+        let msg;
+        try {
+            msg = await client.messages.create({ from, to: phone, body: text });
+        } catch (e) {
+            // Alphanumeric sender refused (not enabled on the account, carrier
+            // rule...): send it from the Twilio number instead of losing the SMS.
+            if (!fallback) throw e;
+            console.warn(`  ⚠️ Expéditeur "${from}" refusé (${e.code || e.message}), envoi depuis le numéro`);
+            msg = await client.messages.create({ from: fallback, to: phone, body: text });
+        }
         console.log(`  📱 SMS envoyé à ${phone} (SID: ${msg.sid})`);
         return { success: true, sid: msg.sid };
     } catch (e) {
@@ -103,7 +142,7 @@ async function sendSMSConfirmation(booking, salon) {
         `RDV confirmé chez ${salon.name || 'Kreno'}`,
         `${formatDateFR(booking.date)} à ${booking.time} - ${booking.serviceName}`,
     ], [salon.address, 'À bientôt !']);
-    return sendSMS(booking.clientPhone, body);
+    return sendSMS(booking.clientPhone, body, salon);
 }
 
 // ---- SMS Rappel J-1 ----
@@ -113,7 +152,7 @@ async function sendSMSReminder(booking, salon, { sameDay = false } = {}) {
         `Rappel : RDV ${sameDay ? "aujourd'hui" : 'demain'} chez ${salon.name || 'Kreno'}`,
         `${booking.time} - ${booking.serviceName}`,
     ], [salon.address, sameDay ? 'À tout à l\'heure !' : 'À demain !']);
-    return sendSMS(booking.clientPhone, body);
+    return sendSMS(booking.clientPhone, body, salon);
 }
 
 // ---- SMS Annulation ----
@@ -122,7 +161,7 @@ async function sendSMSCancellation(booking, salon) {
     const body = buildSMS([
         `Votre RDV du ${formatDateFR(booking.date)} à ${booking.time} chez ${salon.name || 'Kreno'} a été annulé.`,
     ], [salon.phone ? `Pour re-planifier : ${salon.phone}` : 'Contactez-nous pour re-planifier.']);
-    return sendSMS(booking.clientPhone, body);
+    return sendSMS(booking.clientPhone, body, salon);
 }
 
 // ---- SMS Reprogrammation (booking porte la NOUVELLE date/heure) ----
@@ -132,7 +171,7 @@ async function sendSMSReschedule(booking, salon) {
         `RDV déplacé chez ${salon.name || 'Kreno'}`,
         `Nouvelle date : ${formatDateFR(booking.date)} à ${booking.time} - ${booking.serviceName}`,
     ], [salon.address, 'À bientôt !']);
-    return sendSMS(booking.clientPhone, body);
+    return sendSMS(booking.clientPhone, body, salon);
 }
 
 // ---- SMS Notification propriétaire nouveau RDV ----
@@ -145,4 +184,4 @@ async function sendSMSOwnerNotification(booking, salon, ownerPhone) {
     return sendSMS(ownerPhone, body);
 }
 
-module.exports = { toGSM7, buildSMS, sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSReschedule, sendSMSOwnerNotification, SMS_PACKS };
+module.exports = { toGSM7, buildSMS, smsSenderName, sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSReschedule, sendSMSOwnerNotification, SMS_PACKS };
