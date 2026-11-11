@@ -15,7 +15,7 @@ const db = require('./db');
 const { sendBookingConfirmation, sendOTPEmail, sendPasswordResetEmail, sendWelcomeEmail, sendReminderEmail, sendCancellationConfirmation, sendCancellationAlertToOwner, sendRescheduleEmail, sendAdminNewSubscriptionEmail, sendReviewRequestEmail, sendEmployeeBookingNotification, sendReferralRewardEmail, sendPaymentFailedEmail, sendEmail } = require('./email');
 const cloudinary = require('cloudinary').v2;
 const webpush = require('web-push');
-const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSReschedule, sendSMSOwnerNotification, SMS_PACKS, smsSenderName } = require('./sms');
+const { sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSReschedule, sendSMSOwnerNotification, SMS_PACKS, smsSenderName, isProtectedSenderName, senderNameFor } = require('./sms');
 const { sendToSalon: sendFcmToSalon, init: initFcm } = require('./push');
 initFcm(); // eager init so the log appears at startup
 const { getCORSHeaders, SECURITY_HEADERS, getClientIP } = require('./lib/security');
@@ -1901,8 +1901,8 @@ route('GET', '/api/pro/salon/:salonId/sms-status', async (req, res, params) => {
             // Name shown to clients instead of a phone number (TWILIO_ALPHA_SENDER).
             sender: {
                 enabled: process.env.TWILIO_ALPHA_SENDER === 'true',
-                name: smsSenderName(salon.smsSettings?.senderName) || smsSenderName(salon.name) || 'Kreno',
-                default: smsSenderName(salon.name) || 'Kreno',
+                name: senderNameFor(salon),
+                default: senderNameFor(salon, { custom: false }),
             },
         }
     });
@@ -1921,13 +1921,26 @@ route('PUT', '/api/pro/salon/:salonId/sms-settings', async (req, res, params) =>
     if ('clientReminder' in body) smsSettings.clientReminder = body.clientReminder !== false;
     if ('ownerNotification' in body) smsSettings.ownerNotification = !!body.ownerNotification;
     if ('ownerPhone' in body) smsSettings.ownerPhone = String(body.ownerPhone || '').trim();
+    const previousSender = smsSettings.senderName || '';
     if ('senderName' in body) {
         const raw = String(body.senderName || '').trim();
         const name = smsSenderName(raw);
         if (raw && !name) return json(res, 400, { success: false, error: "Le nom d'expéditeur doit contenir au moins une lettre (11 caractères max, sans accents)." });
+        if (name && isProtectedSenderName(name)) return json(res, 400, { success: false, error: "Ce nom d'expéditeur n'est pas autorisé (nom de banque, d'opérateur ou de marque protégée)." });
         smsSettings.senderName = name;
     }
+    // Employees may flip the client SMS toggles (mobile app), not the owner's
+    // settings: sender name, alert phone, owner alert.
+    if (user.role === 'employee') {
+        const before = smsSettingsOf(salon);
+        if (['senderName', 'ownerPhone', 'ownerNotification'].some(k => smsSettings[k] !== before[k])) {
+            return json(res, 403, { success: false, error: 'Réservé au propriétaire du salon' });
+        }
+    }
     await db.updateSalon(params.salonId, { smsSettings });
+    if (smsSettings.senderName !== previousSender) {
+        await db.addSalonLog(params.salonId, 'sms_sender_changed', { from: previousSender, to: smsSettings.senderName, role: user.role });
+    }
     json(res, 200, { success: true, data: smsSettings });
 });
 

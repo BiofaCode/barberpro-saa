@@ -10,6 +10,7 @@ jest.mock('../db', () => ({
     seedIfEmpty: jest.fn(),
     findSalonById: jest.fn(),
     updateSalon: jest.fn(),
+    addSalonLog: jest.fn(),
     findSalons: jest.fn().mockResolvedValue([]),
     findOwners: jest.fn().mockResolvedValue([]),
     findEmployees: jest.fn().mockResolvedValue([]),
@@ -75,4 +76,33 @@ test('another salon cannot change the settings', async () => {
     const res = await request(server).put('/api/pro/salon/s2/sms-settings').set('Authorization', auth()).send({ clientReminder: false });
     expect(res.status).toBe(401);
     expect(db.updateSalon).not.toHaveBeenCalled();
+});
+
+describe('employees', () => {
+    const empAuth = () => `Bearer ${createToken({ employeeId: 'e1', salonId: 's1', role: 'employee' })}`;
+
+    test('cannot change the sender name or the owner alert phone', async () => {
+        const res = await request(server).put('/api/pro/salon/s1/sms-settings').set('Authorization', empAuth())
+            .send({ senderName: 'Autre', ownerPhone: '+41781111111', ownerNotification: false });
+        expect(res.status).toBe(403);
+        expect(db.updateSalon).not.toHaveBeenCalled();
+    });
+
+    test('can still send the unchanged values (mobile app toggles)', async () => {
+        const res = await request(server).put('/api/pro/salon/s1/sms-settings').set('Authorization', empAuth())
+            .send({ clientConfirmation: false, clientReminder: true, ownerNotification: true, ownerPhone: '+41790000000' });
+        expect(res.status).toBe(200);
+        expect(db.updateSalon).toHaveBeenCalledWith('s1', { smsSettings: { ...existing, clientConfirmation: false } });
+    });
+});
+
+test('protected sender name (bank, operator...) is refused', async () => {
+    const res = await put({ senderName: 'PostFinance' });
+    expect(res.status).toBe(400);
+    expect(db.updateSalon).not.toHaveBeenCalled();
+});
+
+test('sender name change is logged on the salon', async () => {
+    await put({ senderName: 'Zoe' });
+    expect(db.addSalonLog).toHaveBeenCalledWith('s1', 'sms_sender_changed', expect.objectContaining({ from: 'Atelier', to: 'Zoe' }));
 });

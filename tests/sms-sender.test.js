@@ -104,3 +104,22 @@ describe('sender used by Twilio', () => {
         expect(mockCreate).not.toHaveBeenCalled();
     });
 });
+
+describe('protected names are never used as sender (phishing)', () => {
+    test.each(['UBS', 'Post Finance', 'postfinance', 'TWINT', 'Swisscom', 'Raiffeisen', 'SBB CFF', 'PayPal', 'Apple', 'Police', 'UBS Coiffure', 'ZKB Coiffure'])(
+        'salon named %p is sent as "Kreno"', async name => {
+            await sms.sendSMSReminder(booking, { name });
+            expect(mockCreate.mock.calls[0][0].from).toBe('Kreno');
+        });
+
+    test('protected custom sender name falls back to the salon name', async () => {
+        await sms.sendSMSReminder(booking, { name: 'Dacutzz', smsSettings: { senderName: 'UBS' } });
+        expect(mockCreate.mock.calls[0][0].from).toBe('Dacutzz');
+    });
+
+    test('ordinary words are allowed', () => {
+        for (const n of ['Swiss Cut', 'Salt and Pepper', 'Post Barber', 'Le Salon', 'Dacutzz']) {
+            expect(sms.isProtectedSenderName(n)).toBe(false);
+        }
+    });
+});

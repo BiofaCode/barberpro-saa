@@ -35,12 +35,36 @@ function smsSenderName(name) {
     }
     return /[A-Za-z]/.test(out) ? out : '';
 }
+// Anti-phishing: anyone can sign up and name a salon "UBS", so names of banks,
+// payment apps, carriers, post, transport, big brands and police are never
+// used as sender. PROTECTED_WORDS: blocked anywhere in the name (also two
+// words glued: "Post Finance"). PROTECTED_EXACT: common words, blocked only
+// when they are the whole name ("Salt" yes, "Salt and Pepper" no).
+const PROTECTED_WORDS = new Set([
+    'ubs', 'creditsuisse', 'postfinance', 'laposte', 'swisspost', 'diepost', 'raiffeisen', 'zkb',
+    'bcv', 'bcge', 'bcn', 'bcf', 'bcvs', 'bcj', 'migrosbank', 'cembra', 'swissquote', 'revolut',
+    'twint', 'paypal', 'visa', 'mastercard', 'amex', 'swisscom', 'sunrise', 'sbb', 'cff', 'ffs',
+    'swisspass', 'swissid', 'dhl', 'ups', 'fedex', 'apple', 'icloud', 'google', 'amazon',
+    'microsoft', 'netflix', 'whatsapp', 'police', 'polizei', 'polizia', 'fedpol', 'kantonspolizei',
+]);
+const PROTECTED_EXACT = new Set(['salt', 'post', 'swiss', 'bank', 'banque', 'admin', 'info', 'sms', 'security', 'verify', 'support']);
+function isProtectedSenderName(name) {
+    const words = smsSenderName(name).toLowerCase().split(' ').filter(Boolean);
+    if (!words.length) return false;
+    if (PROTECTED_EXACT.has(words.join(''))) return true;
+    return words.some((w, i) => PROTECTED_WORDS.has(w) || PROTECTED_WORDS.has(w + (words[i + 1] || '')))
+        || PROTECTED_WORDS.has(words.join(''));
+}
 function senderFor(phone, salon) {
     const number = process.env.TWILIO_PHONE_NUMBER || '';
     const alphaOk = process.env.TWILIO_ALPHA_SENDER === 'true' && /^\+(41|423)/.test(phone);
     if (!alphaOk) return { from: number, fallback: '' };
-    const name = salon ? (smsSenderName(salon.smsSettings?.senderName) || smsSenderName(salon.name)) : '';
-    return { from: name || 'Kreno', fallback: number };
+    return { from: salon ? senderNameFor(salon) : 'Kreno', fallback: number };
+}
+// Name clients see: custom name, else salon name, else "Kreno" (protected names skipped).
+function senderNameFor(salon, { custom = true } = {}) {
+    return [custom ? salon?.smsSettings?.senderName : '', salon?.name]
+        .map(smsSenderName).find(n => n && !isProtectedSenderName(n)) || 'Kreno';
 }
 
 // ---- Packs de crédits SMS ----
@@ -184,4 +208,4 @@ async function sendSMSOwnerNotification(booking, salon, ownerPhone) {
     return sendSMS(ownerPhone, body);
 }
 
-module.exports = { toGSM7, buildSMS, smsSenderName, sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSReschedule, sendSMSOwnerNotification, SMS_PACKS };
+module.exports = { toGSM7, buildSMS, smsSenderName, isProtectedSenderName, senderNameFor, sendSMSConfirmation, sendSMSReminder, sendSMSCancellation, sendSMSReschedule, sendSMSOwnerNotification, SMS_PACKS };
