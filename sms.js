@@ -54,14 +54,16 @@ function isProtectedSenderName(name) {
     const base = smsSenderName(name).toLowerCase().replace(/[034578]/g, c => LEET[c] ?? c);
     if (!base.trim()) return false;
     return [base.replace(/1/g, 'i'), base.replace(/1/g, 'l')].some(variant => {
-        const words = variant.split(' ').filter(Boolean);
+        // "U B S Info" -> "ubs info": single letters spaced out are glued back.
+        const collapsed = variant.replace(/\b([a-z0-9]) (?=[a-z0-9]\b)/g, '$1');
+        const words = collapsed.split(' ').filter(Boolean);
         const joined = words.join('');
         if (PROTECTED_EXACT.has(joined)) return true;
         for (const p of PROTECTED_WORDS) {
             // Long names: anywhere, even glued or disguised ("PostFinanceCH",
             // "MyTw1nt"). Short acronyms (ubs, cff, visa...): whole
             // word only, so "Visage" or "Upscale" stay allowed.
-            if (p.length >= 5 ? joined.includes(p) : words.includes(p)) return true;
+            if (p.length >= 5 ? joined.includes(p) : (joined === p || words.some((w, i) => w === p || w + (words[i + 1] || '') === p))) return true;
         }
         return false;
     });

@@ -125,10 +125,10 @@ describe('protected names are never used as sender (phishing)', () => {
 });
 
 describe('disguised protected names', () => {
-    test.each(['PostFinanceCH', 'P0stFinance', 'MyTw1nt', 'Swissc0m', 'UB5', 'Raiffeisen24', 'paypal pay'])('%p is protected', n => {
+    test.each(['PostFinanceCH', 'P0stFinance', 'MyTw1nt', 'Swissc0m', 'UB5', 'Raiffeisen24', 'paypal pay', 'U B S', 'Z K B', 'U B S Info', 'Info U B S', 'UB S', 'S B B'])('%p is protected', n => {
         expect(sms.isProtectedSenderName(n)).toBe(true);
     });
-    test.each(['Visage', 'Upscale', 'Cuts 4 You', 'Studio 54', 'Barber 1'])('%p is allowed', n => {
+    test.each(['Visage', 'Upscale', 'Cuts 4 You', 'Studio 54', 'Barber 1', 'A B Coiffure', 'Salon K B'])('%p is allowed', n => {
         expect(sms.isProtectedSenderName(n)).toBe(false);
     });
 });
