@@ -8,7 +8,7 @@ expliquer simplement, étape par étape, sans jargon. Il veut qu'on avance
 ## 1. Où on en est
 
 PR #53 à #56 fusionnées dans `main`. Le travail du 11 novembre (ci-dessous) est sur
-`claude/beautiful-edison-u9lm2z`, en PR à fusionner. Tests : **210 Jest + 9 Flutter**, verts en CI (GitHub Actions,
+`claude/beautiful-edison-u9lm2z`, en PR à fusionner. Tests : **222 Jest + 9 Flutter**, verts en CI (GitHub Actions,
 `.github/workflows/tests.yml`, sur chaque PR et push sur `main`).
 
 ### Fait le 11 novembre 2026 (branche `claude/beautiful-edison-u9lm2z`, PR à fusionner)
@@ -37,7 +37,7 @@ PR #53 à #56 fusionnées dans `main`. Le travail du 11 novembre (ci-dessous) es
 - **Flutter figé à 3.47.9** (CI GitHub + `codemagic.yaml`) : Flutter 3.50 (sorti le 10-11 nov.)
   déclare obsolète `package:flutter/material.dart` et faisait échouer la CI. Montée de version
   à faire volontairement plus tard (migration vers `material_ui`).
-- Tests : **210 Jest** (nouveaux : `sms-sender`, `sms-settings`, `static-pages`).
+- Tests : **222 Jest** (nouveaux : `sms-sender`, `sms-settings`, `static-pages`).
 
 ### Fait pendant la session précédente
 - **Réservation publique** : validation serveur (nom, prestation existante, date

@@ -48,12 +48,23 @@ const PROTECTED_WORDS = new Set([
     'microsoft', 'netflix', 'whatsapp', 'police', 'polizei', 'polizia', 'fedpol', 'kantonspolizei',
 ]);
 const PROTECTED_EXACT = new Set(['salt', 'post', 'swiss', 'bank', 'banque', 'admin', 'info', 'sms', 'security', 'verify', 'support']);
+// Digits used as look-alike letters ("P0stFinance", "UB5"); 1 is tried as i and l.
+const LEET = { 0: 'o', 3: 'e', 4: 'a', 5: 's', 7: 't', 8: 'b' };
 function isProtectedSenderName(name) {
-    const words = smsSenderName(name).toLowerCase().split(' ').filter(Boolean);
-    if (!words.length) return false;
-    if (PROTECTED_EXACT.has(words.join(''))) return true;
-    return words.some((w, i) => PROTECTED_WORDS.has(w) || PROTECTED_WORDS.has(w + (words[i + 1] || '')))
-        || PROTECTED_WORDS.has(words.join(''));
+    const base = smsSenderName(name).toLowerCase().replace(/[034578]/g, c => LEET[c] ?? c);
+    if (!base.trim()) return false;
+    return [base.replace(/1/g, 'i'), base.replace(/1/g, 'l')].some(variant => {
+        const words = variant.split(' ').filter(Boolean);
+        const joined = words.join('');
+        if (PROTECTED_EXACT.has(joined)) return true;
+        for (const p of PROTECTED_WORDS) {
+            // Long names: anywhere, even glued or disguised ("PostFinanceCH",
+            // "MyTw1nt"). Short acronyms (ubs, cff, visa...): whole
+            // word only, so "Visage" or "Upscale" stay allowed.
+            if (p.length >= 5 ? joined.includes(p) : words.includes(p)) return true;
+        }
+        return false;
+    });
 }
 function senderFor(phone, salon) {
     const number = process.env.TWILIO_PHONE_NUMBER || '';
