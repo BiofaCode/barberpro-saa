@@ -2318,6 +2318,14 @@ h3 {
     grid-template-columns: repeat(3, 1fr);
   }
 
+  /* 5 étapes ne tiennent pas sur 390px : défilement horizontal au lieu d'être coupées à gauche */
+  .booking-modal-steps {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .booking-modal-steps::-webkit-scrollbar { display: none; }
+
   /* Bigger tap targets for service/employee cards */
   .bm-service-card {
     min-height: 80px;

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Démo Kreno × Da Cutzz</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; background: #fafafa; color: #111; }
+  a.bm { display: inline-block; padding: 14px 22px; border-radius: 999px; background: #ff66c4; color: #111; font-weight: 700; text-decoration: none; }
+  code { background: #eee; padding: 2px 6px; border-radius: 4px; }
+  li { margin: 6px 0; }
+</style>
+</head>
+<body>
+  <h1>Démo « Kreno sur dacutzz.ch »</h1>
+  <p>Ce favori charge le module Kreno <strong>sur le vrai site de Da Cutzz, dans ton navigateur uniquement</strong>.
+     Rien n'est modifié sur son WordPress : si tu recharges la page, tout redevient comme avant.</p>
+
+  <p><strong>1.</strong> Glisse ce bouton dans ta barre de favoris :</p>
+  <p><a class="bm" href="javascript:(function(){var SLUG='dacutzz-demo';function hook(){document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('#header-booking-link,[id^=amelia-step-booking-btn],.amelia-step-booking-button-trigger');if(!t)return;e.preventDefault();e.stopImmediatePropagation();Kreno.open(SLUG);},true);Kreno.open(SLUG);}if(window.Kreno){Kreno.open(SLUG);return;}var s=document.createElement('script');s.src='https://kreno.ch/embed.js';s.onload=hook;document.body.appendChild(s);})();">Réserver avec Kreno</a></p>
+
+  <p><strong>2.</strong> Ouvre <a href="https://dacutzz.ch/">dacutzz.ch</a> et clique sur le favori :</p>
+  <ul>
+    <li>la réservation Kreno s'ouvre <strong>par-dessus son site</strong> ;</li>
+    <li>ensuite, ses <strong>propres boutons « Réserver »</strong> de Divio (en-tête, Amelia) ouvrent Kreno au lieu de l'ancien système.</li>
+  </ul>
+
+  <p>Le module utilisé est celui de Kreno (<code>kreno.ch/embed.js</code> — déjà en ligne).<br>
+     Sur iPhone, les favoris JavaScript sont pénibles : fais cette partie de la démo sur l'ordinateur.</p>
+</body>
+</html>

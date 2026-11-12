@@ -414,12 +414,11 @@ function applySalonBranding(salon) {
           const dotsEl = document.getElementById('testimonialsDots');
           if (dotsEl) setupTestimonialDots(testimonialsGrid, dotsEl, allCards.length);
 
+          // Pas de `return` ici : il sautait updateFooter / badge / équipe pour les salons à >3 avis.
           if (allCards.length > 3) {
             initTestimonialCarousel(testimonialsGrid);
-            return;
-          }
-          // ≤3 cards → grid layout on desktop only; carousel CSS handles mobile
-          if (window.innerWidth > 768) {
+          } else if (window.innerWidth > 768) {
+            // ≤3 cards → grid layout on desktop only; carousel CSS handles mobile
             const cols = 'repeat(auto-fit,minmax(260px,1fr))';
             testimonialsGrid.style.cssText = `display:grid;grid-template-columns:${cols};gap:20px;overflow:visible;scroll-snap-type:none;padding:0`;
           }
