@@ -1,0 +1,35 @@
+<!--
+  Démo Kreno sur dacutzz.ch — invisible pour les vrais visiteurs.
+  À coller dans le pied de page du site (plugin WPCode « Footer », ou Elementor → Code personnalisé → </body>).
+
+  Activer  : ouvrir https://dacutzz.ch/?kreno=demo  (reste actif sur toutes les pages de l'onglet)
+  Couper   : https://dacutzz.ch/?kreno=off  (ou fermer l'onglet)
+  Effet    : les boutons « Réserver » de Divio (en-tête, boutons Amelia) ouvrent Kreno au lieu d'Amelia.
+             Le lien d'Ottilie (co-labs) n'est pas touché.
+  Le jour J : retirer ce bloc et mettre à la place  <script src="https://kreno.ch/embed.js" defer></script>
+              + lien des boutons → https://kreno.ch/s/dacutzz  (voir dacutzz-demo.md).
+-->
+<script>
+(function () {
+  var q = new URLSearchParams(location.search).get('kreno');
+  try {
+    if (q === 'demo') sessionStorage.setItem('kreno_demo', '1');
+    if (q === 'off') sessionStorage.removeItem('kreno_demo');
+    if (sessionStorage.getItem('kreno_demo') !== '1') return;
+  } catch (e) { if (q !== 'demo') return; }
+
+  var SLUG = 'dacutzz-demo';
+  var BUTTONS = '#header-booking-link, a[href$="#open-booking"], [id^=amelia-step-booking-btn], .amelia-step-booking-button-trigger';
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest && e.target.closest(BUTTONS);
+    if (!t || !window.Kreno) return;
+    e.preventDefault();
+    e.stopImmediatePropagation(); // empêche Amelia de s'ouvrir aussi
+    window.Kreno.open(SLUG);
+  }, true);
+  var s = document.createElement('script');
+  s.src = 'https://kreno.ch/embed.js';
+  s.defer = true;
+  document.head.appendChild(s);
+})();
+</script>

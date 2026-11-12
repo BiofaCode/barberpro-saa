@@ -14,14 +14,30 @@
 Recréer la démo : `node scripts/seed-dacutzz.js` (nouveau mot de passe). Supprimer : `node scripts/seed-dacutzz.js --delete`.
 ⚠️ Un ancien salon de test `dacutzz` (mars 2026) existe : le seed refuse de le toucher.
 
-## Déroulé (15 min)
-1. **Son site, avec Kreno dedans** (ordi) : dacutzz.ch → favori → il clique sur *son* bouton « Réserver » → c'est Kreno qui s'ouvre, à ses couleurs, ses prestations, ses prix.
-2. **Il réserve lui-même** depuis ton téléphone (lien embed) → le RDV apparaît dans l'app / portail.
-3. **App mobile** (TestFlight, connecté avec le compte démo) : agenda de la semaine, fiche client, bloquer un créneau.
-4. **Portail pro** : stats, clients, avis, réglages SMS.
-5. **Le plan de transition** (ci-dessous) + prix.
+## Contexte
+Le site dacutzz.ch est géré par nous (accès hébergeur + phpMyAdmin). Objectif : remplacer Amelia (soucis +
+peu personnalisable) par Kreno, notre outil — toute fonctionnalité manquante peut être ajoutée.
+**Offre : 40.-/mois tout compris, migration offerte** (même budget que sa formule Amelia).
+Facturation : salon créé en admin + Stripe Payment Link mensuel 40 CHF (voir CLAUDE.md « Plans & abonnement »).
 
-Ne pas promettre : date App Store (dire « en test »), synchro automatique bidirectionnelle avec Amelia.
+## Préparation (la veille)
+1. Coller `docs/demo/wordpress-demo-snippet.html` dans le pied de page WordPress (WPCode → Footer). Inactif pour les visiteurs.
+2. Export Amelia (phpMyAdmin → `docs/migration/amelia-export.sql` → CSV), puis :
+   ```
+   DACUTZZ_DEMO_PASSWORD=<mdp actuel> node scripts/seed-dacutzz.js --vide
+   node scripts/import-bookings-csv.js --salon dacutzz-demo --file rdv.csv            # simulation
+   node scripts/import-bookings-csv.js --salon dacutzz-demo --file rdv.csv --commit   # import
+   ```
+   → l'app affiche **son vrai agenda**. Aucun email/SMS/rappel envoyé aux clients.
+3. App mobile connectée au compte démo ; ouvrir une fois `https://dacutzz.ch/?kreno=demo` pour vérifier.
+
+## Déroulé (tout sur le téléphone, 10 min)
+1. Ouvrir `dacutzz.ch/?kreno=demo` → **il appuie sur son bouton** « Réserver avec le Coiffeur Barbier » → Kreno s'ouvre sur son site.
+2. Il réserve un créneau → la notif / le RDV arrive dans l'app.
+3. App : **ses vrais RDV de la semaine** (importés d'Amelia), fiche client, bloquer un créneau.
+4. « Ce qui ne te plaît pas dans Amelia, on l'ajoute. » Noter ses demandes.
+5. 40.-/mois, migration offerte, on bascule quand il veut, retour arrière en 1 min.
+Après la démo : `dacutzz.ch/?kreno=off`, supprimer le RDV test.
 
 ## Plan de transition
 | Phase | Les clients réservent sur | Kreno |

@@ -14,6 +14,7 @@
        node scripts/seed-dacutzz.js
    Affiche à la fin l'URL publique, l'URL d'intégration et les identifiants.
    Pour supprimer : relancer avec --delete
+   Sans faux RDV/avis (pour importer les vrais RDV Amelia) : --vide
 */
 
 require('dotenv').config();
@@ -25,6 +26,7 @@ const db = require('../db');
 const slugArg = process.argv.indexOf('--slug');
 const SLUG = slugArg > -1 ? process.argv[slugArg + 1] : 'dacutzz-demo';
 const OWNER_EMAIL = `demo-${SLUG}@kreno.ch`;
+const EMPTY = process.argv.includes('--vide');
 // Mot de passe aléatoire à chaque seed (le salon tourne sur la base de prod).
 const OWNER_PASSWORD = process.env.DACUTZZ_DEMO_PASSWORD || crypto.randomBytes(6).toString('base64url');
 const LOGO = 'https://dacutzz.ch/wp-content/uploads/2026/01/cropped-Logo-Dacutzz.png';
@@ -137,8 +139,8 @@ async function run() {
     subscription: { plan: 'pro', status: 'active', price: 49 },
     smsSettings: { clientConfirmation: true, clientReminder: true, ownerNotification: false },
     smsCredits: 0,
-    rating: 4.9,
-    reviewCount: REVIEWS.length,
+    rating: EMPTY ? 0 : 4.9,
+    reviewCount: EMPTY ? 0 : REVIEWS.length,
     active: true,
     demoSeed: 'seed-dacutzz', // marqueur : autorise ce script à recréer / supprimer ce salon
   });
@@ -157,6 +159,12 @@ async function run() {
   await db.updateSalon(salonId, {
     services: services.map(({ _who, ...s }) => ({ ...s, assignedEmployees: [String(staff[_who]._id)] })),
   });
+
+  // --vide : salon sans faux clients / RDV / avis (pour y importer les vrais RDV Amelia).
+  if (EMPTY) {
+    console.log('📭 Mode --vide : aucun faux RDV ni avis (importer ensuite avec import-bookings-csv.js)');
+    return done();
+  }
 
   const clients = [];
   for (const c of CLIENTS) clients.push(await db.findOrCreateClient(salonId, { ...c, price: 0 }));
@@ -184,7 +192,10 @@ async function run() {
     });
   }
   console.log(`⭐ ${REVIEWS.length} avis créés`);
+  done();
+}
 
+function done() {
   const base = process.env.PUBLIC_BASE_URL || 'https://kreno.ch';
   console.log('\n✅ Démo Da Cutzz prête');
   console.log(`   Site Kreno      : ${base}/s/${SLUG}`);
