@@ -74,7 +74,7 @@ function showPaymentSuccess() {
         start.setHours(h, mn, 0, 0);
         const title = `${c.name || 'RDV'} @ ${c.salon || ''}`;
         const desc = c.emp ? `avec ${c.emp}` : '';
-        calHtml = calendarButtonsHtml(start, c.dur || 60, title, desc, c.salon || '');
+        calHtml = calendarButtonsHtml(start, c.dur || 60, title, desc, c.salon || '', { id: c.id, token: c.token });
       }
       sessionStorage.removeItem('kreno_pending_cal');
     }
@@ -1054,6 +1054,7 @@ async function submitBooking() {
             dur: bmState.service?.duration || 60,
             emp: bmState.employee?.name || '',
             salon: SALON_DATA?.name || '',
+            id: data.data.bookingId || '', token: data.data.token || '',
           }));
         } catch (e) { /* sessionStorage unavailable — non-blocking */ }
         // Stripe Checkout refuses to load inside an iframe: the parent page
@@ -1069,7 +1070,16 @@ async function submitBooking() {
   // Flow standard (sans paiement en ligne)
   try {
     const endpoint = slug ? `/api/salon/${slug}/book` : '/api/bookings';
-    await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(booking) });
+    const r = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(booking) });
+    const d = await r.json().catch(() => null);
+    // Refused (slot just taken, closed day...): never show "confirmed".
+    if (d && d.success === false) {
+      showToast(d.error || "Ce créneau n'est plus disponible. Choisissez un autre horaire.");
+      const idx = bmSteps.findIndex(st => st.id === 'datetime');
+      if (idx >= 0) { bmState.time = null; goToStep(idx); renderBmTimeSlots(); }
+      return;
+    }
+    if (d?.data?._id && d.data.cancelToken) bmState.created = { id: d.data._id, token: d.data.cancelToken };
   } catch (e) {
     const b = JSON.parse(localStorage.getItem('kreno_bookings') || '[]');
     b.push(booking); localStorage.setItem('kreno_bookings', JSON.stringify(b));
@@ -1080,17 +1090,17 @@ async function submitBooking() {
 
 // Builds the "add to calendar" buttons HTML from explicit event details, so it
 // works both from live bmState and from values restored after a Stripe redirect.
-function calendarButtonsHtml(start, durMin, title, desc, location) {
+function calendarButtonsHtml(start, durMin, title, desc, location, ref) {
   try {
     if (!(start instanceof Date) || isNaN(start.getTime())) return '';
     const end = new Date(start.getTime() + (durMin || 60) * 60000);
     // UTC timestamps: no timezone ambiguity in Google or in the .ics file.
     const utc = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-    // Served by the server (/api/ics): data: URLs are blocked inside the embed
-    // iframe and by iOS Safari. target=_blank so it opens outside the popup.
-    const icsUrl = '/api/ics?' + new URLSearchParams({
-      s: start.toISOString(), e: end.toISOString(), t: title, d: desc || '', l: location || '',
-    }).toString();
+    // .ics served by the server from the stored booking (needs its id + secret
+    // token): data: URLs are blocked inside the embed iframe and by iOS Safari.
+    // target=_blank so it opens outside the popup.
+    const icsUrl = ref && ref.id && ref.token
+      ? `/api/bookings/${encodeURIComponent(ref.id)}/ics?token=${encodeURIComponent(ref.token)}` : '';
     const gcUrl = 'https://calendar.google.com/calendar/render?' + new URLSearchParams({
       action: 'TEMPLATE', text: title, dates: `${utc(start)}/${utc(end)}`, details: desc || '', location: location || '',
     }).toString();
@@ -1098,8 +1108,8 @@ function calendarButtonsHtml(start, durMin, title, desc, location) {
     const a = (href, label) => `<a href="${_esc(href)}" target="_blank" rel="noopener" style="${btnStyle}">${label}</a>`;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isAndroid = /Android/.test(navigator.userAgent);
-    if (isIOS) return `<div style="margin-bottom:0.5rem">${a(icsUrl, '📅 Ajouter au calendrier')}</div>`;
-    if (isAndroid) return `<div style="margin-bottom:0.5rem">${a(gcUrl, '📅 Ajouter à Google Agenda')}</div>`;
+    if (isIOS && icsUrl) return `<div style="margin-bottom:0.5rem">${a(icsUrl, '📅 Ajouter au calendrier')}</div>`;
+    if (isAndroid || !icsUrl) return `<div style="margin-bottom:0.5rem">${a(gcUrl, '📅 Ajouter à Google Agenda')}</div>`;
     return `<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:0.5rem">
       ${a(icsUrl, '📅 Apple / Outlook')}
       ${a(gcUrl, '📅 Google Agenda')}
@@ -1114,7 +1124,7 @@ function buildCalendarButtons() {
   start.setHours(h, mn, 0, 0);
   const title = `${bmState.service?.name || 'RDV'} @ ${SALON_DATA?.name || ''}`;
   const desc = bmState.employee ? `avec ${bmState.employee.name}` : '';
-  return calendarButtonsHtml(start, bmState.service?.duration || 60, title, desc, [SALON_DATA?.name, SALON_DATA?.address].filter(Boolean).join(', '));
+  return calendarButtonsHtml(start, bmState.service?.duration || 60, title, desc, [SALON_DATA?.name, SALON_DATA?.address].filter(Boolean).join(', '), bmState.created);
 }
 
 function showBookingSuccess() {

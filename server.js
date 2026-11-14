@@ -543,28 +543,35 @@ route('POST', '/api/admin/login', async (req, res) => {
     json(res, 200, { success: true, token });
 });
 
-// "Ajouter au calendrier" (website/js/app.js): a real .ics file served over HTTP.
-// data: URLs are blocked in iframes (embed popup) and by iOS Safari.
-// Only carries what the client already has on screen (no lookup, no personal data).
-route('GET', '/api/ics', async (req, res) => {
-    const q = new URL(req.url, 'http://localhost').searchParams;
-    const start = new Date(q.get('s') || '');
-    const end = new Date(q.get('e') || '');
-    if (isNaN(start) || isNaN(end) || end <= start || end - start > 24 * 3600 * 1000) {
-        return json(res, 400, { success: false, error: 'Dates invalides' });
-    }
-    const clean = (v, max) => String(v || '').slice(0, max)
+// "Ajouter au calendrier" (website/js/app.js): a real .ics file served over HTTP
+// (data: URLs are blocked in the embed iframe and by iOS Safari).
+// Built only from the stored booking + salon, and only with the booking's secret
+// token (same as the cancel link): a URL can't make kreno.ch serve arbitrary text.
+route('GET', '/api/bookings/:bookingId/ics', async (req, res, params) => {
+    const token = new URL(req.url, 'http://localhost').searchParams.get('token') || '';
+    let booking = null;
+    try { booking = await db.findBookingById(params.bookingId); } catch (e) { booking = null; }
+    const ok = booking && booking.cancelToken && token.length === booking.cancelToken.length &&
+        crypto.timingSafeEqual(Buffer.from(token), Buffer.from(booking.cancelToken));
+    if (!ok) return json(res, 404, { success: false, error: 'Rendez-vous introuvable' });
+    const salon = await db.findSalonById(booking.salon);
+    // Server runs in Europe/Zurich (TZ set at boot): local date + time = salon time.
+    const start = new Date(`${booking.date}T${booking.time}:00`);
+    if (isNaN(start)) return json(res, 404, { success: false, error: 'Rendez-vous introuvable' });
+    const end = new Date(start.getTime() + (Number(booking.duration) || 30) * 60000);
+    const clean = v => String(v || '').slice(0, 300)
         .replace(/[\r\n]+/g, ' ').replace(/\\/g, '\\\\').replace(/([,;])/g, '\\$1');
     const utc = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const salonName = salon?.name || 'Rendez-vous';
     const ics = [
         'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Kreno//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
         'BEGIN:VEVENT',
-        `UID:${crypto.randomBytes(8).toString('hex')}@kreno.ch`,
+        `UID:${booking._id}@kreno.ch`,
         `DTSTAMP:${utc(new Date())}`,
         `DTSTART:${utc(start)}`, `DTEND:${utc(end)}`,
-        `SUMMARY:${clean(q.get('t') || 'Rendez-vous', 200)}`,
-        q.get('d') ? `DESCRIPTION:${clean(q.get('d'), 500)}` : '',
-        q.get('l') ? `LOCATION:${clean(q.get('l'), 200)}` : '',
+        `SUMMARY:${clean(`${booking.serviceName || 'Rendez-vous'} - ${salonName}`)}`,
+        booking.employeeName ? `DESCRIPTION:${clean(`Avec ${booking.employeeName}`)}` : '',
+        `LOCATION:${clean([salonName, salon?.address].filter(Boolean).join(', '))}`,
         'BEGIN:VALARM', 'TRIGGER:-PT2H', 'ACTION:DISPLAY', 'DESCRIPTION:Rappel', 'END:VALARM',
         'END:VEVENT', 'END:VCALENDAR',
     ].filter(Boolean).join('\r\n');
@@ -3283,7 +3290,7 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
             cancel_url: `${baseUrl}/s/${salon.slug}?booking_cancel=true&booking_id=${booking._id}`,
         });
         console.log(`  💳 Paiement créé: ${body.clientName} - ${service.name} @ ${salon.name} (${amountCHF} CHF)`);
-        json(res, 200, { success: true, data: { checkoutUrl: session.url, bookingId: booking._id } });
+        json(res, 200, { success: true, data: { checkoutUrl: session.url, bookingId: booking._id, token: booking.cancelToken } });
     } catch (err) {
         // Annule le booking pending si Stripe échoue
         await db.updateBooking(booking._id, { status: 'cancelled', paymentStatus: 'failed' }).catch(() => {});
