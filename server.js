@@ -459,6 +459,16 @@ function pushDate(ymd) {
     return isNaN(d) ? ymd : d.toLocaleDateString('fr-CH', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+// ---- Online booking grid (website/js/slots.js) ----
+// slotInterval: how often a start time is offered; minGap: smallest hole allowed
+// between two bookings (0 = no rule). Defaults keep the historical 30-min grid.
+const SLOT_INTERVALS = [5, 10, 15, 20, 30, 45, 60];
+const MIN_GAPS = [0, 10, 15, 20, 30, 45, 60];
+const BOOKING_DEFAULTS = { slotInterval: 30, minGap: 0 };
+function bookingSettingsOf(salon) {
+    return { ...BOOKING_DEFAULTS, ...((salon && salon.bookingSettings) || {}) };
+}
+
 // ---- SMS (paid with the salon's prepaid credits) ----
 // Defaults: only the D-1 reminder is on. Confirmation, reschedule and
 // cancellation go by email (free); SMS for those are opt-in.
@@ -531,6 +541,39 @@ route('POST', '/api/admin/login', async (req, res) => {
     }
     const token = createToken({ role: 'superadmin' });
     json(res, 200, { success: true, token });
+});
+
+// "Ajouter au calendrier" (website/js/app.js): a real .ics file served over HTTP.
+// data: URLs are blocked in iframes (embed popup) and by iOS Safari.
+// Only carries what the client already has on screen (no lookup, no personal data).
+route('GET', '/api/ics', async (req, res) => {
+    const q = new URL(req.url, 'http://localhost').searchParams;
+    const start = new Date(q.get('s') || '');
+    const end = new Date(q.get('e') || '');
+    if (isNaN(start) || isNaN(end) || end <= start || end - start > 24 * 3600 * 1000) {
+        return json(res, 400, { success: false, error: 'Dates invalides' });
+    }
+    const clean = (v, max) => String(v || '').slice(0, max)
+        .replace(/[\r\n]+/g, ' ').replace(/\\/g, '\\\\').replace(/([,;])/g, '\\$1');
+    const utc = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const ics = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Kreno//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        `UID:${crypto.randomBytes(8).toString('hex')}@kreno.ch`,
+        `DTSTAMP:${utc(new Date())}`,
+        `DTSTART:${utc(start)}`, `DTEND:${utc(end)}`,
+        `SUMMARY:${clean(q.get('t') || 'Rendez-vous', 200)}`,
+        q.get('d') ? `DESCRIPTION:${clean(q.get('d'), 500)}` : '',
+        q.get('l') ? `LOCATION:${clean(q.get('l'), 200)}` : '',
+        'BEGIN:VALARM', 'TRIGGER:-PT2H', 'ACTION:DISPLAY', 'DESCRIPTION:Rappel', 'END:VALARM',
+        'END:VEVENT', 'END:VCALENDAR',
+    ].filter(Boolean).join('\r\n');
+    res.writeHead(200, {
+        'Content-Type': 'text/calendar; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="rendez-vous.ics"',
+        'Cache-Control': 'no-store',
+    });
+    res.end(ics);
 });
 
 route('GET', '/api/health', async (req, res) => {
@@ -1128,6 +1171,19 @@ route('PUT', '/api/pro/salon/:salonId', async (req, res, params) => {
     if (body.hours) updates.hours = body.hours;
     if (body.closedDates !== undefined) updates.closedDates = body.closedDates;
     if (body.category !== undefined) updates.category = body.category;
+    if (body.bookingSettings && typeof body.bookingSettings === 'object') {
+        const cur = bookingSettingsOf(salon);
+        const bs = body.bookingSettings;
+        if ('slotInterval' in bs) {
+            if (!SLOT_INTERVALS.includes(Number(bs.slotInterval))) return json(res, 400, { success: false, error: 'Intervalle invalide' });
+            cur.slotInterval = Number(bs.slotInterval);
+        }
+        if ('minGap' in bs) {
+            if (!MIN_GAPS.includes(Number(bs.minGap))) return json(res, 400, { success: false, error: 'Trou minimum invalide' });
+            cur.minGap = Number(bs.minGap);
+        }
+        updates.bookingSettings = cur;
+    }
 
     const updated = await db.updateSalon(params.salonId, updates);
     json(res, 200, { success: true, data: updated });
@@ -3017,6 +3073,7 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
             services: (salon.services || []).filter(s => s.active),
             hours: salon.hours,
             closedDates: salon.closedDates || [],
+            bookingSettings: bookingSettingsOf(salon),
             testimonials: salon.testimonials || [],
             employees: staff,
             rating: salon.rating, reviewCount: salon.reviewCount,

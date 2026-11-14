@@ -965,8 +965,11 @@ h3 {
 }
 
 .bm-cal-header span {
-  font-family: var(--font-heading);
-  font-size: 1rem;
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: capitalize;
 }
 
 .bm-cal-nav {
@@ -996,10 +999,9 @@ h3 {
 
 .bm-cal-dayname {
   text-align: center;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.02em;
   padding: 0.4rem 0;
   font-weight: 600;
 }
@@ -1011,7 +1013,9 @@ h3 {
   justify-content: center;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
   transition: all var(--transition-fast);
   border: none;
   background: none;
@@ -1035,9 +1039,9 @@ h3 {
 
 .bm-cal-day.disabled {
   color: var(--color-text-muted);
-  opacity: 0.25;
+  opacity: 0.3;
+  font-weight: 400;
   cursor: not-allowed;
-  text-decoration: line-through;
 }
 
 .bm-cal-day.empty {
@@ -1191,7 +1195,9 @@ h3 {
 .bm-recap-total strong {
   font-size: 1.2rem;
   color: var(--color-primary);
-  font-family: var(--font-heading);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .booking-modal-footer {
@@ -2325,6 +2331,10 @@ h3 {
     scrollbar-width: none;
   }
   .booking-modal-steps::-webkit-scrollbar { display: none; }
+  /* Centred when the steps fit, still scrollable when they don't
+     (justify-content:center would clip the first step on overflow). */
+  .booking-modal-steps > :first-child { margin-left: auto; }
+  .booking-modal-steps > :last-child { margin-right: auto; }
 
   /* Bigger tap targets for service/employee cards */
   .bm-service-card {
@@ -2600,7 +2610,17 @@ body {
 .bm-timeslot {
   position: relative;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
+
+.bm-slot-group {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: 0.6rem 0 0.1rem;
+}
+.bm-slot-group:first-child { margin-top: 0; }
 
 .bm-timeslot:hover:not(.bm-timeslot-skeleton):not(.bm-timeslot-taken) {
   border-color: var(--color-primary);
@@ -2652,9 +2672,8 @@ body {
 
 /* Calendar — disabled / past days */
 .bm-cal-day.disabled {
-  opacity: 0.2;
+  opacity: 0.3;
   cursor: not-allowed;
-  text-decoration: line-through;
   filter: grayscale(1);
 }
 

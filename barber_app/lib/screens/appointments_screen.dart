@@ -26,7 +26,7 @@ class AppointmentsScreen extends StatefulWidget {
 }
 
 class AppointmentsScreenState extends State<AppointmentsScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   List<BookingModel> _allBookings = [];
   bool _loading = true;
@@ -34,9 +34,11 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
 
   DateTime _selectedDate = DateTime.now();       // pour la vue liste
   DateTime _calendarDayDate = DateTime.now();    // pour la vue jour
-  // The list-view date strip starts 7 days back: open it on yesterday so
-  // today is visible (item = 52 px + 8 px margin).
-  final ScrollController _dateStripController = ScrollController(initialScrollOffset: 6 * 60.0);
+  // The list-view date strip starts 7 days back: open it scrolled so today is
+  // the first visible day (item = 52 px + 8 px margin). Past days stay one swipe away.
+  static const double _todayOffset = 7 * 60.0;
+  final ScrollController _dateStripController = ScrollController(initialScrollOffset: _todayOffset);
+  DateTime _openedOn = DateTime.now();
   static DateTime _getMondayOf(DateTime date) {
     final monday = date.subtract(Duration(days: date.weekday - 1));
     return DateTime(monday.year, monday.month, monday.day);
@@ -46,7 +48,33 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    WidgetsBinding.instance.addObserver(this);
     _loadBookings();
+  }
+
+  /// Back on today: selected list day, day view and the date strip.
+  void goToToday() {
+    final now = DateTime.now();
+    setState(() {
+      _selectedDate = now;
+      _calendarDayDate = now;
+      _openedOn = now;
+    });
+    _tabController.animateTo(0);
+    if (_dateStripController.hasClients) {
+      _dateStripController.animateTo(_todayOffset,
+          duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    }
+  }
+
+  // The app can stay in memory for days: when it comes back on a new day,
+  // don't leave the list on an old date.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && !_isSameDay(_openedOn, DateTime.now())) {
+      goToToday();
+      _loadBookings();
+    }
   }
 
   void reload() => _loadBookings();
@@ -133,6 +161,7 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     _dateStripController.dispose();
     super.dispose();
@@ -159,6 +188,23 @@ class AppointmentsScreenState extends State<AppointmentsScreen>
                     ),
                   ),
                   const Spacer(),
+                  if (!_isSameDay(activeDate, DateTime.now()))
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap: goToToday,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withAlpha(25),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text("Aujourd'hui",
+                              style: GoogleFonts.dmSans(
+                                  fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+                        ),
+                      ),
+                    ),
                   // Toggle views (icônes uniquement pour éviter l'overflow)
                   Container(
                     padding: const EdgeInsets.all(3),

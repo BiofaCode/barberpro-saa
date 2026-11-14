@@ -82,12 +82,12 @@ function senderNameFor(salon, { custom = true } = {}) {
 
 // ---- Packs de crédits SMS ----
 // Twilio CH ≈ 0.0725 USD (~0.07 CHF) per SMS + Stripe ~2.9% + 0.30 CHF per
-// purchase: >= 0.10 CHF/SMS keeps a margin even if the USD rises ~30%.
+// purchase. Sold ~0.14-0.15 CHF/SMS (≈ 40% margin, safe if the USD rises).
 // 1 credit = 1 SMS, and every template fits in one GSM-7 segment.
 const SMS_PACKS = {
-    starter:  { credits: 100, priceChf: 12, label: 'Pack 100 SMS' },
-    pro:      { credits: 300, priceChf: 33, label: 'Pack 300 SMS' },
-    max:      { credits: 600, priceChf: 60, label: 'Pack 600 SMS' },
+    starter:  { credits: 100, priceChf: 15, label: 'Pack 100 SMS' },
+    pro:      { credits: 330, priceChf: 50, label: 'Pack 330 SMS' },
+    max:      { credits: 700, priceChf: 100, label: 'Pack 700 SMS' },
 };
 
 // ---- GSM-7 ----
