@@ -90,6 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onTap(int index) {
+    // Tapping "RDV" again while already on it jumps back to today.
+    if (index == 1 && _currentIndex == 1) _appointmentsKey.currentState?.goToToday();
     setState(() => _currentIndex = index);
     if (index == 0) _dashboardKey.currentState?.reload();
     if (index == 1) _appointmentsKey.currentState?.reload();

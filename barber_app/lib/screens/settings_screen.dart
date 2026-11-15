@@ -895,7 +895,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 14),
             _buildSmsToggle(
               'SMS de confirmation au client',
-              settings['clientConfirmation'] != false,
+              settings['clientConfirmation'] == true,
               (v) => _saveSmsToggle(clientConfirmation: v),
             ),
             _buildSmsToggle(
@@ -932,7 +932,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         {'clientConfirmation': false, 'clientReminder': true};
     // Optimistic local update so the switch flips immediately.
     final newSettings = {
-      'clientConfirmation': clientConfirmation ?? (settings['clientConfirmation'] != false),
+      'clientConfirmation': clientConfirmation ?? (settings['clientConfirmation'] == true),
       'clientReminder': clientReminder ?? (settings['clientReminder'] != false),
       'ownerNotification': settings['ownerNotification'] == true,
       'ownerPhone': settings['ownerPhone'] ?? '',

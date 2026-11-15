@@ -20,16 +20,21 @@
 
   var SLUG = 'dacutzz-demo';
   var BUTTONS = '#header-booking-link, a[href$="#open-booking"], [id^=amelia-step-booking-btn], .amelia-step-booking-button-trigger';
+  var pending = false;
   document.addEventListener('click', function (e) {
     var t = e.target.closest && e.target.closest(BUTTONS);
-    if (!t || !window.Kreno) return;
+    if (!t) return;
+    // Toujours intercepter, même si Kreno n'est pas encore chargé :
+    // sinon un clic rapide ouvre Amelia.
     e.preventDefault();
-    e.stopImmediatePropagation(); // empêche Amelia de s'ouvrir aussi
-    window.Kreno.open(SLUG);
+    e.stopImmediatePropagation();
+    if (window.Kreno) window.Kreno.open(SLUG); else pending = true;
   }, true);
   var s = document.createElement('script');
   s.src = 'https://kreno.ch/embed.js';
-  s.defer = true;
+  s.async = true;
+  s.onload = function () { if (pending && window.Kreno) window.Kreno.open(SLUG); pending = false; };
+  s.onerror = function () { if (pending) location.href = 'https://kreno.ch/s/' + SLUG; };
   document.head.appendChild(s);
 })();
 </script>

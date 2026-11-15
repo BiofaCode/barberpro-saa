@@ -2858,6 +2858,28 @@ async function loadSettings() {
                 </div>
             </div>
 
+            <!-- CRÉNEAUX DE RÉSERVATION -->
+            <div class="card" style="margin-bottom:20px">
+                <div class="card-header"><h3>📅 Créneaux de réservation en ligne</h3></div>
+                <div class="card-body">
+                    <p style="font-size:.85rem;color:var(--text-sec);margin-bottom:12px">La durée de chaque prestation se règle dans « Prestations ». Ici, vous choisissez quels horaires sont proposés à vos clients.</p>
+                    <div class="form-group">
+                        <label class="form-label">Proposer un horaire toutes les</label>
+                        <select class="form-input form-input-full" id="bsSlotInterval">
+                            ${[5, 10, 15, 20, 30, 45, 60].map(v => `<option value="${v}" ${(salon.bookingSettings?.slotInterval || 30) === v ? 'selected' : ''}>${v} minutes</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Enchaîner les rendez-vous : refuser un trou de moins de</label>
+                        <select class="form-input form-input-full" id="bsMinGap">
+                            ${[0, 10, 15, 20, 30, 45, 60].map(v => `<option value="${v}" ${(salon.bookingSettings?.minGap || 0) === v ? 'selected' : ''}>${v === 0 ? 'Pas de règle' : v + ' minutes'}</option>`).join('')}
+                        </select>
+                        <p style="font-size:.8rem;color:var(--text-muted);margin-top:6px">Ex. 30 minutes : si une coupe finit à 9h45, le client peut réserver à 9h45 ou à partir de 10h15, mais pas à 10h (15 minutes perdues).</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveBookingSettings()">Enregistrer</button>
+                </div>
+            </div>
+
             <!-- CONGÉS / VACANCES -->
             <div class="card" style="margin-bottom:20px">
                 <div class="card-header"><h3>🏖 Congés & Fermetures</h3></div>
@@ -3176,6 +3198,26 @@ async function saveHours() {
             showToast('Horaires enregistrés ✅');
         } else {
             showToast('Erreur', 'error');
+        }
+    } catch (e) { showToast('Erreur de connexion', 'error'); }
+}
+
+async function saveBookingSettings() {
+    const bookingSettings = {
+        slotInterval: Number(document.getElementById('bsSlotInterval').value),
+        minGap: Number(document.getElementById('bsMinGap').value),
+    };
+    try {
+        const res = await apiFetch(`${API}/api/pro/salon/${salonId}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ bookingSettings })
+        });
+        const data = await res.json();
+        if (data.success) {
+            currentSalon = data.data;
+            showToast('Créneaux enregistrés ✅');
+        } else {
+            showToast(data.error || 'Erreur', 'error');
         }
     } catch (e) { showToast('Erreur de connexion', 'error'); }
 }

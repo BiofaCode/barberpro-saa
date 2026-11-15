@@ -74,7 +74,7 @@ function showPaymentSuccess() {
         start.setHours(h, mn, 0, 0);
         const title = `${c.name || 'RDV'} @ ${c.salon || ''}`;
         const desc = c.emp ? `avec ${c.emp}` : '';
-        calHtml = calendarButtonsHtml(start, c.dur || 60, title, desc, c.salon || '');
+        calHtml = calendarButtonsHtml(start, c.dur || 60, title, desc, c.salon || '', { id: c.id, token: c.token });
       }
       sessionStorage.removeItem('kreno_pending_cal');
     }
@@ -611,13 +611,15 @@ let bmSteps = [];
 
 function getEmployees() { return SALON_DATA?.employees || []; }
 function hasEmployees() { return getEmployees().length >= 1; }
+// A "who?" step only makes sense with a choice: a solo barber skips it.
+function needsEmployeeStep() { return getEmployees().length > 1; }
 function localDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function buildSteps() {
   const steps = [];
-  if (hasEmployees()) steps.push({ id: 'employee', label: 'Pro' });
+  if (needsEmployeeStep()) steps.push({ id: 'employee', label: 'Pro' });
   steps.push({ id: 'service', label: 'Prestation' });
   steps.push({ id: 'datetime', label: 'Date' });
   steps.push({ id: 'info', label: 'Infos' });
@@ -643,8 +645,13 @@ async function openBooking() {
   bmState = { stepIdx: 0, employee: null, service: null, date: null, time: null, month: new Date().getMonth(), year: new Date().getFullYear() };
   bmSteps = buildSteps();
   renderStepsBar();
-  if (hasEmployees()) populateEmployees();
-  else populateServices();
+  if (needsEmployeeStep()) populateEmployees();
+  else {
+    // Single pro: chosen automatically (their hours and bookings still apply).
+    const only = getEmployees()[0];
+    if (only) bmState.employee = { id: only._id, name: only.name };
+    populateServices();
+  }
 
   // Reset form fields
   ['bmFirstName', 'bmLastName', 'bmEmail', 'bmPhone', 'bmNotes'].forEach(id => {
@@ -948,32 +955,36 @@ async function renderBmTimeSlots() {
   grid.innerHTML = '';
 
   const hours = getOpenHours(bmState.date);
-  const [oH, oM] = hours.open.split(':').map(Number);
-  const [cH, cM] = hours.close.split(':').map(Number);
 
   const now = new Date();
   const isToday = bmState.date.toDateString() === now.toDateString();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const serviceDuration = bmState.service?.duration || 30;
 
-  let h = oH, m = oM;
-  while (h < cH || (h === cH && m < cM)) {
-    const t = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-    const slotMinutes = h * 60 + m;
-
-    // Skip past slots for today
-    if (!(isToday && slotMinutes <= currentMinutes)) {
-      const unavailable = isSlotUnavailable(t, takenSlots, blockedSlots, serviceDuration);
-      if (!unavailable) {
-        const el = document.createElement('div'); el.classList.add('bm-timeslot'); el.textContent = t;
-        el.addEventListener('click', () => {
-          grid.querySelectorAll('.bm-timeslot').forEach(s => s.classList.remove('selected'));
-          el.classList.add('selected'); bmState.time = t;
-        });
-        grid.appendChild(el);
-      }
+  const bs = SALON_DATA?.bookingSettings || {};
+  const slots = window.KrenoSlots.computeSlots({
+    open: hours.open, close: hours.close,
+    duration: serviceDuration,
+    interval: bs.slotInterval || 30,
+    minGap: bs.minGap || 0,
+    busy: [...takenSlots, ...blockedSlots],
+    nowMin: isToday ? currentMinutes : null,
+  });
+  // Matin / Après-midi / Soir headings: a long list of times is easier to scan.
+  let lastGroup = null;
+  for (const t of slots) {
+    const hh = Number(t.slice(0, 2));
+    const group = hh < 12 ? 'Matin' : hh < 17 ? 'Après-midi' : 'Soir';
+    if (group !== lastGroup) {
+      const g = document.createElement('div'); g.className = 'bm-slot-group'; g.textContent = group;
+      grid.appendChild(g); lastGroup = group;
     }
-    m += 30; if (m >= 60) { m = 0; h++; }
+    const el = document.createElement('div'); el.classList.add('bm-timeslot'); el.textContent = t;
+    el.addEventListener('click', () => {
+      grid.querySelectorAll('.bm-timeslot').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected'); bmState.time = t;
+    });
+    grid.appendChild(el);
   }
 
   if (grid.children.length === 0) {
@@ -1043,6 +1054,7 @@ async function submitBooking() {
             dur: bmState.service?.duration || 60,
             emp: bmState.employee?.name || '',
             salon: SALON_DATA?.name || '',
+            id: data.data.bookingId || '', token: data.data.token || '',
           }));
         } catch (e) { /* sessionStorage unavailable — non-blocking */ }
         // Stripe Checkout refuses to load inside an iframe: the parent page
@@ -1058,7 +1070,16 @@ async function submitBooking() {
   // Flow standard (sans paiement en ligne)
   try {
     const endpoint = slug ? `/api/salon/${slug}/book` : '/api/bookings';
-    await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(booking) });
+    const r = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(booking) });
+    const d = await r.json().catch(() => null);
+    // Refused (slot just taken, closed day...): never show "confirmed".
+    if (d && d.success === false) {
+      showToast(d.error || "Ce créneau n'est plus disponible. Choisissez un autre horaire.");
+      const idx = bmSteps.findIndex(st => st.id === 'datetime');
+      if (idx >= 0) { bmState.time = null; goToStep(idx); renderBmTimeSlots(); }
+      return;
+    }
+    if (d?.data?._id && d.data.cancelToken) bmState.created = { id: d.data._id, token: d.data.cancelToken };
   } catch (e) {
     const b = JSON.parse(localStorage.getItem('kreno_bookings') || '[]');
     b.push(booking); localStorage.setItem('kreno_bookings', JSON.stringify(b));
@@ -1069,27 +1090,29 @@ async function submitBooking() {
 
 // Builds the "add to calendar" buttons HTML from explicit event details, so it
 // works both from live bmState and from values restored after a Stripe redirect.
-function calendarButtonsHtml(start, durMin, title, desc, location) {
+function calendarButtonsHtml(start, durMin, title, desc, location, ref) {
   try {
     if (!(start instanceof Date) || isNaN(start.getTime())) return '';
     const end = new Date(start.getTime() + (durMin || 60) * 60000);
-    const pad = n => String(n).padStart(2, '0');
-    const fmtLocal = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
-    const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kreno//FR','BEGIN:VEVENT',
-      `DTSTART:${fmtLocal(start)}`,`DTEND:${fmtLocal(end)}`,`SUMMARY:${title}`,
-      desc ? `DESCRIPTION:${desc}` : '',`LOCATION:${location || ''}`,
-      `UID:${Date.now()}@kreno.ch`,'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');
-    const icsUrl = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
-    const gcUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmtLocal(start)}/${fmtLocal(end)}&details=${encodeURIComponent(desc)}&location=${encodeURIComponent(location || '')}`;
+    // UTC timestamps: no timezone ambiguity in Google or in the .ics file.
+    const utc = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    // .ics served by the server from the stored booking (needs its id + secret
+    // token): data: URLs are blocked inside the embed iframe and by iOS Safari.
+    // target=_blank so it opens outside the popup.
+    const icsUrl = ref && ref.id && ref.token
+      ? `/api/bookings/${encodeURIComponent(ref.id)}/ics?token=${encodeURIComponent(ref.token)}` : '';
+    const gcUrl = 'https://calendar.google.com/calendar/render?' + new URLSearchParams({
+      action: 'TEMPLATE', text: title, dates: `${utc(start)}/${utc(end)}`, details: desc || '', location: location || '',
+    }).toString();
     const btnStyle = `display:inline-flex;align-items:center;gap:6px;padding:10px 18px;background:var(--color-bg-elevated,rgba(255,255,255,0.08));border:1px solid var(--badge-border,rgba(255,255,255,0.15));border-radius:10px;text-decoration:none;color:var(--color-text-primary);font-size:0.82rem;font-weight:500`;
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const a = (href, label) => `<a href="${_esc(href)}" target="_blank" rel="noopener" style="${btnStyle}">${label}</a>`;
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isAndroid = /Android/.test(navigator.userAgent);
-    // iOS Safari: open data URI directly (download attribute not supported)
-    if (isIOS) return `<div style="margin-bottom:0.5rem"><a href="${icsUrl}" target="_blank" style="${btnStyle}">📅 Ajouter au calendrier iPhone</a></div>`;
-    if (isAndroid) return `<div style="margin-bottom:0.5rem"><a href="${gcUrl}" target="_blank" style="${btnStyle}">📅 Google Calendar</a></div>`;
+    if (isIOS && icsUrl) return `<div style="margin-bottom:0.5rem">${a(icsUrl, '📅 Ajouter au calendrier')}</div>`;
+    if (isAndroid || !icsUrl) return `<div style="margin-bottom:0.5rem">${a(gcUrl, '📅 Ajouter à Google Agenda')}</div>`;
     return `<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:0.5rem">
-      <a href="${icsUrl}" download="rdv.ics" style="${btnStyle}">📅 Apple / iCal</a>
-      <a href="${gcUrl}" target="_blank" style="${btnStyle}">📅 Google Calendar</a>
+      ${a(icsUrl, '📅 Apple / Outlook')}
+      ${a(gcUrl, '📅 Google Agenda')}
     </div>`;
   } catch(e) { return ''; }
 }
@@ -1101,7 +1124,7 @@ function buildCalendarButtons() {
   start.setHours(h, mn, 0, 0);
   const title = `${bmState.service?.name || 'RDV'} @ ${SALON_DATA?.name || ''}`;
   const desc = bmState.employee ? `avec ${bmState.employee.name}` : '';
-  return calendarButtonsHtml(start, bmState.service?.duration || 60, title, desc, SALON_DATA?.name || '');
+  return calendarButtonsHtml(start, bmState.service?.duration || 60, title, desc, [SALON_DATA?.name, SALON_DATA?.address].filter(Boolean).join(', '), bmState.created);
 }
 
 function showBookingSuccess() {

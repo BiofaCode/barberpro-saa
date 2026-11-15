@@ -459,6 +459,16 @@ function pushDate(ymd) {
     return isNaN(d) ? ymd : d.toLocaleDateString('fr-CH', { weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+// ---- Online booking grid (website/js/slots.js) ----
+// slotInterval: how often a start time is offered; minGap: smallest hole allowed
+// between two bookings (0 = no rule). Defaults keep the historical 30-min grid.
+const SLOT_INTERVALS = [5, 10, 15, 20, 30, 45, 60];
+const MIN_GAPS = [0, 10, 15, 20, 30, 45, 60];
+const BOOKING_DEFAULTS = { slotInterval: 30, minGap: 0 };
+function bookingSettingsOf(salon) {
+    return { ...BOOKING_DEFAULTS, ...((salon && salon.bookingSettings) || {}) };
+}
+
 // ---- SMS (paid with the salon's prepaid credits) ----
 // Defaults: only the D-1 reminder is on. Confirmation, reschedule and
 // cancellation go by email (free); SMS for those are opt-in.
@@ -531,6 +541,46 @@ route('POST', '/api/admin/login', async (req, res) => {
     }
     const token = createToken({ role: 'superadmin' });
     json(res, 200, { success: true, token });
+});
+
+// "Ajouter au calendrier" (website/js/app.js): a real .ics file served over HTTP
+// (data: URLs are blocked in the embed iframe and by iOS Safari).
+// Built only from the stored booking + salon, and only with the booking's secret
+// token (same as the cancel link): a URL can't make kreno.ch serve arbitrary text.
+route('GET', '/api/bookings/:bookingId/ics', async (req, res, params) => {
+    const token = new URL(req.url, 'http://localhost').searchParams.get('token') || '';
+    let booking = null;
+    try { booking = await db.findBookingById(params.bookingId); } catch (e) { booking = null; }
+    const ok = booking && booking.cancelToken && token.length === booking.cancelToken.length &&
+        crypto.timingSafeEqual(Buffer.from(token), Buffer.from(booking.cancelToken));
+    if (!ok) return json(res, 404, { success: false, error: 'Rendez-vous introuvable' });
+    const salon = await db.findSalonById(booking.salon);
+    // Server runs in Europe/Zurich (TZ set at boot): local date + time = salon time.
+    const start = new Date(`${booking.date}T${booking.time}:00`);
+    if (isNaN(start)) return json(res, 404, { success: false, error: 'Rendez-vous introuvable' });
+    const end = new Date(start.getTime() + (Number(booking.duration) || 30) * 60000);
+    const clean = v => String(v || '').slice(0, 300)
+        .replace(/[\r\n]+/g, ' ').replace(/\\/g, '\\\\').replace(/([,;])/g, '\\$1');
+    const utc = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const salonName = salon?.name || 'Rendez-vous';
+    const ics = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Kreno//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        `UID:${booking._id}@kreno.ch`,
+        `DTSTAMP:${utc(new Date())}`,
+        `DTSTART:${utc(start)}`, `DTEND:${utc(end)}`,
+        `SUMMARY:${clean(`${booking.serviceName || 'Rendez-vous'} - ${salonName}`)}`,
+        booking.employeeName ? `DESCRIPTION:${clean(`Avec ${booking.employeeName}`)}` : '',
+        `LOCATION:${clean([salonName, salon?.address].filter(Boolean).join(', '))}`,
+        'BEGIN:VALARM', 'TRIGGER:-PT2H', 'ACTION:DISPLAY', 'DESCRIPTION:Rappel', 'END:VALARM',
+        'END:VEVENT', 'END:VCALENDAR',
+    ].filter(Boolean).join('\r\n');
+    res.writeHead(200, {
+        'Content-Type': 'text/calendar; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="rendez-vous.ics"',
+        'Cache-Control': 'no-store',
+    });
+    res.end(ics);
 });
 
 route('GET', '/api/health', async (req, res) => {
@@ -1128,6 +1178,19 @@ route('PUT', '/api/pro/salon/:salonId', async (req, res, params) => {
     if (body.hours) updates.hours = body.hours;
     if (body.closedDates !== undefined) updates.closedDates = body.closedDates;
     if (body.category !== undefined) updates.category = body.category;
+    if (body.bookingSettings && typeof body.bookingSettings === 'object') {
+        const cur = bookingSettingsOf(salon);
+        const bs = body.bookingSettings;
+        if ('slotInterval' in bs) {
+            if (!SLOT_INTERVALS.includes(Number(bs.slotInterval))) return json(res, 400, { success: false, error: 'Intervalle invalide' });
+            cur.slotInterval = Number(bs.slotInterval);
+        }
+        if ('minGap' in bs) {
+            if (!MIN_GAPS.includes(Number(bs.minGap))) return json(res, 400, { success: false, error: 'Trou minimum invalide' });
+            cur.minGap = Number(bs.minGap);
+        }
+        updates.bookingSettings = cur;
+    }
 
     const updated = await db.updateSalon(params.salonId, updates);
     json(res, 200, { success: true, data: updated });
@@ -3017,6 +3080,7 @@ route('GET', '/api/salon/:slug', async (req, res, params) => {
             services: (salon.services || []).filter(s => s.active),
             hours: salon.hours,
             closedDates: salon.closedDates || [],
+            bookingSettings: bookingSettingsOf(salon),
             testimonials: salon.testimonials || [],
             employees: staff,
             rating: salon.rating, reviewCount: salon.reviewCount,
@@ -3226,7 +3290,7 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
             cancel_url: `${baseUrl}/s/${salon.slug}?booking_cancel=true&booking_id=${booking._id}`,
         });
         console.log(`  💳 Paiement créé: ${body.clientName} - ${service.name} @ ${salon.name} (${amountCHF} CHF)`);
-        json(res, 200, { success: true, data: { checkoutUrl: session.url, bookingId: booking._id } });
+        json(res, 200, { success: true, data: { checkoutUrl: session.url, bookingId: booking._id, token: booking.cancelToken } });
     } catch (err) {
         // Annule le booking pending si Stripe échoue
         await db.updateBooking(booking._id, { status: 'cancelled', paymentStatus: 'failed' }).catch(() => {});
