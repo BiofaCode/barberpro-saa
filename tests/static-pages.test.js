@@ -58,3 +58,16 @@ test('app-links.js only accepts an apps.apple.com link', () => {
     const src = fs.readFileSync(path.join(__dirname, '../saas/js/app-links.js'), 'utf8');
     expect(src).toMatch(/apps\\\.apple\\\.com/);
 });
+
+test('demo and pre-launch salons stay out of the sitemap', async () => {
+    const db = require('../db');
+    db.findSalons.mockResolvedValueOnce([
+        { slug: 'live-salon', active: true },
+        { slug: 'demo-salon', active: true, demoSeed: 'seed-x' },
+        { slug: 'prelaunch-salon', active: true, hideFromSearch: true },
+    ]);
+    const res = await request(server).get('/sitemap.xml').set('Host', 'kreno.ch').buffer(true).parse((r, cb) => { let d = ''; r.on('data', c => { d += c; }); r.on('end', () => cb(null, d)); });
+    expect(res.body).toContain('/s/live-salon');
+    expect(res.body).not.toContain('/s/demo-salon');
+    expect(res.body).not.toContain('/s/prelaunch-salon');
+});

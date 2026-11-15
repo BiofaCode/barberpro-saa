@@ -652,7 +652,7 @@ route('GET', '/sitemap.xml', async (req, res) => {
             `<url><loc>${baseUrl}/faq</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
         ];
 
-        const salonUrls = salons.filter(s => s.slug && !s.demoSeed).map(s =>
+        const salonUrls = salons.filter(s => s.slug && !s.demoSeed && !s.hideFromSearch).map(s =>
             `<url><loc>${baseUrl}/s/${encodeURIComponent(s.slug)}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`
         );
 
@@ -3913,8 +3913,9 @@ tr+tr td{border-top:1px solid #f0f0f0}
                         } : null;
 
                         const seoHead = [
-                            // Salons de démo prospect (scripts/seed-*.js) : jamais indexés.
-                            salon.demoSeed ? '<meta name="robots" content="noindex, nofollow">' : '',
+                            // Salons de démo prospect (scripts/seed-*.js) et salons en préparation
+                            // (hideFromSearch, avant la bascule) : jamais indexés.
+                            (salon.demoSeed || salon.hideFromSearch) ? '<meta name="robots" content="noindex, nofollow">' : '',
                             `<title>${safeName} | Réservation en ligne</title>`,
                             `<meta name="description" content="${safeDesc}">`,
                             `<meta property="og:title" content="${safeName} | Réservation en ligne">`,
