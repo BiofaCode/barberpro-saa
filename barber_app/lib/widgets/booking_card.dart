@@ -54,17 +54,25 @@ class BookingCard extends StatelessWidget {
                   child: Row(
                     children: [
                       // Time column
+                      // Largeur fixe + FittedBox : « 09:00 » ne passe jamais
+                      // à la ligne, même avec une grande taille de texte iOS.
                       SizedBox(
-                        width: 44,
+                        width: 52,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(
-                              timeStr,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.textPrimary,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                timeStr,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.textPrimary,
+                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                ),
                               ),
                             ),
                             Container(
@@ -73,11 +81,17 @@ class BookingCard extends StatelessWidget {
                               height: 14,
                               color: AppTheme.border,
                             ),
-                            Text(
-                              endTimeStr,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 11,
-                                color: AppTheme.textMuted,
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                endTimeStr,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 11,
+                                  color: AppTheme.textMuted,
+                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                ),
                               ),
                             ),
                           ],
