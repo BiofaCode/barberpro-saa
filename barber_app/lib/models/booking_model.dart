@@ -11,6 +11,7 @@ class BookingModel {
   final String? notes;
   final BookingStatus status;
   final DateTime createdAt;
+  final String? employeeId;
 
   const BookingModel({
     required this.id,
@@ -25,6 +26,7 @@ class BookingModel {
     this.notes,
     this.status = BookingStatus.confirmed,
     required this.createdAt,
+    this.employeeId,
   });
 
   BookingModel copyWith({
@@ -43,6 +45,7 @@ class BookingModel {
       notes: notes,
       status: status ?? this.status,
       createdAt: createdAt,
+      employeeId: employeeId,
     );
   }
 
@@ -85,6 +88,7 @@ class BookingModel {
       notes: json['notes'],
       status: _parseStatus(json['status']),
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      employeeId: json['employeeId']?.toString(),
     );
   }
 
