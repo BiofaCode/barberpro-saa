@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
+import '../services/free_slots.dart';
 import 'dashboard_screen.dart';
 import 'appointments_screen.dart';
 import 'clients_screen.dart';
@@ -346,26 +347,21 @@ class _NewBookingSheetState extends State<_NewBookingSheet> {
   }
 
   Future<void> _pickTime() async {
-    // Sélecteur de créneaux toutes les 30 min
-    final picked = await _showTimeSlotPicker(context, _selectedTime, _selectedDate);
-    if (picked != null) setState(() => _selectedTime = picked);
-  }
-
-  static Future<TimeOfDay?> _showTimeSlotPicker(
-      BuildContext context, TimeOfDay current, DateTime selectedDate) {
-    // Créneaux de 7h00 à 21h30 par tranches de 30 min
-    final slots = <TimeOfDay>[];
-    for (int h = 7; h <= 21; h++) {
-      slots.add(TimeOfDay(hour: h, minute: 0));
-      if (h < 21) slots.add(TimeOfDay(hour: h, minute: 30));
-    }
-
-    return showModalBottomSheet<TimeOfDay>(
+    // Seulement les heures libres (horaires du salon, RDV, pauses bloquées).
+    final dur = (_selectedService?['duration'] as num?)?.toInt() ?? 30;
+    final slotsFuture = FreeSlots.load(
+      day: _selectedDate,
+      durationMin: dur,
+      employeeId: _selectedEmployee?['_id']?.toString(),
+    );
+    final picked = await showModalBottomSheet<TimeOfDay>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => _TimeSlotSheet(slots: slots, current: current, selectedDate: selectedDate),
+      builder: (_) => _TimeSlotSheet(
+          slotsFuture: slotsFuture, current: _selectedTime, selectedDate: _selectedDate),
     );
+    if (picked != null) setState(() => _selectedTime = picked);
   }
 
   Future<void> _submit() async {
@@ -1299,23 +1295,14 @@ class _DrawerItem extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _TimeSlotSheet extends StatelessWidget {
-  final List<TimeOfDay> slots;
+  final Future<FreeSlots> slotsFuture;
   final TimeOfDay current;
   final DateTime selectedDate;
 
-  const _TimeSlotSheet({required this.slots, required this.current, required this.selectedDate});
+  const _TimeSlotSheet({required this.slotsFuture, required this.current, required this.selectedDate});
 
   @override
   Widget build(BuildContext context) {
-    // Index du créneau le plus proche de l'heure actuelle
-    final now = TimeOfDay.now();
-    final initialIndex = slots.indexWhere((s) => s.hour > now.hour || (s.hour == now.hour && s.minute >= now.minute));
-    final scrollIndex = initialIndex < 0 ? 0 : initialIndex;
-
-    final controller = ScrollController(
-      initialScrollOffset: scrollIndex * 56.0 > 0 ? (scrollIndex * 56.0) - 56 : 0,
-    );
-
     return Container(
       decoration: const BoxDecoration(
         color: AppTheme.bgCard,
@@ -1361,11 +1348,24 @@ class _TimeSlotSheet extends StatelessWidget {
           ),
           const Divider(height: 1),
 
-          // Grille de créneaux
-          SizedBox(
+          // Grille de créneaux (uniquement les heures libres)
+          FutureBuilder<FreeSlots>(
+            future: slotsFuture,
+            builder: (context, snap) {
+              if (!snap.hasData) {
+                return const SizedBox(
+                    height: 200, child: Center(child: CircularProgressIndicator()));
+              }
+              final slots = snap.data!.slots;
+              if (slots.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: NoSlotsNotice(closed: snap.data!.closed),
+                );
+              }
+              return SizedBox(
             height: 320,
             child: GridView.builder(
-              controller: controller,
               padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 4,
@@ -1422,6 +1422,8 @@ class _TimeSlotSheet extends StatelessWidget {
                 );
               },
             ),
+          );
+            },
           ),
 
           // Padding bas

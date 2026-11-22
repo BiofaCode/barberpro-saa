@@ -739,10 +739,16 @@ class ApiService {
   }
 
   // ---- Blocs (indisponibilités) ----
-  static Future<List<Map<String, dynamic>>> getBlocks() async {
+  static Future<List<Map<String, dynamic>>> getBlocks({String? from, String? to}) async {
     if (_salonId == null) return [];
     try {
-      final res = await _get(Uri.parse('$_url/api/pro/salon/$_salonId/blocks'), headers: _authHeaders);
+      final params = <String, String>{
+        if (from != null) 'from': from,
+        if (to != null) 'to': to,
+      };
+      final uri = Uri.parse('$_url/api/pro/salon/$_salonId/blocks')
+          .replace(queryParameters: params.isEmpty ? null : params);
+      final res = await _get(uri, headers: _authHeaders);
       final data = jsonDecode(res.body);
       if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
     } catch (e) {
