@@ -46,6 +46,71 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
     if (mounted) setState(() { _currentStatus = newStatus; _saving = false; });
   }
 
+  static int _toMin(String? t) {
+    final p = (t ?? '').split(':');
+    if (p.length < 2) return -1;
+    return (int.tryParse(p[0]) ?? 0) * 60 + (int.tryParse(p[1]) ?? 0);
+  }
+
+  /// Heures libres (pas de 15 min) pendant les horaires du salon :
+  /// on retire les RDV existants (sauf celui-ci), les blocages et l'heure passée.
+  Future<({List<TimeOfDay> slots, bool closed})> _freeSlotsFor(DateTime day) async {
+    final dateStr = DateFormat('yyyy-MM-dd').format(day);
+    final results = await Future.wait([
+      ApiService.getMySalon(),
+      ApiService.getMyBookings(date: dateStr),
+      ApiService.getBlocks(),
+    ]);
+    final salon = results[0] as Map<String, dynamic>?;
+    final bookings = results[1] as List<BookingModel>;
+    final blocks = results[2] as List<Map<String, dynamic>>;
+
+    // Horaires du jour (même format que les réglages : open bool + openTime/closeTime)
+    const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    final h = ((salon?['hours'] ?? {}) as Map)[days[day.weekday - 1]];
+    int open = 7 * 60, close = 21 * 60; // repli si horaires inconnus
+    if (salon != null) {
+      final isOpen = h is Map &&
+          (h['open'] == true || (h['open'] is String && (h['open'] as String).isNotEmpty));
+      if (!isOpen) return (slots: <TimeOfDay>[], closed: true);
+      final o = _toMin((h['openTime'] ?? (h['open'] is String ? h['open'] : null))?.toString());
+      final c = _toMin((h['closeTime'] ?? h['close'])?.toString());
+      if (o >= 0 && c > o) { open = o; close = c; }
+    }
+
+    final me = widget.booking;
+    final emp = me.employeeId;
+    final busy = <List<int>>[];
+    for (final b in bookings) {
+      if (b.id == me.id) continue;
+      if (b.status == BookingStatus.cancelled) continue;
+      if (b.dateTime.year != day.year || b.dateTime.month != day.month || b.dateTime.day != day.day) continue;
+      if (emp != null && b.employeeId != null && emp != b.employeeId) continue;
+      final s = b.dateTime.hour * 60 + b.dateTime.minute;
+      busy.add([s, s + b.durationMinutes]);
+    }
+    for (final bl in blocks) {
+      if (bl['date'] != dateStr) continue;
+      final bEmp = bl['employeeId']?.toString();
+      if (emp != null && bEmp != null && bEmp.isNotEmpty && emp != bEmp) continue;
+      final s = _toMin(bl['startTime'] as String?), e = _toMin(bl['endTime'] as String?);
+      if (s >= 0 && e > s) busy.add([s, e]);
+    }
+
+    final now = DateTime.now();
+    final isToday = day.year == now.year && day.month == now.month && day.day == now.day;
+    final nowMin = now.hour * 60 + now.minute;
+    final dur = me.durationMinutes;
+    final starts = <int>{};
+    for (int t = open; t + dur <= close; t += 15) { starts.add(t); }
+    for (final b in busy) { starts.add(b[1]); } // juste après un RDV
+    final out = starts.where((t) =>
+        t >= open && t + dur <= close &&
+        !(isToday && t <= nowMin) &&
+        !busy.any((b) => t < b[1] && t + dur > b[0])).toList()..sort();
+    return (slots: out.map((t) => TimeOfDay(hour: t ~/ 60, minute: t % 60)).toList(), closed: false);
+  }
+
   Future<void> _reschedule() async {
     final now = DateTime.now();
     final currentDt = widget.booking.dateTime;
@@ -69,21 +134,22 @@ class _BookingDetailSheetState extends State<BookingDetailSheet> {
     );
     if (pickedDate == null || !mounted) return;
 
+    setState(() => _saving = true);
+    final free = await _freeSlotsFor(pickedDate);
     if (!mounted) return;
-    // 30-min slot picker (7h–21h30)
-    final slots = <TimeOfDay>[];
-    for (int h = 7; h <= 21; h++) {
-      slots.add(TimeOfDay(hour: h, minute: 0));
-      if (h < 21) slots.add(TimeOfDay(hour: h, minute: 30));
-    }
+    setState(() => _saving = false);
+
     final pickedTime = await showModalBottomSheet<TimeOfDay>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => _RescheduleTimeSheet(
-        slots: slots,
+        slots: free.slots,
         current: TimeOfDay(hour: currentDt.hour, minute: currentDt.minute),
         selectedDate: pickedDate,
+        emptyMessage: free.closed
+            ? 'Le salon est fermé ce jour-là.'
+            : 'Aucun créneau libre ce jour-là.',
       ),
     );
     if (pickedTime == null || !mounted) return;
@@ -640,11 +706,13 @@ class _RescheduleTimeSheet extends StatelessWidget {
   final List<TimeOfDay> slots;
   final TimeOfDay current;
   final DateTime selectedDate;
+  final String emptyMessage;
 
   const _RescheduleTimeSheet({
     required this.slots,
     required this.current,
     required this.selectedDate,
+    this.emptyMessage = 'Aucun créneau libre ce jour-là.',
   });
 
   @override
@@ -674,10 +742,22 @@ class _RescheduleTimeSheet extends StatelessWidget {
           Text('Choisir un créneau',
               style: GoogleFonts.bricolageGrotesque(
                   fontSize: 17, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+          const SizedBox(height: 4),
+          Text(DateFormat('EEEE d MMMM', 'fr_FR').format(selectedDate),
+              style: GoogleFonts.dmSans(fontSize: 13, color: AppTheme.textMuted)),
           const SizedBox(height: 16),
-          GridView.builder(
+          if (slots.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Text(emptyMessage,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.dmSans(fontSize: 14, color: AppTheme.textMuted)),
+            )
+          else
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.55),
+            child: GridView.builder(
             shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 4,
               mainAxisSpacing: 8,
@@ -719,6 +799,7 @@ class _RescheduleTimeSheet extends StatelessWidget {
                 ),
               );
             },
+          ),
           ),
         ],
       ),
