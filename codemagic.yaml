@@ -139,5 +139,7 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
-        beta_groups:
-          - Beta Testers
+        # Branche de refonte : PAS d'envoi au groupe externe (Divio). Seuls les
+        # testeurs internes (Fabio, Enzo) la reçoivent. À REMETTRE avant fusion dans main.
+        # beta_groups:
+        #   - Beta Testers
