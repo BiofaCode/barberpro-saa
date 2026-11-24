@@ -44,7 +44,7 @@
 **Interfaces:**
 - Produces (used by every later task):
   - `AppTheme` neutral constants with the Global Constraints values (`bgMain`, `bgCard`, `bgSurface`, `border`, `textPrimary`, `textSecondary`, `textMuted`, `success`, `warning`, `error`). Legacy names kept: `primaryLight`, `bgElevated` → `#F0F0EE`; `borderDark` → `#D6D6D0`; `primaryDark` → `#161616`; `primaryMid` → `#8A8A83`; `shadowSm`/`shadowMd` → `const <BoxShadow>[]`. `defaultPrimary` stays `#5850E8` (fallback when a salon has no colour).
-  - `static Color onColor(Color c)` → `Color(0xFF161616)` if `c.computeLuminance() > 0.4`, else `Colors.white`.
+  - `static Color onColor(Color c)` → whichever of `Colors.white` and `Color(0xFF161616)` has the higher WCAG contrast ratio against `c` (ties → white).
   - `static Color get onPrimary` → `onColor(primary)`.
   - `static Color get accentText` → `primary` if contrast vs white ≥ 4.5, else `primary` darkened (HSL lightness −0.05 per step) until ≥ 4.5.
   - `static Color get accentTint` → `primary.withAlpha(26)`.
