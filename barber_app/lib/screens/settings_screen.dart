@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import 'login_screen.dart';
+import 'admin_salons_screen.dart';
 import 'employees_screen.dart';
 import 'services_screen.dart';
 import 'blocks_screen.dart';
@@ -130,9 +131,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text('Annuler', style: GoogleFonts.dmSans(color: AppTheme.textMuted)),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
+              final nav = Navigator.of(context);
+              // En mode admin : on quitte juste ce salon et on revient à la console.
+              if (ApiService.isAdminSession) {
+                await ApiService.leaveAdminSalon();
+                nav.pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const AdminSalonsScreen()),
+                  (_) => false,
+                );
+                return;
+              }
               ApiService.logout();
-              Navigator.of(context).pushAndRemoveUntil(
+              nav.pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (_) => false,
               );
@@ -508,8 +519,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Account deletion (App Store guideline 5.1.1(v))
-                      Center(
+                      // Account deletion (App Store guideline 5.1.1(v)) — jamais en mode admin
+                      if (!ApiService.isAdminSession) Center(
                         child: TextButton(
                           onPressed: _requestAccountDeletion,
                           child: Text('Supprimer mon compte',

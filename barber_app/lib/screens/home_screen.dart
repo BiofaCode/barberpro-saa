@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import '../services/free_slots.dart';
+import 'admin_salons_screen.dart';
 import 'dashboard_screen.dart';
 import 'appointments_screen.dart';
 import 'clients_screen.dart';
@@ -51,6 +52,37 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  Widget _adminBanner(BuildContext context) {
+    final name = ApiService.currentSalon?['name']?.toString() ?? 'Salon';
+    return Material(
+      color: const Color(0xFF1F2937),
+      child: InkWell(
+        onTap: () async {
+          final nav = Navigator.of(context);
+          await ApiService.leaveAdminSalon();
+          nav.pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const AdminSalonsScreen()), (_) => false);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          child: Row(children: [
+            const Icon(Icons.admin_panel_settings_rounded, size: 18, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Mode admin · $name',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+            ),
+            Text('Changer de salon',
+                style: GoogleFonts.dmSans(
+                    fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFFFBBF24))),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -60,7 +92,9 @@ class _HomeScreenState extends State<HomeScreen> {
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (ApiService.isAdminSession) _adminBanner(context),
+        Container(
         decoration: BoxDecoration(
           color: AppTheme.bgCard,
           border: Border(
@@ -87,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+      ]),
     );
   }
 

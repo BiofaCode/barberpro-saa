@@ -798,6 +798,8 @@ route('PUT', '/api/admin/salons/:id', async (req, res, params) => {
 route('POST', '/api/pro/account/delete-request', async (req, res) => {
     const user = verifyToken(req);
     if (!user || !user.salonId) return json(res, 401, { success: false, error: 'Non autorisé' });
+    // An admin viewing a salon must never request deletion on the owner's behalf.
+    if (user.impersonatedBy) return json(res, 403, { success: false, error: 'Action impossible en mode admin' });
     const isOwner = user.role === 'owner';
     const account = isOwner ? await db.findOwnerById(user.ownerId) : await db.findEmployeeById(user.employeeId);
     if (!account) return json(res, 404, { success: false, error: 'Compte introuvable' });
@@ -924,12 +926,13 @@ route('GET', '/api/admin/salons/:id/magic-link', async (req, res, params) => {
     const owner = await db.findOwnerBySalon(params.id);
     if (!owner) return json(res, 404, { success: false, error: 'Aucun propriétaire trouvé' });
 
-    const token = createToken({ ownerId: owner._id, salonId: owner.salon, role: 'owner' });
+    // Marked as an admin session: no push registration, no account deletion.
+    const token = createToken({ ownerId: owner._id, salonId: owner.salon, role: 'owner', impersonatedBy: 'superadmin' }, 7);
     json(res, 200, {
         success: true,
         data: {
             token,
-            user: { id: owner._id, salonId: owner.salon, name: owner.name, email: owner.email, role: 'owner' },
+            user: { id: owner._id, salonId: owner.salon, name: owner.name, email: owner.email, role: 'owner', impersonated: true },
             salon
         }
     });
@@ -1130,6 +1133,8 @@ route('POST', '/api/pro/push-token', async (req, res) => {
     const token = (body.token || '').trim();
     const platform = (body.platform || '').trim();
     if (!token) return json(res, 400, { success: false, error: 'Token requis' });
+    // Admin viewing a salon: don't send the owner's notifications to the admin's phone.
+    if (user.impersonatedBy) return json(res, 200, { success: true, skipped: true });
     const userId = user.ownerId || user.employeeId;
     if (!userId) return json(res, 400, { success: false, error: 'User invalide' });
     await db.savePushToken(userId, token, platform);
