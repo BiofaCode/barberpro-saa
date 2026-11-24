@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../theme/app_text.dart';
 import '../theme/app_theme.dart';
+import '../widgets/kreno_bottom_bar.dart';
 import '../services/api_service.dart';
 import '../services/free_slots.dart';
 import 'admin_salons_screen.dart';
@@ -55,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _adminBanner(BuildContext context) {
     final name = ApiService.currentSalon?['name']?.toString() ?? 'Salon';
     return Material(
-      color: const Color(0xFF1F2937),
+      color: const Color(0xFF161616),
       child: InkWell(
         onTap: () async {
           final nav = Navigator.of(context);
@@ -64,19 +66,24 @@ class _HomeScreenState extends State<HomeScreen> {
               MaterialPageRoute(builder: (_) => const AdminSalonsScreen()), (_) => false);
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(children: [
-            const Icon(Icons.admin_panel_settings_rounded, size: 18, color: Colors.white),
+            const Icon(Icons.admin_panel_settings_outlined, size: 18, color: Colors.white),
             const SizedBox(width: 8),
             Expanded(
               child: Text('Mode admin · $name',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+                  style: AppText.label.copyWith(color: Colors.white)),
             ),
+            const SizedBox(width: 8),
             Text('Changer de salon',
-                style: GoogleFonts.dmSans(
-                    fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFFFBBF24))),
+                maxLines: 1,
+                style: AppText.label.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    decoration: TextDecoration.underline,
+                    decorationColor: Colors.white)),
           ]),
         ),
       ),
@@ -94,33 +101,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
         if (ApiService.isAdminSession) _adminBanner(context),
-        Container(
-        decoration: BoxDecoration(
-          color: AppTheme.bgCard,
-          border: Border(
-            top: BorderSide(color: AppTheme.primary.withAlpha(20), width: 1),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(20),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
+        KrenoBottomBar(
+          current: _currentIndex,
+          onTap: _onTap,
+          onNew: _onNewTap,
         ),
-        child: SafeArea(
-          top: false,
-          child: Row(
-            children: [
-              _NavItem(icon: Icons.dashboard_rounded, label: 'Accueil', index: 0, current: _currentIndex, onTap: _onTap),
-              _NavItem(icon: Icons.calendar_month_rounded, label: 'RDV', index: 1, current: _currentIndex, onTap: _onTap),
-              _NewButton(onTap: _onNewTap),
-              _NavItem(icon: Icons.people_rounded, label: 'Clients', index: 2, current: _currentIndex, onTap: _onTap),
-              _NavItem(icon: Icons.storefront_rounded, label: 'Salon', index: 3, current: _currentIndex, onTap: _onTap),
-            ],
-          ),
-        ),
-      ),
       ]),
     );
   }
@@ -162,20 +147,15 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
               child: Row(
                 children: [
-                  Image.asset('assets/images/logo.png', width: 36, height: 36),
+                  Image.asset('assets/images/logo.png', width: 32, height: 32),
                   const SizedBox(width: 12),
-                  Text('Kreno',
-                    style: GoogleFonts.bricolageGrotesque(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
-                    )),
+                  Text('Kreno', style: AppText.title),
                 ],
               ),
             ),
             const Divider(height: 24),
             _DrawerItem(
-              icon: Icons.group_rounded,
+              icon: Icons.group_outlined,
               label: 'Équipe',
               onTap: () {
                 Navigator.pop(context);
@@ -183,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             _DrawerItem(
-              icon: Icons.spa_rounded,
+              icon: Icons.content_cut_outlined,
               label: 'Services',
               onTap: () {
                 Navigator.pop(context);
@@ -191,7 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             _DrawerItem(
-              icon: Icons.block_rounded,
+              icon: Icons.event_busy_outlined,
               label: 'Créneaux bloqués',
               onTap: () {
                 Navigator.pop(context);
@@ -221,8 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text('Version 1.0 · Kreno',
-                style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
+              child: Text('Version 1.0 · Kreno', style: AppText.caption),
             ),
           ],
         ),
@@ -1192,119 +1171,6 @@ class _SubmitButton extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Bottom nav items
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final int index;
-  final int current;
-  final ValueChanged<int> onTap;
-
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.index,
-    required this.current,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final active = index == current;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => onTap(index),
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: active ? AppTheme.primary.withAlpha(26) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Icon(
-                  icon,
-                  size: 22,
-                  color: active ? AppTheme.primary : AppTheme.textMuted,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: GoogleFonts.dmSans(
-                  fontSize: 10,
-                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                  color: active ? AppTheme.primary : AppTheme.textMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NewButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _NewButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppTheme.primary, AppTheme.primary.withAlpha(200)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primary.withAlpha(80),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.add_rounded, size: 26, color: Colors.white),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Nouveau',
-                style: GoogleFonts.dmSans(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _DrawerItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1317,8 +1183,7 @@ class _DrawerItem extends StatelessWidget {
     return ListTile(
       leading: Icon(icon, color: AppTheme.textSecondary, size: 22),
       title: Text(label,
-        style: GoogleFonts.dmSans(
-          fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+        style: AppText.body.copyWith(fontWeight: FontWeight.w500)),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
     );

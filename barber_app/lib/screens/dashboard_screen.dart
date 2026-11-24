@@ -1,11 +1,10 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../theme/app_text.dart';
 import '../theme/app_theme.dart';
 import '../models/booking_model.dart';
 import '../services/api_service.dart';
-import '../widgets/stat_card.dart';
 import '../widgets/booking_card.dart';
 import 'booking_detail_screen.dart';
 import 'employees_screen.dart';
@@ -104,6 +103,8 @@ class DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final dateStr = DateFormat('EEEE d MMMM yyyy', 'fr_FR').format(DateTime.now());
+    final firstName =
+        ApiService.currentUser?['name']?.split(' ').first ?? '';
 
     return Scaffold(
       drawer: _buildDrawer(context),
@@ -118,22 +119,31 @@ class DashboardScreenState extends State<DashboardScreen> {
               children: [
                 // Header
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                   child: Row(
                     children: [
                       // Menu button top-left
                       Builder(
-                        builder: (ctx) => GestureDetector(
-                          onTap: () => Scaffold.of(ctx).openDrawer(),
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 14),
-                            padding: const EdgeInsets.all(9),
-                            decoration: BoxDecoration(
-                              color: AppTheme.bgCard,
-                              borderRadius: BorderRadius.circular(12),
+                        builder: (ctx) => Padding(
+                          padding: const EdgeInsets.only(right: 14),
+                          child: Material(
+                            color: AppTheme.bgCard,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.rMd),
+                              side: const BorderSide(color: AppTheme.border),
                             ),
-                            child: Icon(Icons.menu_rounded,
-                                color: AppTheme.textPrimary, size: 20),
+                            child: InkWell(
+                              onTap: () => Scaffold.of(ctx).openDrawer(),
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.rMd),
+                              child: const SizedBox(
+                                width: 40,
+                                height: 40,
+                                child: Icon(Icons.menu_rounded,
+                                    color: AppTheme.textPrimary, size: 20),
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -142,33 +152,32 @@ class DashboardScreenState extends State<DashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Bonjour ${ApiService.currentUser?['name']?.split(' ').first ?? ''} 👋',
-                              style: GoogleFonts.dmSans(
-                                fontSize: 14,
-                                color: AppTheme.textSecondary,
-                              ),
+                              firstName.isEmpty
+                                  ? 'Bonjour'
+                                  : 'Bonjour $firstName',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.label
+                                  .copyWith(color: AppTheme.textSecondary),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               ApiService.currentSalon?['name'] ?? 'Mon Salon',
-                              style: GoogleFonts.bricolageGrotesque(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.textPrimary,
-                                letterSpacing: -0.5,
-                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.title,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              dateStr,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 12,
-                                color: AppTheme.textMuted,
-                              ),
+                              _capitalize(dateStr),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.caption,
                             ),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 12),
                       _buildLogoAvatar(),
                     ],
                   ),
@@ -178,29 +187,28 @@ class DashboardScreenState extends State<DashboardScreen> {
                 if (_error != null)
                   Container(
                     margin: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-                    padding: const EdgeInsets.all(14),
+                    padding: const EdgeInsets.fromLTRB(14, 4, 4, 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.error.withAlpha(20),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.error.withAlpha(51)),
+                      color: AppTheme.bgCard,
+                      borderRadius: BorderRadius.circular(AppTheme.rMd),
+                      border: Border.all(color: AppTheme.error.withAlpha(90)),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.wifi_off_rounded,
-                            color: AppTheme.error, size: 20),
+                        const Icon(Icons.wifi_off_rounded,
+                            color: AppTheme.error, size: 18),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             _error!,
-                            style: GoogleFonts.dmSans(
-                              fontSize: 13,
-                              color: AppTheme.error,
-                            ),
+                            style: AppText.label
+                                .copyWith(color: AppTheme.error),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: _loadData,
-                          child: Icon(Icons.refresh_rounded,
+                        IconButton(
+                          onPressed: _loadData,
+                          tooltip: 'Réessayer',
+                          icon: const Icon(Icons.refresh_rounded,
                               color: AppTheme.error, size: 20),
                         ),
                       ],
@@ -209,44 +217,36 @@ class DashboardScreenState extends State<DashboardScreen> {
 
                 // Stats
                 if (_loading)
-                  Padding(
+                  const Padding(
                     padding: EdgeInsets.all(40),
                     child: Center(
-                      child: CircularProgressIndicator(color: AppTheme.primary),
+                      child: CircularProgressIndicator(
+                        color: AppTheme.textPrimary,
+                        strokeWidth: 2,
+                      ),
                     ),
                   )
                 else if (_hasError && _stats.isEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 80),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 80, horizontal: 20),
                     child: Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.cloud_off_rounded,
-                              size: 56, color: AppTheme.textMuted),
+                          const Icon(Icons.cloud_off_outlined,
+                              size: 40, color: AppTheme.textMuted),
                           const SizedBox(height: 16),
                           Text(
                             'Impossible de charger les données',
-                            style: GoogleFonts.dmSans(
-                              fontSize: 15,
-                              color: AppTheme.textMuted,
-                            ),
+                            textAlign: TextAlign.center,
+                            style: AppText.body
+                                .copyWith(color: AppTheme.textSecondary),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _loadData,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 12),
-                            ),
-                            child: Text('Réessayer',
-                                style: GoogleFonts.dmSans(
-                                    fontWeight: FontWeight.w600)),
+                            child: const Text('Réessayer'),
                           ),
                         ],
                       ),
@@ -256,26 +256,28 @@ class DashboardScreenState extends State<DashboardScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: StatCard(
-                            icon: Icons.calendar_today_rounded,
+                          child: _StatTile(
+                            icon: Icons.calendar_today_outlined,
                             label: 'RDV aujourd\'hui',
                             value: '${_stats['todayBookings'] ?? _todayBookings.length}',
                             subtitle: _todayBookings.isEmpty ? 'aucun pour l\'instant' : 'rendez-vous',
-                            color: AppTheme.primary,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: StatCard(
-                            icon: Icons.euro_rounded,
+                          child: _StatTile(
+                            icon: Icons.payments_outlined,
                             label: 'CA du jour',
-                            value: (_stats['todayRevenue'] == null || _stats['todayRevenue'] == 0)
+                            value: _isEmptyAmount(_stats['todayRevenue'])
                                 ? '—'
-                                : '${_stats['todayRevenue']} CHF',
+                                : '${_stats['todayRevenue']}',
+                            unit: _isEmptyAmount(_stats['todayRevenue'])
+                                ? null
+                                : 'CHF',
                             subtitle: 'chiffre d\'affaires',
-                            color: AppTheme.success,
                           ),
                         ),
                       ],
@@ -284,28 +286,30 @@ class DashboardScreenState extends State<DashboardScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: StatCard(
-                            icon: Icons.people_rounded,
+                          child: _StatTile(
+                            icon: Icons.people_outline_rounded,
                             label: 'Clients',
                             value: '${_stats['totalClients'] ?? 0}',
                             subtitle: (_stats['totalClients'] == null || _stats['totalClients'] == 0)
                                 ? 'aucun client encore'
                                 : 'clients enregistrés',
-                            color: Colors.blueAccent,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: StatCard(
+                          child: _StatTile(
                             icon: Icons.trending_up_rounded,
                             label: 'CA total',
-                            value: (_stats['totalRevenue'] == null || _stats['totalRevenue'] == 0)
+                            value: _isEmptyAmount(_stats['totalRevenue'])
                                 ? '—'
-                                : '${_stats['totalRevenue']} CHF',
+                                : '${_stats['totalRevenue']}',
+                            unit: _isEmptyAmount(_stats['totalRevenue'])
+                                ? null
+                                : 'CHF',
                             subtitle: 'revenus cumulés',
-                            color: AppTheme.warning,
                           ),
                         ),
                       ],
@@ -319,33 +323,30 @@ class DashboardScreenState extends State<DashboardScreen> {
 
                   // Today's schedule
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                    padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Planning du jour',
-                          style: GoogleFonts.bricolageGrotesque(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textPrimary,
-                            letterSpacing: -0.3,
+                        Expanded(
+                          child: Text(
+                            'Planning du jour',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.heading,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryLight,
-                            borderRadius: BorderRadius.circular(20),
+                            color: AppTheme.bgSurface,
+                            borderRadius: BorderRadius.circular(AppTheme.rSm),
                           ),
                           child: Text(
                             '${_todayBookings.length} RDV',
-                            style: GoogleFonts.dmSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.primary,
-                            ),
+                            maxLines: 1,
+                            style: AppText.num(AppText.label)
+                                .copyWith(color: AppTheme.textSecondary),
                           ),
                         ),
                       ],
@@ -353,27 +354,35 @@ class DashboardScreenState extends State<DashboardScreen> {
                   ),
                   if (_todayBookings.isEmpty)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-                      child: Center(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 28),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bgCard,
+                          borderRadius: BorderRadius.circular(AppTheme.rMd),
+                          border: Border.all(color: AppTheme.border),
+                        ),
                         child: Column(
                           children: [
-                            const Text('📅', style: TextStyle(fontSize: 48)),
+                            const Icon(Icons.event_available_outlined,
+                                size: 28, color: AppTheme.textMuted),
                             const SizedBox(height: 12),
                             Text(
                               'Aucun rendez-vous aujourd\'hui',
-                              style: GoogleFonts.dmSans(
-                                fontSize: 15,
-                                color: AppTheme.textMuted,
-                              ),
+                              textAlign: TextAlign.center,
+                              style: AppText.body
+                                  .copyWith(fontWeight: FontWeight.w500),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
                             Text(
                               'Les réservations depuis le site\net l\'admin apparaîtront ici',
                               textAlign: TextAlign.center,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 13,
+                              style: AppText.label.copyWith(
+                                fontWeight: FontWeight.w400,
                                 color: AppTheme.textMuted,
-                                height: 1.5,
+                                height: 1.45,
                               ),
                             ),
                           ],
@@ -403,24 +412,27 @@ class DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  static bool _isEmptyAmount(dynamic v) => v == null || v == 0;
+
+  static String _capitalize(String s) =>
+      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
   Widget _buildLogoAvatar() {
     final logoUrl = ApiService.currentSalon?['logo'] as String?;
     if (logoUrl != null && logoUrl.isNotEmpty) {
       return Container(
-        width: 46,
-        height: 46,
+        width: 44,
+        height: 44,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: AppTheme.border, width: 1.5),
-          boxShadow: AppTheme.shadowSm,
+          color: AppTheme.bgCard,
+          borderRadius: BorderRadius.circular(AppTheme.rMd),
+          border: Border.all(color: AppTheme.border),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Image.network(
-            logoUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => _defaultAvatar(),
-          ),
+        child: Image.network(
+          logoUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => _defaultAvatar(),
         ),
       );
     }
@@ -430,31 +442,17 @@ class DashboardScreenState extends State<DashboardScreen> {
   Widget _defaultAvatar() {
     final name = ApiService.currentSalon?['name'] as String? ?? 'S';
     return Container(
-      width: 46,
-      height: 46,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.primary, AppTheme.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(13),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x335850E8),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
+        color: AppTheme.bgSurface,
+        borderRadius: BorderRadius.circular(AppTheme.rMd),
+        border: Border.all(color: AppTheme.border),
       ),
       child: Center(
         child: Text(
-          name[0].toUpperCase(),
-          style: GoogleFonts.bricolageGrotesque(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
+          name.isEmpty ? 'S' : name[0].toUpperCase(),
+          style: AppText.heading,
         ),
       ),
     );
@@ -479,111 +477,121 @@ class DashboardScreenState extends State<DashboardScreen> {
     final next = upcoming.first;
     final timeStr = DateFormat('HH:mm').format(next.dateTime);
 
+    // White card with a 3px accent bar on the left (no gradient, no glow).
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Container(
-        padding: const EdgeInsets.all(18),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: AppTheme.primary,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x405850E8),
-              blurRadius: 20,
-              offset: Offset(0, 6),
-            ),
-          ],
+          color: AppTheme.bgCard,
+          borderRadius: BorderRadius.circular(AppTheme.rMd),
+          border: Border.all(color: AppTheme.border),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Prochain rendez-vous',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withAlpha(180),
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(30),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    timeStr,
-                    style: GoogleFonts.bricolageGrotesque(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(30),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Text(next.serviceIcon,
-                        style: const TextStyle(fontSize: 22)),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(width: 3, color: AppTheme.primary),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        next.clientName,
-                        style: GoogleFonts.bricolageGrotesque(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.3,
+                        'Prochain rendez-vous',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
-                      Text(
-                        next.serviceName,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          color: Colors.white.withAlpha(180),
-                        ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 64,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                timeStr,
+                                maxLines: 1,
+                                softWrap: false,
+                                style: AppText.num(AppText.title),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: AppTheme.bgSurface,
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.rSm),
+                            ),
+                            child: Center(
+                              child: Text(next.serviceIcon,
+                                  style: const TextStyle(fontSize: 18)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  next.clientName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppText.body
+                                      .copyWith(fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  next.serviceName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppText.label.copyWith(
+                                    fontWeight: FontWeight.w400,
+                                    color: AppTheme.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${next.price.toInt()} CHF',
+                            maxLines: 1,
+                            style: AppText.num(AppText.body)
+                                .copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-                Text(
-                  '${next.price.toInt()} CHF',
-                  style: GoogleFonts.bricolageGrotesque(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildDrawer(BuildContext context) {
+    Widget item(IconData icon, String label, VoidCallback onTap) => ListTile(
+          leading: Icon(icon, color: AppTheme.textSecondary, size: 22),
+          title: Text(label,
+              style: AppText.body.copyWith(fontWeight: FontWeight.w500)),
+          onTap: onTap,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+        );
+
     return Drawer(
       backgroundColor: AppTheme.bgCard,
       child: SafeArea(
@@ -594,85 +602,45 @@ class DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
               child: Row(
                 children: [
-                  Image.asset('assets/images/logo.png', width: 36, height: 36),
+                  Image.asset('assets/images/logo.png', width: 32, height: 32),
                   const SizedBox(width: 12),
-                  Text('Kreno',
-                    style: GoogleFonts.bricolageGrotesque(
-                      fontSize: 22, fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
-                    )),
+                  Text('Kreno', style: AppText.title),
                 ],
               ),
             ),
             const Divider(height: 24),
-            ListTile(
-              leading: Icon(Icons.group_rounded, color: AppTheme.textSecondary, size: 22),
-              title: Text('Équipe',
-                style: GoogleFonts.dmSans(
-                    fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const EmployeesScreen()));
-              },
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-            ),
-            ListTile(
-              leading: Icon(Icons.spa_rounded, color: AppTheme.textSecondary, size: 22),
-              title: Text('Services',
-                style: GoogleFonts.dmSans(
-                    fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ServicesScreen()));
-              },
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-            ),
-            ListTile(
-              leading: Icon(Icons.block_rounded, color: AppTheme.textSecondary, size: 22),
-              title: Text('Créneaux bloqués',
-                style: GoogleFonts.dmSans(
-                    fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const BlocksScreen()));
-              },
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-            ),
-            ListTile(
-              leading: Icon(Icons.star_outline_rounded, color: AppTheme.textSecondary, size: 22),
-              title: Text('Avis clients',
-                style: GoogleFonts.dmSans(
-                    fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ReviewsScreen()));
-              },
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-            ),
+            item(Icons.group_outlined, 'Équipe', () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const EmployeesScreen()));
+            }),
+            item(Icons.content_cut_outlined, 'Services', () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ServicesScreen()));
+            }),
+            item(Icons.event_busy_outlined, 'Créneaux bloqués', () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const BlocksScreen()));
+            }),
+            item(Icons.star_outline_rounded, 'Avis clients', () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ReviewsScreen()));
+            }),
             const Spacer(),
             const Divider(),
-            ListTile(
-              leading: Icon(Icons.privacy_tip_outlined, color: AppTheme.textSecondary, size: 22),
-              title: Text('Politique de confidentialité',
-                style: GoogleFonts.dmSans(
-                    fontSize: 15, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
-              onTap: () {
-                Navigator.pop(context);
-                launchUrl(
-                  Uri.parse('https://kreno.ch/privacy'),
-                  mode: LaunchMode.externalApplication,
-                );
-              },
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
-            ),
+            item(Icons.privacy_tip_outlined, 'Politique de confidentialité', () {
+              Navigator.pop(context);
+              launchUrl(
+                Uri.parse('https://kreno.ch/privacy'),
+                mode: LaunchMode.externalApplication,
+              );
+            }),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Text('Version 1.0 · Kreno',
-                style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
+              child: Text('Version 1.0 · Kreno', style: AppText.caption),
             ),
           ],
         ),
@@ -683,5 +651,84 @@ class DashboardScreenState extends State<DashboardScreen> {
   Future<void> _openBookingDetail(BookingModel booking) async {
     await BookingDetailSheet.show(context, booking);
     _loadData();
+  }
+}
+
+/// Flat stat card: white, radius rMd, 1px border, padding 16.
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.subtitle,
+    this.unit,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final String? unit;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(AppTheme.rMd),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.label.copyWith(color: AppTheme.textSecondary),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(icon, size: 16, color: AppTheme.textMuted),
+            ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text.rich(
+                TextSpan(
+                  text: value,
+                  children: [
+                    if (unit != null)
+                      TextSpan(
+                        text: ' $unit',
+                        style: AppText.label
+                            .copyWith(color: AppTheme.textSecondary),
+                      ),
+                  ],
+                ),
+                maxLines: 1,
+                softWrap: false,
+                style: AppText.num(AppText.display),
+              ),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.caption,
+          ),
+        ],
+      ),
+    );
   }
 }
