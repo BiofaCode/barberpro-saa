@@ -9,6 +9,9 @@ jest.mock('../db', () => ({
     findSalonById: jest.fn(),
     findOwnerBySalon: jest.fn(),
     findOwnerById: jest.fn(),
+    findOwnerByEmail: jest.fn(),
+    createSalon: jest.fn(),
+    createOwner: jest.fn(),
     savePushToken: jest.fn(),
     updateOwner: jest.fn(),
     addSalonLog: jest.fn(),
@@ -73,4 +76,21 @@ test('admin session cannot request account deletion', async () => {
         .set('Authorization', `Bearer ${token}`).send({});
     expect(res.status).toBe(403);
     expect(db.updateOwner).not.toHaveBeenCalled();
+});
+
+describe('admin creates a salon', () => {
+    const create = body => request(server).post('/api/admin/salons').set('Authorization', admin).send(body);
+
+    test('refuses an owner e-mail that already has an account', async () => {
+        db.findOwnerByEmail.mockResolvedValue({ _id: 'o9', email: 'd@x.ch' });
+        const res = await create({ name: 'Nouveau', ownerEmail: 'D@x.ch', ownerPassword: 'secret123' });
+        expect(res.status).toBe(409);
+        expect(db.createSalon).not.toHaveBeenCalled();
+    });
+
+    test('refuses a salon without a name', async () => {
+        const res = await create({ name: '  ', ownerEmail: 'new@x.ch' });
+        expect(res.status).toBe(400);
+        expect(db.createSalon).not.toHaveBeenCalled();
+    });
 });

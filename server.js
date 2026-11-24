@@ -699,6 +699,14 @@ route('GET', '/api/admin/salons', async (req, res) => {
 
 route('POST', '/api/admin/salons', async (req, res) => {
     const body = await parseBody(req);
+    if (!body.name || !String(body.name).trim()) {
+        return json(res, 400, { success: false, error: 'Nom du salon requis' });
+    }
+    // Two owners with the same e-mail would make one of them unable to log in.
+    const ownerEmail = String(body.ownerEmail || '').trim();
+    if (ownerEmail && await db.findOwnerByEmail(ownerEmail)) {
+        return json(res, 409, { success: false, error: 'Un compte existe déjà avec cet e-mail' });
+    }
     const slug = await makeUniqueSlug(body.name || 'salon');
 
     const tpl = SECTOR_TEMPLATES[body.sector] || SECTOR_TEMPLATES.autre;
