@@ -203,6 +203,39 @@ class ApiService {
     return [];
   }
 
+  /// Totaux plateforme (salons, propriétaires, RDV, clients).
+  static Future<Map<String, dynamic>?> getAdminStats() async {
+    final headers = await _adminHeaders();
+    if (headers == null) return null;
+    try {
+      final res = await _get(Uri.parse('$_url/api/admin/stats'), headers: headers);
+      final data = jsonDecode(res.body);
+      if (data['success'] == true) return Map<String, dynamic>.from(data['data']);
+    } catch (e) {
+      debugPrint('getAdminStats error: $e');
+    }
+    return null;
+  }
+
+  /// Crée un salon + son propriétaire. Renvoie `null` si OK, sinon l'erreur.
+  static Future<({String? error, Map<String, dynamic>? salon})> adminCreateSalon(
+      Map<String, dynamic> body) async {
+    final headers = await _adminHeaders();
+    if (headers == null) return (error: 'Session admin expirée', salon: null);
+    try {
+      final res = await _post(Uri.parse('$_url/api/admin/salons'),
+          headers: headers, body: jsonEncode(body));
+      final data = jsonDecode(res.body);
+      if (data['success'] == true) {
+        return (error: null, salon: Map<String, dynamic>.from(data['data']['salon']));
+      }
+      return (error: data['error']?.toString() ?? 'Erreur lors de la création', salon: null);
+    } catch (e) {
+      debugPrint('adminCreateSalon error: $e');
+      return (error: 'Connexion impossible', salon: null);
+    }
+  }
+
   /// Ouvre un salon comme son gérant (session marquée « admin » côté serveur :
   /// pas de notifications push, pas de suppression de compte).
   static Future<String?> openSalonAsAdmin(String salonId) async {
