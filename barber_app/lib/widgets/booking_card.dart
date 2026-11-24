@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../theme/app_text.dart';
 import '../theme/app_theme.dart';
 import '../models/booking_model.dart';
 
@@ -20,37 +20,29 @@ class BookingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final timeStr    = DateFormat('HH:mm').format(booking.dateTime);
     final endTimeStr = DateFormat('HH:mm').format(booking.endTime);
-    final accent     = _accentColor;
+    final statusText = _statusTextColor;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: AppTheme.bgCard,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppTheme.rMd),
           border: Border.all(color: AppTheme.border),
-          boxShadow: AppTheme.shadowSm,
         ),
         child: IntrinsicHeight(
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Colored left accent strip
-              Container(
-                width: 4,
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
-                  ),
-                ),
-              ),
+              // Thin status bar on the left (decorative, never text).
+              Container(width: 3, color: _barColor),
 
               // Content
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                  padding: const EdgeInsets.fromLTRB(13, 14, 14, 14),
                   child: Row(
                     children: [
                       // Time column
@@ -67,18 +59,14 @@ class BookingCard extends StatelessWidget {
                                 timeStr,
                                 maxLines: 1,
                                 softWrap: false,
-                                style: GoogleFonts.dmSans(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppTheme.textPrimary,
-                                  fontFeatures: const [FontFeature.tabularFigures()],
-                                ),
+                                style: AppText.num(AppText.body)
+                                    .copyWith(fontWeight: FontWeight.w600),
                               ),
                             ),
                             Container(
                               margin: const EdgeInsets.symmetric(vertical: 3),
                               width: 1,
-                              height: 14,
+                              height: 12,
                               color: AppTheme.border,
                             ),
                             FittedBox(
@@ -87,11 +75,7 @@ class BookingCard extends StatelessWidget {
                                 endTimeStr,
                                 maxLines: 1,
                                 softWrap: false,
-                                style: GoogleFonts.dmSans(
-                                  fontSize: 11,
-                                  color: AppTheme.textMuted,
-                                  fontFeatures: const [FontFeature.tabularFigures()],
-                                ),
+                                style: AppText.num(AppText.caption),
                               ),
                             ),
                           ],
@@ -99,18 +83,18 @@ class BookingCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
 
-                      // Service icon
+                      // Service icon (comes from the API)
                       Container(
-                        width: 42,
-                        height: 42,
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
-                          color: accent.withAlpha(18),
-                          borderRadius: BorderRadius.circular(12),
+                          color: AppTheme.bgSurface,
+                          borderRadius: BorderRadius.circular(AppTheme.rSm),
                         ),
                         child: Center(
                           child: Text(
                             booking.serviceIcon,
-                            style: const TextStyle(fontSize: 19),
+                            style: const TextStyle(fontSize: 18),
                           ),
                         ),
                       ),
@@ -124,59 +108,56 @@ class BookingCard extends StatelessWidget {
                           children: [
                             Text(
                               booking.clientName,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              booking.serviceName,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 12,
-                                color: AppTheme.textSecondary,
-                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                              style: AppText.body
+                                  .copyWith(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              booking.serviceName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.label.copyWith(
+                                fontWeight: FontWeight.w400,
+                                color: AppTheme.textSecondary,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
 
-                      // Status badge + price
+                      // Status + price
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 9,
-                              vertical: 3,
+                              horizontal: 8,
+                              vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: accent.withAlpha(18),
-                              borderRadius: BorderRadius.circular(20),
+                              color: statusText.withAlpha(20),
+                              borderRadius:
+                                  BorderRadius.circular(AppTheme.rSm),
                             ),
                             child: Text(
                               booking.status.label,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 10,
+                              maxLines: 1,
+                              style: AppText.caption.copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: accent,
+                                color: statusText,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 5),
+                          const SizedBox(height: 6),
                           Text(
                             '${booking.price.toInt()} CHF',
-                            style: GoogleFonts.bricolageGrotesque(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: AppTheme.textPrimary,
-                              letterSpacing: -0.3,
-                            ),
+                            maxLines: 1,
+                            style: AppText.num(AppText.label)
+                                .copyWith(fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -191,18 +172,32 @@ class BookingCard extends StatelessWidget {
     );
   }
 
-  Color get _accentColor {
+  /// Status colour used as text (chip label): neutral/status tokens only,
+  /// never the salon colour, which may be too light to read on white.
+  Color get _statusTextColor {
     switch (booking.status) {
       case BookingStatus.pending:
         return AppTheme.warning;
       case BookingStatus.confirmed:
-        return AppTheme.primary;
+        return AppTheme.success;
       case BookingStatus.inProgress:
-        return AppTheme.success;
+        return AppTheme.textPrimary;
       case BookingStatus.completed:
-        return AppTheme.success;
+        return AppTheme.textMuted;
       case BookingStatus.cancelled:
         return AppTheme.error;
+    }
+  }
+
+  /// Left bar colour: the salon colour marks confirmed bookings.
+  Color get _barColor {
+    switch (booking.status) {
+      case BookingStatus.confirmed:
+        return AppTheme.primary;
+      case BookingStatus.completed:
+        return AppTheme.border;
+      default:
+        return _statusTextColor;
     }
   }
 }
