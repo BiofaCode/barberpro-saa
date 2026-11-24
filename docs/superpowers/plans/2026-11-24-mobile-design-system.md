@@ -14,7 +14,7 @@
 
 - Branch `feat/mobile-design-system` (worktree `.worktrees/production-launch`). Never merge to `main` before Fabio validates; no merge before 7 Dec 2026 unless he says so.
 - No change to navigation, flows, API calls, or business logic. Visual code only.
-- Neutral tokens (exact): app bg `#F7F7F5`, card `#FFFFFF`, surface `#F0F0EE`, border `#E4E4E0`, text `#161616`, text secondary `#55554F`, text muted `#8A8A83`, success `#1F8A4C`, warning `#B7791F`, error `#C2362F`.
+- Neutral tokens (exact): app bg `#F7F7F5`, card `#FFFFFF`, surface `#F0F0EE`, border `#E4E4E0`, text `#161616`, text secondary `#55554F`, text muted `#6E6E67`, success `#1A7A43`, warning `#8F5E12`, error `#C2362F`.
 - Accent = salon colour (`AppTheme.primaryNotifier`), used only for primary actions and selected/active state. Text on accent = black or white chosen by luminance (`AppTheme.onPrimary`).
 - One font family: Inter (google_fonts). Weights 400/500/600/700. Type scale: 12 · 13 · 15 · 17 · 20 · 28. Tabular figures for times and amounts.
 - Radii: 8 (small), 12 (cards, fields, buttons), 20 (bottom sheets). Buttons: radius 12, height 48–52, no pill shape.
@@ -43,7 +43,7 @@
 
 **Interfaces:**
 - Produces (used by every later task):
-  - `AppTheme` neutral constants with the Global Constraints values (`bgMain`, `bgCard`, `bgSurface`, `border`, `textPrimary`, `textSecondary`, `textMuted`, `success`, `warning`, `error`). Legacy names kept: `primaryLight`, `bgElevated` → `#F0F0EE`; `borderDark` → `#D6D6D0`; `primaryDark` → `#161616`; `primaryMid` → `#8A8A83`; `shadowSm`/`shadowMd` → `const <BoxShadow>[]`. `defaultPrimary` stays `#5850E8` (fallback when a salon has no colour).
+  - `AppTheme` neutral constants with the Global Constraints values (`bgMain`, `bgCard`, `bgSurface`, `border`, `textPrimary`, `textSecondary`, `textMuted`, `success`, `warning`, `error`). Legacy names kept: `primaryLight`, `bgElevated` → `#F0F0EE`; `borderDark` → `#D6D6D0`; `primaryDark` → `#161616`; `primaryMid` → `#6E6E67`; `shadowSm`/`shadowMd` → `const <BoxShadow>[]`. `defaultPrimary` stays `#5850E8` (fallback when a salon has no colour).
   - `static Color onColor(Color c)` → whichever of `Colors.white` and `Color(0xFF161616)` has the higher WCAG contrast ratio against `c` (ties → white).
   - `static Color get onPrimary` → `onColor(primary)`.
   - `static Color get accentText` → `primary` if contrast vs white ≥ 4.5, else `primary` darkened (HSL lightness −0.05 per step) until ≥ 4.5.

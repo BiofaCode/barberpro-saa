@@ -52,7 +52,7 @@ l'app actuelle avant son lancement du 7 déc. 2026.
 ## Le système (décisions)
 - **Couleurs neutres** (tokens) : fond app `#F7F7F5`, carte `#FFFFFF`, surface
   secondaire `#F0F0EE`, bordure `#E4E4E0`, texte `#161616`, texte secondaire `#55554F`,
-  texte discret `#8A8A83`. États : succès `#1F8A4C`, alerte `#B7791F`, erreur `#C2362F`
+  texte discret `#6E6E67`. États : succès `#1A7A43`, alerte `#8F5E12`, erreur `#C2362F`
   (moins saturés que l'actuel).
 - **Accent** = couleur du salon (inchangé : `primaryNotifier`), + `onPrimary` calculé
   (blanc ou noir selon luminance) et une teinte légère dérivée (fond de sélection).
