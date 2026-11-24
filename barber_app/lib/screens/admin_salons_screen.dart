@@ -120,7 +120,7 @@ class _AdminSalonsScreenState extends State<AdminSalonsScreen> {
                   child: ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
                     itemCount: shown.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (_, i) => _tile(shown[i]),
                   ),
                 ),

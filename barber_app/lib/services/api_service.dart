@@ -847,8 +847,8 @@ class ApiService {
     if (_salonId == null) return [];
     try {
       final params = <String, String>{
-        if (from != null) 'from': from,
-        if (to != null) 'to': to,
+        'from': ?from,
+        'to': ?to,
       };
       final uri = Uri.parse('$_url/api/pro/salon/$_salonId/blocks')
           .replace(queryParameters: params.isEmpty ? null : params);
