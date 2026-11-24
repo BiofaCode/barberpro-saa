@@ -145,6 +145,110 @@ class ApiService {
     return false;
   }
 
+  // ---- Console admin (super-admin Kreno) ----
+  // Le jeton admin est gardé à part : se « déconnecter » d'un salon ramène à la
+  // liste des salons sans redemander le mot de passe admin.
+  static const _adminTokenKey = 'adminToken';
+
+  /// Vrai quand le salon affiché a été ouvert depuis la console admin.
+  static bool get isAdminSession => _currentUser?['impersonated'] == true;
+
+  static Future<bool> hasAdminToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_adminTokenKey) != null;
+  }
+
+  static Future<String?> adminLogin(String password) async {
+    try {
+      final res = await _post(
+        Uri.parse('$_url/api/admin/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'password': password}),
+      );
+      final data = jsonDecode(res.body);
+      if (data['success'] == true && data['token'] != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_adminTokenKey, data['token']);
+        return null;
+      }
+      return data['error']?.toString() ?? 'Mot de passe incorrect';
+    } catch (e) {
+      debugPrint('adminLogin error: $e');
+      return 'Connexion impossible';
+    }
+  }
+
+  static Future<Map<String, String>?> _adminHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final t = prefs.getString(_adminTokenKey);
+    if (t == null) return null;
+    return {'Content-Type': 'application/json', 'Authorization': 'Bearer $t'};
+  }
+
+  /// Liste de tous les salons. `null` = jeton admin absent ou expiré.
+  static Future<List<Map<String, dynamic>>?> getAdminSalons() async {
+    final headers = await _adminHeaders();
+    if (headers == null) return null;
+    try {
+      final res = await _get(Uri.parse('$_url/api/admin/salons'), headers: headers);
+      if (res.statusCode == 401 || res.statusCode == 403) {
+        await adminLogout();
+        return null;
+      }
+      final data = jsonDecode(res.body);
+      if (data['success'] == true) return List<Map<String, dynamic>>.from(data['data']);
+    } catch (e) {
+      debugPrint('getAdminSalons error: $e');
+    }
+    return [];
+  }
+
+  /// Ouvre un salon comme son gérant (session marquée « admin » côté serveur :
+  /// pas de notifications push, pas de suppression de compte).
+  static Future<String?> openSalonAsAdmin(String salonId) async {
+    final headers = await _adminHeaders();
+    if (headers == null) return 'Session admin expirée';
+    try {
+      final res = await _get(Uri.parse('$_url/api/admin/salons/$salonId/magic-link'), headers: headers);
+      final data = jsonDecode(res.body);
+      if (data['success'] != true) return data['error']?.toString() ?? 'Erreur';
+      final d = Map<String, dynamic>.from(data['data']);
+      _token = d['token'];
+      _currentUser = Map<String, dynamic>.from(d['user']);
+      _currentSalon = d['salon'] != null ? Map<String, dynamic>.from(d['salon']) : null;
+      _salonId = _currentUser?['salonId']?.toString();
+      _currentUser?['salonId'] = _salonId;
+      _applyBrandingColor();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('token', _token!);
+      await prefs.setString('currentUser', jsonEncode(_currentUser));
+      if (_currentSalon != null) await prefs.setString('currentSalon', jsonEncode(_currentSalon));
+      return null;
+    } catch (e) {
+      debugPrint('openSalonAsAdmin error: $e');
+      return 'Connexion impossible';
+    }
+  }
+
+  /// Quitte le salon ouvert en admin, garde le jeton admin.
+  static Future<void> leaveAdminSalon() async {
+    _token = null;
+    _salonId = null;
+    _currentUser = null;
+    _currentSalon = null;
+    AppTheme.primaryNotifier.value = AppTheme.defaultPrimary;
+    final prefs = await SharedPreferences.getInstance();
+    for (final k in ['token', 'currentUser', 'currentSalon']) {
+      await prefs.remove(k);
+    }
+  }
+
+  static Future<void> adminLogout() async {
+    await leaveAdminSalon();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_adminTokenKey);
+  }
+
   static Future<void> logout() async {
     // Drop server-side token while we still have auth.
     await PushService.clearToken();

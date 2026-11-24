@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/admin_salons_screen.dart';
 import 'theme/app_theme.dart';
 import 'services/api_service.dart';
 import 'services/push_service.dart';
@@ -37,13 +38,16 @@ void main() async {
   // If we have a persisted session, also (re)register the push token in case
   // FCM rotated it while logged in on another device.
   if (isLoggedIn) PushService.registerToken();
+  // Console admin ouverte sans salon choisi → on y retourne directement.
+  final adminOnly = !isLoggedIn && await ApiService.hasAdminToken();
 
-  runApp(KrenoApp(isLoggedIn: isLoggedIn));
+  runApp(KrenoApp(isLoggedIn: isLoggedIn, adminOnly: adminOnly));
 }
 
 class KrenoApp extends StatelessWidget {
   final bool isLoggedIn;
-  const KrenoApp({super.key, this.isLoggedIn = false});
+  final bool adminOnly;
+  const KrenoApp({super.key, this.isLoggedIn = false, this.adminOnly = false});
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +65,11 @@ class KrenoApp extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
+        home: isLoggedIn
+            ? const HomeScreen()
+            : adminOnly
+                ? const AdminSalonsScreen()
+                : const LoginScreen(),
       ),
     );
   }

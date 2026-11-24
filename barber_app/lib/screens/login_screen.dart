@@ -1,9 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
+import 'admin_salons_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -319,11 +320,79 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                 ),
 
+                const SizedBox(height: 18),
+
+                // Console admin Kreno (gestion de tous les salons)
+                GestureDetector(
+                  onTap: _showAdminLogin,
+                  child: Text('Accès admin',
+                      style: GoogleFonts.dmSans(fontSize: 12, color: AppTheme.textMuted)),
+                ),
+
                 const SizedBox(height: 8),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showAdminLogin() {
+    final ctrl = TextEditingController();
+    String? err;
+    bool busy = false;
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (dialogCtx, setD) {
+          Future<void> submit() async {
+            if (ctrl.text.isEmpty || busy) return;
+            setD(() { busy = true; err = null; });
+            final e = await ApiService.adminLogin(ctrl.text);
+            if (!dialogCtx.mounted) return;
+            if (e != null) {
+              setD(() { busy = false; err = e; });
+              return;
+            }
+            Navigator.pop(dialogCtx);
+            if (!mounted) return;
+            Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const AdminSalonsScreen()), (_) => false);
+          }
+
+          return AlertDialog(
+            backgroundColor: AppTheme.bgCard,
+            title: Text('Console admin',
+                style: GoogleFonts.bricolageGrotesque(fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+            content: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: ctrl,
+                obscureText: true,
+                autofocus: true,
+                onSubmitted: (_) => submit(),
+                style: GoogleFonts.dmSans(color: AppTheme.textPrimary),
+                decoration: const InputDecoration(labelText: 'Mot de passe admin'),
+              ),
+              if (err != null) ...[
+                const SizedBox(height: 10),
+                Text(err!, style: GoogleFonts.dmSans(color: AppTheme.error, fontSize: 13)),
+              ],
+            ]),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: Text('Annuler', style: GoogleFonts.dmSans(color: AppTheme.textMuted)),
+              ),
+              TextButton(
+                onPressed: busy ? null : submit,
+                child: busy
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Text('Entrer', style: GoogleFonts.dmSans(color: AppTheme.primary, fontWeight: FontWeight.w700)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
