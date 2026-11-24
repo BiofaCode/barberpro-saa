@@ -73,7 +73,11 @@ void main() {
   group('neutral tokens', () {
     test('values', () {
       expect(AppTheme.bgMain, const Color(0xFFF7F7F5));
-      expect(AppTheme.textMuted, const Color(0xFF8A8A83));
+      expect(AppTheme.textMuted, const Color(0xFF6E6E67));
+      expect(AppTheme.primaryMid, const Color(0xFF6E6E67));
+      expect(AppTheme.success, const Color(0xFF1A7A43));
+      expect(AppTheme.warning, const Color(0xFF8F5E12));
+      expect(AppTheme.error, const Color(0xFFC2362F));
       expect(AppTheme.shadowSm.isEmpty, isTrue);
       expect(AppTheme.shadowMd.isEmpty, isTrue);
       expect(AppTheme.rMd, 12);

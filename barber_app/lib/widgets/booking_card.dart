@@ -139,7 +139,7 @@ class BookingCard extends StatelessWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: statusText.withAlpha(20),
+                              color: statusText.withAlpha(14),
                               borderRadius:
                                   BorderRadius.circular(AppTheme.rSm),
                             ),

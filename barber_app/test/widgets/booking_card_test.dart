@@ -7,6 +7,14 @@ import 'package:kreno_app/widgets/booking_card.dart';
 
 const _salonPink = Color(0xFFFF66C4);
 
+double _contrast(Color a, Color b) {
+  final l1 = a.computeLuminance();
+  final l2 = b.computeLuminance();
+  final hi = l1 > l2 ? l1 : l2;
+  final lo = l1 > l2 ? l2 : l1;
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 BookingModel _booking({BookingStatus status = BookingStatus.confirmed}) =>
     BookingModel(
       id: 'b1',
@@ -63,7 +71,19 @@ void main() {
     for (final status in BookingStatus.values) {
       await pumpCard(tester, _booking(status: status));
       final label = tester.widget<Text>(find.text(status.label));
-      expect(label.style?.color, isNot(_salonPink), reason: status.name);
+      final fg = label.style!.color!;
+      expect(fg, isNot(_salonPink), reason: status.name);
+      expect(_contrast(fg, Colors.white), greaterThanOrEqualTo(4.5),
+          reason: '${status.name} on white');
+      // The chip background is a light tint of the text colour on white.
+      final chip = tester.widget<Container>(find
+          .ancestor(of: find.text(status.label), matching: find.byType(Container))
+          .first);
+      final bg = Color.alphaBlend(
+          (chip.decoration! as BoxDecoration).color!, Colors.white);
+      expect(bg, isNot(Colors.white), reason: 'chip tint found');
+      expect(_contrast(fg, bg), greaterThanOrEqualTo(4.5),
+          reason: '${status.name} on its chip tint');
       expect(tester.takeException(), isNull);
     }
   });

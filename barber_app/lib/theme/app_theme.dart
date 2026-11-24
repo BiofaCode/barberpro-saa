@@ -22,7 +22,7 @@ class AppTheme {
   static Color get primary => primaryNotifier.value;
   static const Color primaryDark  = Color(0xFF161616);
   static const Color primaryLight = Color(0xFFF0F0EE);
-  static const Color primaryMid   = Color(0xFF8A8A83);
+  static const Color primaryMid   = Color(0xFF6E6E67);
 
   // ── Radii ────────────────────────────────────────────────
   static const double rSm = 8;
@@ -41,15 +41,15 @@ class AppTheme {
   // ── Text ─────────────────────────────────────────────────
   static const Color textPrimary   = Color(0xFF161616);
   static const Color textSecondary = Color(0xFF55554F);
-  static const Color textMuted     = Color(0xFF8A8A83);
+  static const Color textMuted     = Color(0xFF6E6E67);
 
   // ── Borders ──────────────────────────────────────────────
   static const Color border     = Color(0xFFE4E4E0);
   static const Color borderDark = Color(0xFFD6D6D0);
 
   // ── Status ───────────────────────────────────────────────
-  static const Color success = Color(0xFF1F8A4C);
-  static const Color warning = Color(0xFFB7791F);
+  static const Color success = Color(0xFF1A7A43);
+  static const Color warning = Color(0xFF8F5E12);
   static const Color error   = Color(0xFFC2362F);
 
   // ── Shadows (flat design: none) ──────────────────────────
