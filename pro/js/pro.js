@@ -8,6 +8,11 @@ let salonId = null;
 let currentUser = null;
 let currentSalon = null;
 
+// Escape user-controlled text before inserting it into innerHTML (XSS).
+function esc(v) {
+    return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // ---- JWT helpers (client-side) ----
 function getTokenPayload(t) {
     try {
@@ -352,7 +357,7 @@ function renderTopServices(services) {
             <div style="font-size:18px;width:28px;text-align:center">${s.icon}</div>
             <div style="flex:1;min-width:0">
                 <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-                    <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${s.name}</span>
+                    <span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${esc(s.name)}</span>
                     <span style="color:var(--text-muted)">${s.count}× · ${s.revenue} CHF</span>
                 </div>
                 <div style="height:6px;background:rgba(255,255,255,.05);border-radius:4px;overflow:hidden">
@@ -552,8 +557,8 @@ async function loadDashboard(_retry = 0) {
                 <div class="booking-row">
                     <div class="booking-icon">${b.serviceIcon || '✂️'}</div>
                     <div class="booking-info">
-                        <div class="booking-name">${b.clientName}</div>
-                        <div class="booking-detail">${b.serviceName} · ${b.time} · ${b.duration || 30}min</div>
+                        <div class="booking-name">${esc(b.clientName)}</div>
+                        <div class="booking-detail">${esc(b.serviceName)} · ${b.time} · ${b.duration || 30}min</div>
                     </div>
                     <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
                     <div style="font-weight:700;color:var(--primary)">${b.price || 0} CHF</div>
@@ -592,8 +597,8 @@ async function loadDashboard(_retry = 0) {
                         <div class="booking-row">
                             <div class="booking-icon">${b.serviceIcon || '✂️'}</div>
                             <div class="booking-info">
-                                <div class="booking-name">${b.clientName}</div>
-                                <div class="booking-detail">${b.serviceName} · ${fmt(b.date)} ${b.time}${b.employeeName ? ' · ' + b.employeeName : ''}</div>
+                                <div class="booking-name">${esc(b.clientName)}</div>
+                                <div class="booking-detail">${esc(b.serviceName)} · ${fmt(b.date)} ${b.time}${b.employeeName ? ' · ' + esc(b.employeeName) : ''}</div>
                             </div>
                             <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
                             <div style="font-weight:700;color:var(--primary)">${b.price || 0} CHF</div>
@@ -668,8 +673,8 @@ function renderBookingsList(bookings) {
         <div class="data-card" style="cursor:pointer" onclick='showBookingDetail(${JSON.stringify(b).replace(/'/g,"&#39;")})'>
             <div class="data-card-icon">${b.serviceIcon || '✂️'}</div>
             <div class="data-card-info">
-                <div class="data-card-name">${b.clientName}</div>
-                <div class="data-card-sub">${b.serviceName} · ${b.date} à ${b.time} · ${b.duration || 30}min${b.employeeName ? ' · ' + b.employeeName : ''}</div>
+                <div class="data-card-name">${esc(b.clientName)}</div>
+                <div class="data-card-sub">${esc(b.serviceName)} · ${b.date} à ${b.time} · ${b.duration || 30}min${b.employeeName ? ' · ' + esc(b.employeeName) : ''}</div>
             </div>
             <div><span class="badge badge-${b.status || 'confirmed'}">${statusLabel(b.status)}</span></div>
             <div class="data-card-right">
@@ -808,7 +813,7 @@ async function showAddBlock() {
             const empData = await empRes.json();
             const emps = (empData.data || []).filter(e => e.role === 'employee');
             if (emps.length > 0) {
-                const opts = emps.map(e => `<option value="${e._id}" data-name="${e.name}">${e.name}</option>`).join('');
+                const opts = emps.map(e => `<option value="${e._id}" data-name="${esc(e.name)}">${esc(e.name)}</option>`).join('');
                 empSection = `<div class="form-group">
                     <label class="form-label">Concerne</label>
                     <select class="form-input form-input-full" id="blockEmployee">
@@ -902,18 +907,18 @@ function showBookingDetail(b) {
     document.getElementById('modalBody').innerHTML = `
         <div style="display:grid;gap:8px;margin-bottom:16px">
             <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
-                <span style="color:var(--text-muted)">Client</span><strong>${b.clientName}</strong>
+                <span style="color:var(--text-muted)">Client</span><strong>${esc(b.clientName)}</strong>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
                 <span style="color:var(--text-muted)">Date</span><strong>${b.date} à ${b.time}</strong>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
-                <span style="color:var(--text-muted)">Prestation</span><strong>${b.serviceName || '—'}</strong>
+                <span style="color:var(--text-muted)">Prestation</span><strong>${esc(b.serviceName || '—')}</strong>
             </div>
             <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
                 <span style="color:var(--text-muted)">Durée</span><strong>${b.duration || 30} min</strong>
             </div>
-            ${b.employeeName ? `<div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text-muted)">Styliste</span><strong>${b.employeeName}</strong></div>` : ''}
+            ${b.employeeName ? `<div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text-muted)">Styliste</span><strong>${esc(b.employeeName)}</strong></div>` : ''}
             <div style="display:flex;justify-content:space-between;font-size:.9rem;padding:8px 0;border-bottom:1px solid var(--border)">
                 <span style="color:var(--text-muted)">Prix</span><strong>${b.price || 0} CHF</strong>
             </div>
@@ -1053,7 +1058,7 @@ function renderCalendarWeek(bookings) {
             const blockCards = startBlocks.map(bl => `<div class="cal-booking" style="background:rgba(239,68,68,0.22);border-left:3px solid #ef4444;color:#ef4444;font-size:.72rem;cursor:pointer" onclick="event.stopPropagation();showBlockDetail(${JSON.stringify(bl).replace(/"/g,'&quot;')})"><div class="cal-booking-name">🚫 ${bl.reason || 'Bloqué'}</div><div class="cal-booking-svc">${bl.startTime}–${bl.endTime}${bl.employeeName ? ' · '+bl.employeeName : ''}</div></div>`).join('');
             return `<div class="cal-slot${iso === todayISO ? ' cal-today-col' : ''}" onclick="showAddBookingOnDate('${iso}','${hStr}:00')" style="${bgStyle}">
                 ${blockCards}
-                ${slotBkgs.map(b => `<div class="cal-booking cal-booking-${b.status||'confirmed'}" onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})"><div class="cal-booking-name">${b.clientName}</div><div class="cal-booking-svc">${b.serviceName||''}</div></div>`).join('')}
+                ${slotBkgs.map(b => `<div class="cal-booking cal-booking-${b.status||'confirmed'}" onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})"><div class="cal-booking-name">${esc(b.clientName)}</div><div class="cal-booking-svc">${esc(b.serviceName||'')}</div></div>`).join('')}
             </div>`;
         }).join('');
         return timeLbl + slots;
@@ -1233,8 +1238,8 @@ function renderCalendarDay(bookings) {
                     ${slotBkgs.map(b => `
                         <div class="cal-booking cal-booking-${b.status||'confirmed'}" style="margin-bottom:4px"
                              onclick="event.stopPropagation();showBookingDetail(${JSON.stringify(b).replace(/"/g,'&quot;')})">
-                            <div class="cal-booking-name">${b.time} · ${b.clientName}</div>
-                            <div class="cal-booking-svc">${b.serviceName||''} ${b.duration ? '· '+b.duration+'min' : ''} ${b.price ? '· '+b.price+' CHF' : ''}</div>
+                            <div class="cal-booking-name">${b.time} · ${esc(b.clientName)}</div>
+                            <div class="cal-booking-svc">${esc(b.serviceName||'')} ${b.duration ? '· '+b.duration+'min' : ''} ${b.price ? '· '+b.price+' CHF' : ''}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -1463,7 +1468,7 @@ async function showAddBooking() {
     const visibleServices = isEmp
         ? services.filter(s => !s.assignedEmployees || s.assignedEmployees.length === 0 || s.assignedEmployees.includes(currentUser.id))
         : services;
-    const svcOptions = visibleServices.map(s => `<option value="${s.name}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">${s.icon} ${s.name} — ${s.price} CHF (${s.duration}min)</option>`).join('');
+    const svcOptions = visibleServices.map(s => `<option value="${esc(s.name)}" data-icon="${s.icon}" data-price="${s.price}" data-duration="${s.duration}">${s.icon} ${esc(s.name)} — ${s.price} CHF (${s.duration}min)</option>`).join('');
 
     window._mbEmployees = employees;
     window._mbServices = visibleServices;
@@ -1482,7 +1487,7 @@ async function showAddBooking() {
             return true;
         });
         if (validEmps.length === 0) return '<option value="">— Aucun pro pour cette prestation —</option>';
-        return '<option value="">— Non assigné —</option>' + validEmps.map(e => `<option value="${e._id}" data-name="${e.name}">${e.name}</option>`).join('');
+        return '<option value="">— Non assigné —</option>' + validEmps.map(e => `<option value="${e._id}" data-name="${esc(e.name)}">${esc(e.name)}</option>`).join('');
     };
 
     const initialService = services.length > 0 ? services[0].name : null;
@@ -1551,7 +1556,7 @@ async function runClientSearch(q) {
                  style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:.88rem;transition:background .1s"
                  onmouseover="this.style.background='rgba(255,255,255,.05)'"
                  onmouseout="this.style.background=''">
-                <div style="font-weight:600">${c.name}</div>
+                <div style="font-weight:600">${esc(c.name)}</div>
                 <div style="color:var(--text-muted);font-size:.78rem">${[c.phone, c.email].filter(Boolean).join(' · ') || 'Pas de contact'}</div>
             </div>
         `).join('');
@@ -1635,8 +1640,8 @@ function _renderClientsList(clients) {
         <div class="data-card" style="cursor:pointer" onclick="showClientProfile('${c._id}')">
             <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),var(--primary-mid));color:#fff;font-weight:700;font-size:16px">${(c.name || '?')[0].toUpperCase()}</div>
             <div class="data-card-info">
-                <div class="data-card-name">${c.name} ${loyalty}</div>
-                <div class="data-card-sub">${c.email || ''} ${c.phone ? '· ' + c.phone : ''}</div>
+                <div class="data-card-name">${esc(c.name)} ${loyalty}</div>
+                <div class="data-card-sub">${esc(c.email || '')} ${c.phone ? '· ' + esc(c.phone) : ''}</div>
             </div>
             <div class="data-card-right">
                 <div class="data-card-value">${visits}</div>
@@ -1675,8 +1680,8 @@ async function loadClients() {
                 <div class="data-card" style="cursor:pointer" onclick="showClientProfile('${c._id}')">
                     <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),var(--primary-mid));color:#fff;font-weight:700;font-size:16px">${(c.name || '?')[0].toUpperCase()}</div>
                     <div class="data-card-info">
-                        <div class="data-card-name">${c.name} ${loyalty}</div>
-                        <div class="data-card-sub">${c.email || ''} ${c.phone ? '· ' + c.phone : ''}</div>
+                        <div class="data-card-name">${esc(c.name)} ${loyalty}</div>
+                        <div class="data-card-sub">${esc(c.email || '')} ${c.phone ? '· ' + esc(c.phone) : ''}</div>
                     </div>
                     <div class="data-card-right">
                         <div class="data-card-value">${visits}</div>
@@ -1720,12 +1725,12 @@ async function showClientProfile(clientId) {
                 </div>
             </div>
             <div style="font-size:.85rem;margin-bottom:14px;color:var(--text-muted)">
-                ${c.email || '—'} ${c.phone ? '· ' + c.phone : ''}
+                ${esc(c.email || '—')} ${c.phone ? '· ' + esc(c.phone) : ''}
                 ${c.lastVisit ? ' · Dernière visite : ' + c.lastVisit.split('T')[0] : ''}
             </div>
             <div class="form-group">
                 <label class="form-label">Notes internes</label>
-                <textarea class="form-input form-input-full" id="clientNotesField" rows="3" placeholder="Allergies, préférences, notes…">${c.notes || ''}</textarea>
+                <textarea class="form-input form-input-full" id="clientNotesField" rows="3" placeholder="Allergies, préférences, notes…">${esc(c.notes || '')}</textarea>
             </div>
             ${(c.recentBookings || []).length ? `
                 <div style="margin-top:14px">
@@ -1733,7 +1738,7 @@ async function showClientProfile(clientId) {
                     ${c.recentBookings.slice(0, 6).map(b => `
                         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.83rem">
                             <div>
-                                <div style="font-weight:600">${b.serviceName || '—'}</div>
+                                <div style="font-weight:600">${esc(b.serviceName || '—')}</div>
                                 <div style="color:var(--text-muted)">${b.date} à ${b.time}</div>
                             </div>
                             <div style="text-align:right;flex-shrink:0">
@@ -1816,7 +1821,7 @@ async function loadEmployees() {
                 <div class="data-card">
                     <div class="data-card-icon" style="background:linear-gradient(135deg,var(--primary),var(--primary-mid));color:#fff;font-weight:700;font-size:16px;flex-shrink:0">${(e.name || '?')[0].toUpperCase()}</div>
                     <div class="data-card-info" style="min-width:0;flex:1">
-                        <div class="data-card-name">${e.name}</div>
+                        <div class="data-card-name">${esc(e.name)}</div>
                         <div class="data-card-sub">${e.role === 'owner' ? 'Propriétaire' : 'Employé'}${(e.specialties || []).length ? ' · ' + e.specialties.join(', ') : ''}</div>
                     </div>
                     <div style="display:flex;gap:6px;align-items:center;flex-shrink:0">
@@ -2035,7 +2040,7 @@ async function loadServices() {
                 <div class="data-card">
                     <div class="data-card-icon">${s.icon || '✂️'}</div>
                     <div class="data-card-info">
-                        <div class="data-card-name">${s.name}</div>
+                        <div class="data-card-name">${esc(s.name)}</div>
                         <div class="data-card-sub">${s.duration || 30}min · ${s.description || ''}</div>
                     </div>
                     <div class="data-card-right">
@@ -2097,7 +2102,7 @@ async function showAddService() {
         } else {
             document.getElementById('svcEmployeesList').innerHTML = emps.map(e => `
                 <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.9rem;cursor:pointer">
-                    <input type="checkbox" class="svc-emp-cb" value="${e._id}"> ${e.name} (${e.role === 'owner' ? 'Propriétaire' : 'Employé'})
+                    <input type="checkbox" class="svc-emp-cb" value="${e._id}"> ${esc(e.name)} (${e.role === 'owner' ? 'Propriétaire' : 'Employé'})
                 </label>
             `).join('');
         }
@@ -2136,7 +2141,7 @@ async function addService() {
 async function showEditService(svc) {
     document.getElementById('modalTitle').textContent = 'Modifier une prestation';
     document.getElementById('modalBody').innerHTML = `
-        <div class="form-group"><label class="form-label">Nom</label><input class="form-input form-input-full" id="svcName" value="${svc.name}"></div>
+        <div class="form-group"><label class="form-label">Nom</label><input class="form-input form-input-full" id="svcName" value="${esc(svc.name)}"></div>
         <div class="form-row">
             <div class="form-group" style="flex:1"><label class="form-label">Prix (CHF)</label><input type="number" class="form-input form-input-full" id="svcPrice" value="${svc.price}"></div>
             <div class="form-group" style="flex:1"><label class="form-label">Durée (min)</label><input type="number" class="form-input form-input-full" id="svcDuration" value="${svc.duration}"></div>
@@ -2151,7 +2156,7 @@ async function showEditService(svc) {
                 ${['✂️','💇','💅','🧖','💆','🪒','🧴','💋','👗','👠','💄','🌸','🧘','🪮','🧼','🌿','⭐','✨','💎','🔥'].map(e=>`<button type="button" onclick="document.getElementById('svcIcon').value='${e}'" style="font-size:1.3rem;padding:4px 6px;background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">${e}</button>`).join('')}
             </div>
         </div>
-        <div class="form-group"><label class="form-label">Description</label><input class="form-input form-input-full" id="svcDesc" value="${svc.description}"></div>
+        <div class="form-group"><label class="form-label">Description</label><input class="form-input form-input-full" id="svcDesc" value="${esc(svc.description)}"></div>
         <div class="form-group">
             <label class="form-label">Assigner à (laisser vide = tous)</label>
             <div id="svcEmployeesList"><div style="margin-top:10px;font-size:0.9rem;color:var(--text-sec)">Chargement des employés...</div></div>
@@ -2180,7 +2185,7 @@ async function showEditService(svc) {
             const assignedIds = svc.assignedEmployees || [];
             document.getElementById('svcEmployeesList').innerHTML = emps.map(e => `
                 <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:0.9rem;cursor:pointer">
-                    <input type="checkbox" class="svc-emp-cb" value="${e._id}" ${assignedIds.includes(e._id) ? 'checked' : ''}> ${e.name} (${e.role === 'owner' ? 'Propriétaire' : 'Employé'})
+                    <input type="checkbox" class="svc-emp-cb" value="${e._id}" ${assignedIds.includes(e._id) ? 'checked' : ''}> ${esc(e.name)} (${e.role === 'owner' ? 'Propriétaire' : 'Employé'})
                 </label>
             `).join('');
         }
@@ -2281,14 +2286,14 @@ function renderReviews() {
                         ${r.clientName?.[0]?.toUpperCase() || '?'}
                     </div>
                     <div>
-                        <div style="font-weight:600;font-size:.9rem">${r.clientName}</div>
+                        <div style="font-weight:600;font-size:.9rem">${esc(r.clientName)}</div>
                         <div style="font-size:.75rem;color:var(--text-muted)">${r.serviceName || ''}${r.date ? ' · ' + r.date : ''}</div>
                     </div>
                 </div>
                 ${statusBadge(r)}
             </div>
             <div style="color:#f59e0b;font-size:1.1rem;letter-spacing:1px">${stars(r.reviewRating || 0)}</div>
-            ${r.reviewComment ? `<div style="font-size:.85rem;color:var(--text-sec);font-style:italic;line-height:1.5">"${r.reviewComment}"</div>` : ''}
+            ${r.reviewComment ? `<div style="font-size:.85rem;color:var(--text-sec);font-style:italic;line-height:1.5">"${esc(r.reviewComment)}"</div>` : ''}
             ${r.reviewApproved === null || r.reviewApproved === undefined ? `
             <div style="display:flex;gap:8px;width:100%;margin-top:4px">
                 <button class="btn btn-primary btn-sm" style="flex:1" onclick="moderateReview('${r._id}', true)">✅ Publier</button>
@@ -2625,11 +2630,11 @@ async function loadSettings() {
                                 return `<button type="button"
                                     data-theme-chip
                                     data-primary="${t.primary}" data-accent="${t.accent}"
-                                    data-bg="${t.bg}" data-text="${t.text}"
-                                    onclick="applyColorTheme({primary:'${t.primary}',accent:'${t.accent}',bg:'${t.bg}',text:'${t.text}'})"
+                                    data-bg="${t.bg}" data-text="${esc(t.text)}"
+                                    onclick="applyColorTheme({primary:'${t.primary}',accent:'${t.accent}',bg:'${t.bg}',text:'${esc(t.text)}'})"
                                     style="border:2px solid ${isActive ? 'rgba(255,255,255,.8)' : 'var(--border)'};border-radius:10px;padding:8px 6px;background:${isActive ? 'rgba(255,255,255,.08)' : 'var(--bg)'};cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:68px;transition:border-color .15s,background .15s">
                                     <div style="width:46px;height:20px;border-radius:5px;background:linear-gradient(90deg,${t.primary},${t.accent})"></div>
-                                    <span style="font-size:.7rem;color:var(--text-sec);white-space:nowrap">${t.name}</span>
+                                    <span style="font-size:.7rem;color:var(--text-sec);white-space:nowrap">${esc(t.name)}</span>
                                 </button>`;
                             }).join('')}
                         </div>
@@ -2795,7 +2800,7 @@ async function loadSettings() {
                     <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px">
                         ${(salon.gallery || []).map(p => `
                             <div style="position:relative;border-radius:12px;overflow:hidden;aspect-ratio:1;background:var(--bg-surface)">
-                                <img src="${p.url}" alt="${p.title}" style="width:100%;height:100%;object-fit:cover">
+                                <img src="${p.url}" alt="${esc(p.title)}" style="width:100%;height:100%;object-fit:cover">
                                 <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:8px">
                                     <div style="font-size:.75rem;color:#fff;font-weight:500">${p.title || ''}</div>
                                 </div>
@@ -2833,8 +2838,8 @@ async function loadSettings() {
                             <div style="background:var(--bg-surface);border-radius:12px;padding:16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start">
                                 <div style="flex:1">
                                     <div style="color:var(--primary);font-size:.9rem;margin-bottom:4px">${'★'.repeat(t.stars)}${'☆'.repeat(5 - t.stars)}</div>
-                                    <div style="font-size:.88rem;color:var(--text);margin-bottom:6px">"${t.text}"</div>
-                                    <div style="font-size:.8rem;color:var(--text-sec)"><strong>${t.name}</strong> — ${t.role}</div>
+                                    <div style="font-size:.88rem;color:var(--text);margin-bottom:6px">"${esc(t.text)}"</div>
+                                    <div style="font-size:.8rem;color:var(--text-sec)"><strong>${esc(t.name)}</strong> — ${t.role}</div>
                                 </div>
                                 <div style="display:flex;gap:6px;margin-left:12px">
                                     <button class="btn btn-sm btn-outline" onclick="editTestimonial('${t._id}')">✏️</button>
@@ -3706,7 +3711,7 @@ function renderBranchesList(salons) {
                         ${s.logo ? `<img src="${s.logo}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">` : '🏪'}
                     </div>
                     <div style="flex:1;min-width:0">
-                        <div style="font-weight:600;font-size:.95rem">${s.name}</div>
+                        <div style="font-weight:600;font-size:.95rem">${esc(s.name)}</div>
                         <div style="font-size:.78rem;color:var(--text-muted)">/s/${s.slug}</div>
                     </div>
                     ${s.isPrimary ? '<span class="badge badge-success" style="flex-shrink:0;font-size:.72rem">Principal</span>' : ''}
@@ -3742,7 +3747,7 @@ async function switchToSalon(targetSalonId) {
         const name = currentSalon.name || 'Mon Salon';
         const words = name.split(' ');
         document.getElementById('sidebarSalonName').innerHTML = words[0] + (words.length > 1 ? ' <span>' + words.slice(1).join(' ') + '</span>' : '');
-        showToast(`Basculé vers ${currentSalon.name} ✅`);
+        showToast(`Basculé vers ${esc(currentSalon.name)} ✅`);
         showPage('dashboard');
     } catch (e) { showToast('Erreur de connexion', 'error'); }
 }
@@ -3780,7 +3785,7 @@ async function createBranch() {
         const data = await res.json();
         if (!data.success) { showToast(data.error || 'Erreur', 'error'); return; }
         closeModal();
-        showToast(`Établissement "${data.data.name}" créé ✅`);
+        showToast(`Établissement "${esc(data.data.name)}" créé ✅`);
         loadMySalons();
     } catch (e) { showToast('Erreur de connexion', 'error'); }
 }

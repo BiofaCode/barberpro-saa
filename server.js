@@ -132,13 +132,33 @@ function parseBody(req) {
             body += c;
         });
         req.on('end', () => {
-            try { resolve(JSON.parse(body)); }
+            try { resolve(neutralizeMarkup(JSON.parse(body))); }
             catch { resolve({}); }
         });
         req.on('error', () => resolve({}));
     });
 }
 
+// Defense in depth against stored XSS: every text that reaches the server
+// (client name, booking notes, salon name, review…) is later rendered by the
+// pro portal, the admin console, e-mails and receipts. No field needs real
+// HTML, so `<` and `>` are replaced by look-alike angle quotes at the door.
+// Secrets are left untouched (a password may legitimately contain `<`).
+const RAW_KEYS = /pass(word)?|token|secret|signature|^code$/i;
+function neutralizeMarkup(value, key = '') {
+    if (typeof value === 'string') {
+        return RAW_KEYS.test(key) ? value : value.replace(/</g, '‹').replace(/>/g, '›');
+    }
+    if (Array.isArray(value)) return value.map(v => neutralizeMarkup(v, key));
+    if (value && typeof value === 'object') {
+        const out = {};
+        for (const [k, v] of Object.entries(value)) out[k] = neutralizeMarkup(v, k);
+        return out;
+    }
+    return value;
+}
+
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10 MB
 function parseMultipart(req) {
     return new Promise((resolve, reject) => {
         const contentType = req.headers['content-type'] || '';
@@ -147,7 +167,16 @@ function parseMultipart(req) {
 
         const boundary = boundaryMatch[1];
         const chunks = [];
-        req.on('data', c => chunks.push(c));
+        let size = 0;
+        req.on('data', c => {
+            size += c.length;
+            // Images only: refuse anything above 10 MB instead of buffering it all.
+            if (size > MAX_UPLOAD_SIZE) {
+                req.destroy();
+                return reject(new Error('Request body too large'));
+            }
+            chunks.push(c);
+        });
         req.on('end', () => {
             try {
                 const buffer = Buffer.concat(chunks);
@@ -239,6 +268,12 @@ function verifySalonAccess(req, salonId) {
     return null;
 }
 
+// Constant-time string comparison (secrets, signatures).
+function safeEqual(a, b) {
+    const x = Buffer.from(String(a ?? '')), y = Buffer.from(String(b ?? ''));
+    return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
+
 function verifyToken(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
@@ -249,7 +284,7 @@ function verifyToken(req) {
         const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
         // Verify signature
         const sig = crypto.createHmac('sha256', JWT_SECRET).update(`${parts[0]}.${parts[1]}`).digest('base64url');
-        if (sig !== parts[2]) return null;
+        if (!safeEqual(sig, parts[2])) return null;
         // Reject tokens without expiry or past their expiry
         if (!payload.exp || Date.now() > payload.exp) return null;
         return payload;
@@ -536,7 +571,7 @@ route('POST', '/api/admin/login', async (req, res) => {
         return json(res, 429, { success: false, error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' });
     }
     const body = await parseBody(req);
-    if (!body.password || body.password !== ADMIN_PASSWORD) {
+    if (!body.password || !safeEqual(body.password, ADMIN_PASSWORD)) {
         return json(res, 401, { success: false, error: 'Mot de passe incorrect' });
     }
     const token = createToken({ role: 'superadmin' });
@@ -588,7 +623,9 @@ route('GET', '/api/health', async (req, res) => {
 });
 
 route('GET', '/api/metrics', async (req, res) => {
-    // Only allow admin access to metrics (optional, can remove for internal monitoring)
+    // Admin only: memory and traffic figures help an attacker plan a DoS.
+    const user = verifyToken(req);
+    if (!user || user.role !== 'superadmin') return json(res, 401, { success: false, error: 'Accès non autorisé' });
     json(res, 200, {
         uptime: process.uptime(),
         memory: process.memoryUsage(),
@@ -604,6 +641,10 @@ route('GET', '/api/metrics', async (req, res) => {
 
 // POST /api/contact — Contact form from landing page
 route('POST', '/api/contact', async (req, res) => {
+    // Anti-spam: the form sends a real e-mail each time.
+    if (rateLimit(getClientIP(req), 'contact', 5, 60 * 60 * 1000)) {
+        return json(res, 429, { success: false, error: 'Trop de messages. Réessayez plus tard.' });
+    }
     const body = await parseBody(req);
     const { name, email, salon, message } = body;
     if (!name || !email || !message) return json(res, 400, { success: false, error: 'Champs requis manquants' });
@@ -1039,7 +1080,7 @@ route('POST', '/api/pro/forgot-password', async (req, res) => {
     if (owner) {
         const token = crypto.randomBytes(32).toString('hex');
         resetTokens.set(token, { ownerId: owner._id, email, expiry: Date.now() + 60 * 60 * 1000 });
-        const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+        const baseUrl = SITE_URL;
         const resetUrl = `${baseUrl}/pro?reset_token=${token}`;
         sendPasswordResetEmail(email, owner.name, resetUrl); // non-blocking
         console.log(`🔑 Password reset token generated for ${email}`);
@@ -1843,7 +1884,7 @@ route('POST', '/api/pro/salon/:salonId/bookings', async (req, res, params) => {
 
     // Non-blocking: email + SMS
     const salon = await db.findSalonById(params.salonId);
-    const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+    const baseUrl = SITE_URL;
     const cancelUrl = booking.cancelToken ? `${baseUrl}/cancel/${booking.cancelToken}` : null;
     const receiptUrl = booking.cancelToken ? `${baseUrl}/receipt/${booking._id}?token=${booking.cancelToken}` : null;
     if (salon && booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrl, receiptUrl);
@@ -2032,7 +2073,7 @@ route('POST', '/api/pro/sms/buy', async (req, res) => {
     const salon = await db.findSalonById(user.salonId);
     if (!salon) return json(res, 404, { success: false });
 
-    const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+    const baseUrl = SITE_URL;
 
     const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -2081,7 +2122,7 @@ route('POST', '/api/stripe/create-checkout', async (req, res) => {
     const planInfo = PLAN_PRICES[plan];
     if (!planInfo) return json(res, 400, { success: false, error: 'Plan invalide' });
 
-    const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+    const baseUrl = SITE_URL;
 
     try {
         const session = await stripe.checkout.sessions.create({
@@ -2128,7 +2169,7 @@ route('POST', '/api/stripe/portal/session', async (req, res) => {
     }
 
     try {
-        const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+        const baseUrl = SITE_URL;
         const session = await stripe.billingPortal.sessions.create({
             customer: salon.subscription.stripeCustomerId,
             return_url: `${baseUrl}/pro`,
@@ -2373,7 +2414,7 @@ route('POST', '/api/stripe/register-and-checkout', async (req, res) => {
 
         // Create Stripe Checkout Session
         if (stripe) {
-            const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+            const baseUrl = SITE_URL;
             const session = await stripe.checkout.sessions.create({
                 payment_method_types: ['card'],
                 mode: 'subscription',
@@ -2466,7 +2507,7 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             const booking = await db.findBookingById ? db.findBookingById(bookingId) : null;
             const salon2 = salonId ? await db.findSalonById(salonId) : null;
             if (booking && salon2 && booking.clientEmail) {
-                const baseUrl2 = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+                const baseUrl2 = SITE_URL;
                 const cancelUrl2 = booking.cancelToken ? `${baseUrl2}/cancel/${booking.cancelToken}` : null;
                 const receiptUrl2 = booking.cancelToken ? `${baseUrl2}/receipt/${booking._id}?token=${booking.cancelToken}` : null;
                 sendBookingConfirmation(booking, salon2, cancelUrl2, receiptUrl2);
@@ -2514,7 +2555,7 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             await db.addSalonLog(salonId, 'subscription_activated', { plan, trialEnd, stripeCustomerId: session.customer, referredBy: refCode || null });
 
             // Send welcome email (non-blocking)
-            const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+            const baseUrl = SITE_URL;
             if (ownerEmail) {
                 const ownerNameMeta = session.metadata?.ownerName || '';
                 sendWelcomeEmail(ownerEmail, ownerNameMeta || salonName, salonName || 'Votre salon', plan, baseUrl, trialDays);
@@ -2608,7 +2649,7 @@ route('POST', '/api/stripe/webhook', async (req, res) => {
             // Notify owner
             const owners = await db.findOwners({ salon: salon._id });
             if (owners.length > 0 && owners[0].email) {
-                const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+                const baseUrl = SITE_URL;
                 sendPaymentFailedEmail(owners[0].email, owners[0].name, salon.name, baseUrl + '/pro');
             }
         }
@@ -2674,7 +2715,7 @@ route('POST', '/api/pro/stripe/connect/onboard', async (req, res) => {
                 'stripeConnect.status': 'pending'
             });
         }
-        const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+        const baseUrl = SITE_URL;
         const link = await stripe.accountLinks.create({
             account: accountId,
             refresh_url: `${baseUrl}/pro?stripe_connect=refresh`,
@@ -3187,7 +3228,7 @@ route('POST', '/api/salon/:slug/book', async (req, res, params) => {
     });
 
     // Non-blocking: email + push + SMS
-    const baseUrlBook = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+    const baseUrlBook = SITE_URL;
     const cancelUrlBook = booking.cancelToken ? `${baseUrlBook}/cancel/${booking.cancelToken}` : null;
     const receiptUrlBook = booking.cancelToken ? `${baseUrlBook}/receipt/${booking._id}?token=${booking.cancelToken}` : null;
     if (booking.clientEmail) sendBookingConfirmation(booking, salon, cancelUrlBook, receiptUrlBook);
@@ -3284,7 +3325,7 @@ route('POST', '/api/salon/:slug/payment/checkout', async (req, res, params) => {
         cancelToken: crypto.randomBytes(16).toString('hex'),
     });
 
-    const baseUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`;
+    const baseUrl = SITE_URL;
     const label = service.name;
     const desc = `Réservation du ${body.date} à ${body.time} chez ${salon.name}`;
 
@@ -3377,13 +3418,20 @@ route('POST', '/api/salon/:slug/my-bookings', async (req, res, params) => {
 
     const body = await parseBody(req);
     const email = (body.email || '').trim().toLowerCase();
-    const code = (body.code || '').trim();
+    const code = String(body.code || '').trim();
     if (!email || !code) return json(res, 400, { success: false, error: 'Email et code requis' });
 
     // Verify OTP
     const otpKey = `${email}:${salon._id}`;
     const stored = otpStore.get(otpKey);
-    if (!stored || stored.code !== code || stored.expires < Date.now()) {
+    if (!stored || stored.expires < Date.now()) {
+        return json(res, 401, { success: false, error: 'Code invalide ou expiré' });
+    }
+    if (stored.code !== code) {
+        // 5 wrong guesses burn the code: a 6-digit code can't be brute-forced
+        // by rotating IP addresses.
+        stored.attempts = (stored.attempts || 0) + 1;
+        if (stored.attempts >= 5) otpStore.delete(otpKey);
         return json(res, 401, { success: false, error: 'Code invalide ou expiré' });
     }
 
@@ -3725,7 +3773,10 @@ const server = http.createServer(async (req, res) => {
         }
     }
     else if (pathname.startsWith('/review/')) {
-        const bookingId = pathname.split('/review/')[1]?.split('?')[0] || '';
+        // The id is written into an inline <script>: only accept a real id
+        // (hex), otherwise a crafted link would inject script (reflected XSS).
+        const rawId = pathname.split('/review/')[1]?.split('?')[0] || '';
+        const bookingId = /^[0-9a-fA-F]{24}$/.test(rawId) ? rawId : '';
         const rawTok = (url.searchParams.get('t') || '').match(/^[0-9a-f]{32}$/)?.[0] || '';
         const token = rawTok;
         const reviewBooking = await db.findBookingById(bookingId).catch(() => null);
@@ -3743,18 +3794,21 @@ const server = http.createServer(async (req, res) => {
         const token = url.searchParams.get('token') || '';
 
         const booking = await db.findBookingById(bookingId).catch(() => null);
-        const isValidToken = booking && (booking.cancelToken === token);
-        // Also allow pro owners via JWT
+        const isValidToken = !!(booking && booking.cancelToken && token.length === booking.cancelToken.length &&
+            crypto.timingSafeEqual(Buffer.from(token), Buffer.from(booking.cancelToken)));
+        // Also allow the salon's own staff via JWT (never another salon's).
         const proUser = verifyToken(req);
-        const isProAccess = proUser && (proUser.role === 'owner' || proUser.role === 'employee');
+        const isProAccess = !!(booking && proUser && (proUser.role === 'owner' || proUser.role === 'employee' || proUser.role === 'superadmin') &&
+            (proUser.role === 'superadmin' || String(proUser.salonId) === String(booking.salon)));
 
         if (!booking || (!isValidToken && !isProAccess)) {
-            res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+            res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8', ...SECURITY_HEADERS });
             return res.end('<!DOCTYPE html><html><body style="font-family:system-ui;text-align:center;padding:60px;color:#6b7280"><h2>Reçu introuvable</h2><p>Ce lien est invalide ou a expiré.</p></body></html>');
         }
         const salon = await db.findSalonById(booking.salon).catch(() => null);
-        const salonName = salon?.name || 'Kreno';
-        const primaryColor = salon?.branding?.primaryColor || '#6366F1';
+        const salonName = escHtml(salon?.name || 'Kreno');
+        const rawReceiptColor = salon?.branding?.primaryColor || '';
+        const primaryColor = /^#[0-9a-fA-F]{3,8}$/.test(rawReceiptColor) ? rawReceiptColor : '#6366F1';
 
         const payStatusLabel = {
             'fully_paid': '✅ Payé en ligne',
@@ -3806,12 +3860,12 @@ tr+tr td{border-top:1px solid #f0f0f0}
       <tr><td>Service</td><td>${escHtml(booking.serviceIcon || '✂️')} ${escHtml(booking.serviceName || '—')}</td></tr>
       <tr><td>Date</td><td>${dateFR}</td></tr>
       <tr><td>Heure</td><td>${escHtml(booking.time || '—')}</td></tr>
-      <tr><td>Durée</td><td>${booking.duration || 30} min</td></tr>
+      <tr><td>Durée</td><td>${Number(booking.duration) || 30} min</td></tr>
       ${booking.employeeName ? `<tr><td>Avec</td><td>${escHtml(booking.employeeName)}</td></tr>` : ''}
-      ${booking.amountPaid ? `<tr><td>Acompte versé</td><td>${booking.amountPaid} CHF</td></tr>` : ''}
-      <tr class="total"><td>Total</td><td>${booking.price || 0} CHF</td></tr>
+      ${booking.amountPaid ? `<tr><td>Acompte versé</td><td>${Number(booking.amountPaid) || 0} CHF</td></tr>` : ''}
+      <tr class="total"><td>Total</td><td>${Number(booking.price) || 0} CHF</td></tr>
     </table>
-    ${salon?.address || salon?.phone ? `<div class="salon-info"><strong>${salonName}</strong>${salon.address ? `📍 ${salon.address}<br>` : ''}${salon.phone ? `📞 ${salon.phone}` : ''}</div>` : ''}
+    ${salon?.address || salon?.phone ? `<div class="salon-info"><strong>${salonName}</strong>${salon.address ? `📍 ${escHtml(salon.address)}<br>` : ''}${salon.phone ? `📞 ${escHtml(salon.phone)}` : ''}</div>` : ''}
     <div class="actions">
       <button class="btn btn-print" onclick="window.print()">🖨️ Imprimer</button>
       <button class="btn btn-close" onclick="window.close()">Fermer</button>
@@ -3906,7 +3960,7 @@ tr+tr td{border-top:1px solid #f0f0f0}
                         const desc = `Prenez rendez-vous en ligne chez ${name}${city ? ' à ' + city : ''}. Réservation rapide, disponible 24h/24. Confirmez votre RDV en quelques clics.`;
                         const safeDesc = desc.replace(/"/g, '&quot;');
                         const safeName = name.replace(/"/g, '&quot;');
-                        const baseUrl = `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}`;
+                        const baseUrl = SITE_URL;
                         const pageUrl = `${baseUrl}/s/${salonSlug}`;
                         const img = salon.logo || '';
 
