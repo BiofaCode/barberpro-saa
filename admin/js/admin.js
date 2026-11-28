@@ -248,8 +248,8 @@ async function loadDashboard() {
                 <div class="booking-item" style="cursor:pointer" onclick="navigateTo('salons')">
                     <div class="booking-icon">🏪</div>
                     <div class="booking-info">
-                        <div class="booking-info-name">${s.name}</div>
-                        <div class="booking-info-service">${s.owner?.name || '—'} · ${s.address}</div>
+                        <div class="booking-info-name">${escapeHtml(s.name)}</div>
+                        <div class="booking-info-service">${escapeHtml(s.owner?.name || '—')} · ${escapeHtml(s.address)}</div>
                     </div>
                     <span class="badge badge-${s.active ? 'active' : 'cancelled'}">${s.active ? 'Actif' : 'Inactif'}</span>
                     <div style="font-size:.8rem;color:var(--text-muted)">${s.stats?.bookings || 0} RDV · ${s.stats?.clients || 0} clients</div>
@@ -525,7 +525,7 @@ function copySalonInfo(salonId) {
   const salon = state.salons.find(s => (s._id || s.id) === salonId);
   if (!salon) return;
   const info = `
-🏪 ${salon.name}
+🏪 ${escapeHtml(salon.name)}
 🌐 Site: ${window.location.origin}/s/${salon.slug}
 👤 Propriétaire: ${salon.owner?.name || '—'}
 📧 Login: ${salon.owner?.email || '—'}
@@ -691,7 +691,7 @@ async function loadRevenuePage() {
             ${salons.map(s => `
               <tr>
                 <td>
-                  <div style="font-weight:600;color:var(--text)">${s.name}</div>
+                  <div style="font-weight:600;color:var(--text)">${escapeHtml(s.name)}</div>
                   <div style="font-size:.75rem;font-family:monospace;color:var(--text-muted)">/s/${s.slug}</div>
                 </td>
                 <td><span class="badge badge-${s.subscription?.plan === 'premium' ? 'active' : s.subscription?.plan === 'pro' ? 'pending' : 'cancelled'}">${s.subscription?.plan || 'pro'}</span></td>
@@ -726,8 +726,8 @@ async function loadActivityPage() {
       return `<div class="activity-item">
         <div class="activity-dot new-salon">🏪</div>
         <div class="activity-body">
-          <div class="activity-title">Nouveau salon : <strong>${s.name}</strong></div>
-          <div class="activity-sub">${s.owner?.email || '—'} · /s/${s.slug} · Plan ${s.subscription?.plan || 'pro'}</div>
+          <div class="activity-title">Nouveau salon : <strong>${escapeHtml(s.name)}</strong></div>
+          <div class="activity-sub">${escapeHtml(s.owner?.email || '—')} · /s/${s.slug} · Plan ${s.subscription?.plan || 'pro'}</div>
         </div>
         <div class="activity-time">${date}</div>
       </div>`;

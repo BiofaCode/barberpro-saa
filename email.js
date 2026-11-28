@@ -5,6 +5,11 @@
 
 const { Resend } = require('resend');
 
+// User-controlled text (client name, notes…) must never become HTML in an e-mail.
+function escEmail(v) {
+  return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // Initialize Resend with the provided API key (from env)
 // Without a key, `new Resend()` throws and would take the whole server down at
 // boot: fall back to a stub that reports an error on each send instead.
@@ -34,13 +39,13 @@ function buildConfirmationEmail(booking, salon, cancelUrl, receiptUrl) {
     <!-- Header -->
     <div style="background:${primaryColor};padding:32px 28px;text-align:center">
       <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">✅ Rendez-vous confirmé</h1>
-      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${salonName}</p>
+      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${escEmail(salonName)}</p>
     </div>
 
     <!-- Body -->
     <div style="padding:28px">
       <p style="font-size:15px;color:#27272a;margin:0 0 20px">
-        Bonjour <strong>${booking.clientName}</strong>,<br>
+        Bonjour <strong>${escEmail(booking.clientName)}</strong>,<br>
         Votre rendez-vous a bien été enregistré. Voici les détails :
       </p>
 
@@ -49,7 +54,7 @@ function buildConfirmationEmail(booking, salon, cancelUrl, receiptUrl) {
         <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3f3f46">
           <tr>
             <td style="padding:8px 0;color:#71717a;width:120px">Service</td>
-            <td style="padding:8px 0;font-weight:600">${booking.serviceIcon || '✂️'} ${booking.serviceName}</td>
+            <td style="padding:8px 0;font-weight:600">${booking.serviceIcon || '✂️'} ${escEmail(booking.serviceName)}</td>
           </tr>
           <tr>
             <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Date</td>
@@ -65,7 +70,7 @@ function buildConfirmationEmail(booking, salon, cancelUrl, receiptUrl) {
           </tr>
           ${booking.employeeName ? `<tr>
             <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Avec</td>
-            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">👤 ${booking.employeeName}</td>
+            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">👤 ${escEmail(booking.employeeName)}</td>
           </tr>` : ''}
           <tr>
             <td style="padding:10px 0;color:#71717a;border-top:2px solid #e4e4e7;font-weight:600">Total</td>
@@ -78,8 +83,8 @@ function buildConfirmationEmail(booking, salon, cancelUrl, receiptUrl) {
       ${salon.address || salon.phone ? `
       <div style="margin-top:20px;padding:16px;background:#f0f0ff;border-radius:12px;font-size:13px;color:#3f3f46">
         <strong style="display:block;margin-bottom:8px">📍 Informations pratiques</strong>
-        ${salon.address ? `<div style="margin-bottom:4px">${salon.address}</div>` : ''}
-        ${salon.phone ? `<div>📞 ${salon.phone}</div>` : ''}
+        ${salon.address ? `<div style="margin-bottom:4px">${escEmail(salon.address)}</div>` : ''}
+        ${salon.phone ? `<div>📞 ${escEmail(salon.phone)}</div>` : ''}
       </div>
       ` : ''}
 
@@ -96,7 +101,7 @@ function buildConfirmationEmail(booking, salon, cancelUrl, receiptUrl) {
 
     <!-- Footer -->
     <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par Kreno</p>
+      <p style="font-size:12px;color:#a1a1aa;margin:0">${escEmail(salonName)} — Propulsé par Kreno</p>
     </div>
   </div>
 </body>
@@ -159,7 +164,7 @@ async function sendOTPEmail(email, code, salonName = 'Kreno') {
       html: `
             <div style="font-family:sans-serif;max-width:500px;margin:auto;padding:20px;border:1px solid #eaeaea;border-radius:10px;">
                 <h2 style="color:#333;text-align:center;">Code d'Accès</h2>
-                <p style="color:#555;font-size:16px;">Voici votre code sécurisé pour accéder à vos rendez-vous sur <strong>${salonName}</strong> :</p>
+                <p style="color:#555;font-size:16px;">Voici votre code sécurisé pour accéder à vos rendez-vous sur <strong>${escEmail(salonName)}</strong> :</p>
                 <div style="background:#f4f4f5;padding:15px;text-align:center;font-size:32px;font-weight:bold;letter-spacing:4px;border-radius:8px;color:#111;margin:20px 0;">
                     ${code}
                 </div>
@@ -210,15 +215,15 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
         <span style="color:#fff;font-size:13px;font-weight:600;letter-spacing:.5px">KRENO</span>
       </div>
       <h1 style="color:#fff;margin:0;font-size:26px;font-weight:700;line-height:1.3">Votre salon est en ligne 🎉</h1>
-      <p style="color:rgba(255,255,255,.8);margin:10px 0 0;font-size:15px">Bienvenue dans la famille Kreno, ${ownerName} !</p>
+      <p style="color:rgba(255,255,255,.8);margin:10px 0 0;font-size:15px">Bienvenue dans la famille Kreno, ${escEmail(ownerName)} !</p>
     </div>
 
     <!-- Body -->
     <div style="background:#fff;padding:32px;border-left:1px solid #e4e4e7;border-right:1px solid #e4e4e7">
 
       <p style="font-size:15px;color:#27272a;margin:0 0 24px;line-height:1.7">
-        Bonjour <strong>${ownerName}</strong>,<br>
-        <strong>${salonName}</strong> est désormais sur Kreno avec le plan <strong>${planLabel}</strong>${trialDays ? ` — vous bénéficiez de <strong>${trialDays} jours d'essai gratuit</strong>` : ''}.
+        Bonjour <strong>${escEmail(ownerName)}</strong>,<br>
+        <strong>${escEmail(salonName)}</strong> est désormais sur Kreno avec le plan <strong>${planLabel}</strong>${trialDays ? ` — vous bénéficiez de <strong>${trialDays} jours d'essai gratuit</strong>` : ''}.
         Voici tout ce dont vous avez besoin pour démarrer.
       </p>
 
@@ -273,7 +278,7 @@ async function sendWelcomeEmail(email, ownerName, salonName, plan, baseUrl) {
       <div style="background:#fafafa;border-radius:10px;padding:16px 20px;border:1px solid #e4e4e7;font-size:14px;color:#3f3f46">
         <div style="margin-bottom:8px"><span style="color:#71717a;min-width:80px;display:inline-block">Email</span> <strong>${email}</strong></div>
         <div style="margin-bottom:8px"><span style="color:#71717a;min-width:80px;display:inline-block">Plan</span> <strong>${planLabel}</strong></div>
-        <div><span style="color:#71717a;min-width:80px;display:inline-block">Salon</span> <strong>${salonName}</strong></div>
+        <div><span style="color:#71717a;min-width:80px;display:inline-block">Salon</span> <strong>${escEmail(salonName)}</strong></div>
       </div>
 
       ${trialDays ? `
@@ -388,18 +393,18 @@ async function sendReminderEmail(booking, salon, { sameDay = false } = {}) {
   <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
     <div style="background:${primaryColor};padding:32px 28px;text-align:center">
       <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">⏰ Rappel de rendez-vous</h1>
-      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${salonName}</p>
+      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${escEmail(salonName)}</p>
     </div>
     <div style="padding:28px">
       <p style="font-size:15px;color:#27272a;margin:0 0 20px">
-        Bonjour <strong>${booking.clientName}</strong>,<br>
+        Bonjour <strong>${escEmail(booking.clientName)}</strong>,<br>
         Nous vous rappelons votre rendez-vous ${sameDay ? "d'<strong>aujourd'hui</strong>" : 'de <strong>demain</strong>'} :
       </p>
       <div style="background:#fafafa;border-radius:12px;padding:20px;border:1px solid #e4e4e7">
         <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3f3f46">
           <tr>
             <td style="padding:8px 0;color:#71717a;width:120px">Service</td>
-            <td style="padding:8px 0;font-weight:600">${booking.serviceIcon || '✂️'} ${booking.serviceName}</td>
+            <td style="padding:8px 0;font-weight:600">${booking.serviceIcon || '✂️'} ${escEmail(booking.serviceName)}</td>
           </tr>
           <tr>
             <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Date</td>
@@ -415,7 +420,7 @@ async function sendReminderEmail(booking, salon, { sameDay = false } = {}) {
           </tr>
           ${booking.employeeName ? `<tr>
             <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Avec</td>
-            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">👤 ${booking.employeeName}</td>
+            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">👤 ${escEmail(booking.employeeName)}</td>
           </tr>` : ''}
         </table>
       </div>
@@ -428,7 +433,7 @@ async function sendReminderEmail(booking, salon, { sameDay = false } = {}) {
       </div>` : ''}
     </div>
     <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par Kreno</p>
+      <p style="font-size:12px;color:#a1a1aa;margin:0">${escEmail(salonName)} — Propulsé par Kreno</p>
     </div>
   </div>
 </body>
@@ -457,18 +462,18 @@ async function sendCancellationConfirmation(booking, salon) {
   <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
     <div style="background:#ef4444;padding:32px 28px;text-align:center">
       <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">❌ Rendez-vous annulé</h1>
-      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${salonName}</p>
+      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${escEmail(salonName)}</p>
     </div>
     <div style="padding:28px">
       <p style="font-size:15px;color:#27272a;margin:0 0 20px">
-        Bonjour <strong>${booking.clientName}</strong>,<br>
+        Bonjour <strong>${escEmail(booking.clientName)}</strong>,<br>
         Votre rendez-vous a bien été annulé.
       </p>
       <div style="background:#fafafa;border-radius:12px;padding:20px;border:1px solid #e4e4e7">
         <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3f3f46">
           <tr>
             <td style="padding:8px 0;color:#71717a;width:120px">Service</td>
-            <td style="padding:8px 0;font-weight:600">${booking.serviceIcon || '✂️'} ${booking.serviceName}</td>
+            <td style="padding:8px 0;font-weight:600">${booking.serviceIcon || '✂️'} ${escEmail(booking.serviceName)}</td>
           </tr>
           <tr>
             <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Date</td>
@@ -481,11 +486,11 @@ async function sendCancellationConfirmation(booking, salon) {
         </table>
       </div>
       <p style="font-size:13px;color:#71717a;margin:20px 0 0;line-height:1.6">
-        Pour prendre un nouveau rendez-vous, contactez directement ${salonName}.
+        Pour prendre un nouveau rendez-vous, contactez directement ${escEmail(salonName)}.
       </p>
     </div>
     <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par Kreno</p>
+      <p style="font-size:12px;color:#a1a1aa;margin:0">${escEmail(salonName)} — Propulsé par Kreno</p>
     </div>
   </div>
 </body>
@@ -514,7 +519,7 @@ async function sendCancellationAlertToOwner(booking, salon, ownerEmail) {
   <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
     <div style="background:${primaryColor};padding:32px 28px;text-align:center">
       <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">⚠️ Annulation de rendez-vous</h1>
-      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${salonName}</p>
+      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${escEmail(salonName)}</p>
     </div>
     <div style="padding:28px">
       <p style="font-size:15px;color:#27272a;margin:0 0 20px">
@@ -524,19 +529,19 @@ async function sendCancellationAlertToOwner(booking, salon, ownerEmail) {
         <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3f3f46">
           <tr>
             <td style="padding:8px 0;color:#71717a;width:120px">Client</td>
-            <td style="padding:8px 0;font-weight:600">${booking.clientName}</td>
+            <td style="padding:8px 0;font-weight:600">${escEmail(booking.clientName)}</td>
           </tr>
           <tr>
             <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Email</td>
-            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">${booking.clientEmail}</td>
+            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">${escEmail(booking.clientEmail)}</td>
           </tr>
           ${booking.clientPhone ? `<tr>
             <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Téléphone</td>
-            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">${booking.clientPhone}</td>
+            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">${escEmail(booking.clientPhone)}</td>
           </tr>` : ''}
           <tr>
             <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Service</td>
-            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">${booking.serviceIcon || '✂️'} ${booking.serviceName}</td>
+            <td style="padding:8px 0;font-weight:600;border-top:1px solid #e4e4e7">${booking.serviceIcon || '✂️'} ${escEmail(booking.serviceName)}</td>
           </tr>
           <tr>
             <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Date</td>
@@ -553,7 +558,7 @@ async function sendCancellationAlertToOwner(booking, salon, ownerEmail) {
       </p>
     </div>
     <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par Kreno</p>
+      <p style="font-size:12px;color:#a1a1aa;margin:0">${escEmail(salonName)} — Propulsé par Kreno</p>
     </div>
   </div>
 </body>
@@ -584,18 +589,18 @@ async function sendRescheduleEmail(booking, salon) {
   <div style="max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08)">
     <div style="background:${primaryColor};padding:32px 28px;text-align:center">
       <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">🔄 Rendez-vous reprogrammé</h1>
-      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${salonName}</p>
+      <p style="color:rgba(255,255,255,.85);margin:8px 0 0;font-size:14px">${escEmail(salonName)}</p>
     </div>
     <div style="padding:28px">
       <p style="font-size:15px;color:#27272a;margin:0 0 20px">
-        Bonjour <strong>${booking.clientName}</strong>,<br>
+        Bonjour <strong>${escEmail(booking.clientName)}</strong>,<br>
         Votre rendez-vous a été déplacé. Voici les <strong>nouveaux horaires</strong> :
       </p>
       <div style="background:#fafafa;border-radius:12px;padding:20px;border:1px solid #e4e4e7">
         <table style="width:100%;border-collapse:collapse;font-size:14px;color:#3f3f46">
           <tr>
             <td style="padding:8px 0;color:#71717a;width:120px">Service</td>
-            <td style="padding:8px 0;font-weight:600">${booking.serviceIcon || '✂️'} ${booking.serviceName}</td>
+            <td style="padding:8px 0;font-weight:600">${booking.serviceIcon || '✂️'} ${escEmail(booking.serviceName)}</td>
           </tr>
           <tr>
             <td style="padding:8px 0;color:#71717a;border-top:1px solid #e4e4e7">Nouvelle date</td>
@@ -612,7 +617,7 @@ async function sendRescheduleEmail(booking, salon) {
       </p>` : ''}
     </div>
     <div style="background:#fafafa;padding:16px 28px;text-align:center;border-top:1px solid #e4e4e7">
-      <p style="font-size:12px;color:#a1a1aa;margin:0">${salonName} — Propulsé par Kreno</p>
+      <p style="font-size:12px;color:#a1a1aa;margin:0">${escEmail(salonName)} — Propulsé par Kreno</p>
     </div>
   </div>
 </body>
@@ -648,7 +653,7 @@ async function sendAdminNewSubscriptionEmail(adminEmail, { salonName, ownerEmail
     </div>
     <div style="background:#fff;padding:28px;border:1px solid #e4e4e7;border-top:none">
       <table style="width:100%;border-collapse:collapse">
-        <tr><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:13px;width:120px">Salon</td><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;font-weight:600;font-size:14px">${salonName}</td></tr>
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:13px;width:120px">Salon</td><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;font-weight:600;font-size:14px">${escEmail(salonName)}</td></tr>
         <tr><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:13px">Email</td><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;font-size:14px">${ownerEmail}</td></tr>
         <tr><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:13px">Plan</td><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;font-size:14px"><strong>${planLabel}</strong></td></tr>
         <tr><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;color:#71717a;font-size:13px">ID Salon</td><td style="padding:10px 0;border-bottom:1px solid #f4f4f5;font-size:12px;font-family:monospace">${salonId}</td></tr>
@@ -689,16 +694,16 @@ async function sendEmployeeBookingNotification(booking, salon, employeeEmail) {
     <div style="background:${primaryColor};padding:28px;text-align:center">
       <div style="font-size:40px;margin-bottom:6px">📅</div>
       <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700">Nouveau rendez-vous</h1>
-      <p style="color:rgba(255,255,255,.85);margin:6px 0 0;font-size:.9rem">${salonName}</p>
+      <p style="color:rgba(255,255,255,.85);margin:6px 0 0;font-size:.9rem">${escEmail(salonName)}</p>
     </div>
     <div style="padding:28px">
       <table style="width:100%;border-collapse:collapse;font-size:.9rem">
-        <tr><td style="padding:8px 0;color:#6b7280;width:110px">Client</td><td style="padding:8px 0;font-weight:600">${booking.clientName}</td></tr>
+        <tr><td style="padding:8px 0;color:#6b7280;width:110px">Client</td><td style="padding:8px 0;font-weight:600">${escEmail(booking.clientName)}</td></tr>
         <tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Prestation</td><td style="padding:8px 0;font-weight:600">${booking.serviceName || '—'}</td></tr>
         <tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Date</td><td style="padding:8px 0;font-weight:600">${formatDateFR(booking.date)} à ${booking.time}</td></tr>
         ${booking.duration ? `<tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Durée</td><td style="padding:8px 0">${booking.duration} min</td></tr>` : ''}
-        ${booking.clientPhone ? `<tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Téléphone</td><td style="padding:8px 0">${booking.clientPhone}</td></tr>` : ''}
-        ${booking.notes ? `<tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Notes</td><td style="padding:8px 0">${booking.notes}</td></tr>` : ''}
+        ${booking.clientPhone ? `<tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Téléphone</td><td style="padding:8px 0">${escEmail(booking.clientPhone)}</td></tr>` : ''}
+        ${booking.notes ? `<tr style="border-top:1px solid #f3f4f6"><td style="padding:8px 0;color:#6b7280">Notes</td><td style="padding:8px 0">${escEmail(booking.notes)}</td></tr>` : ''}
       </table>
       <p style="margin:20px 0 0;text-align:center"><a href="${process.env.BASE_URL || 'https://kreno.ch'}/pro" style="background:${primaryColor};color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:.9rem">Voir dans le panel</a></p>
     </div>
@@ -802,7 +807,7 @@ async function sendPaymentFailedEmail(ownerEmail, ownerName, salonName, proUrl) 
     <div style="background:#fff;padding:28px;border:1px solid #e4e4e7;border-top:none">
       <p style="margin:0 0 16px;font-size:16px;color:#374151">Bonjour <strong>${firstName}</strong>,</p>
       <p style="margin:0 0 20px;font-size:15px;color:#6b7280;line-height:1.6">
-        Nous n'avons pas pu prélever votre abonnement <strong>${salonName}</strong> sur Stripe.
+        Nous n'avons pas pu prélever votre abonnement <strong>${escEmail(salonName)}</strong> sur Stripe.
         Votre compte reste actif pour le moment, mais merci de mettre à jour votre moyen de paiement
         pour éviter toute interruption de service.
       </p>
@@ -857,9 +862,9 @@ async function sendReviewRequestEmail(booking, salon, reviewUrl) {
       <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">Comment s'est passé votre visite ?</h1>
     </div>
     <div style="padding:32px 28px">
-      <p style="margin:0 0 16px;font-size:16px;color:#374151">Bonjour <strong>${clientName}</strong>,</p>
+      <p style="margin:0 0 16px;font-size:16px;color:#374151">Bonjour <strong>${escEmail(clientName)}</strong>,</p>
       <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6">
-        Nous espérons que votre rendez-vous chez <strong>${salonName}</strong> s'est bien passé.<br>
+        Nous espérons que votre rendez-vous chez <strong>${escEmail(salonName)}</strong> s'est bien passé.<br>
         Votre avis nous aide à améliorer notre service et à aider d'autres clients à nous trouver.
       </p>
       <div style="background:#fafafa;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center">
@@ -876,7 +881,7 @@ async function sendReviewRequestEmail(booking, salon, reviewUrl) {
       </p>
     </div>
     <div style="background:#f9fafb;padding:16px 28px;text-align:center;border-top:1px solid #e5e7eb">
-      <p style="margin:0;font-size:12px;color:#9ca3af">${salonName}</p>
+      <p style="margin:0;font-size:12px;color:#9ca3af">${escEmail(salonName)}</p>
     </div>
   </div>
 </body>
@@ -884,7 +889,7 @@ async function sendReviewRequestEmail(booking, salon, reviewUrl) {
 
   try {
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || `${salonName} <noreply@kreno.ch>`,
+      from: process.env.RESEND_FROM_EMAIL || `${String(salonName).replace(/[<>"\r\n]/g, '')} <noreply@kreno.ch>`,
       to: booking.clientEmail,
       subject: `⭐ Comment s'est passé votre visite chez ${salonName} ?`,
       html,
