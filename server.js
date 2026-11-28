@@ -586,8 +586,9 @@ route('GET', '/api/bookings/:bookingId/ics', async (req, res, params) => {
     const token = new URL(req.url, 'http://localhost').searchParams.get('token') || '';
     let booking = null;
     try { booking = await db.findBookingById(params.bookingId); } catch (e) { booking = null; }
-    const ok = booking && booking.cancelToken && token.length === booking.cancelToken.length &&
-        crypto.timingSafeEqual(Buffer.from(token), Buffer.from(booking.cancelToken));
+    // safeEqual compares byte lengths first: timingSafeEqual throws on a
+    // same-length string with multi-byte characters.
+    const ok = booking && booking.cancelToken && safeEqual(token, booking.cancelToken);
     if (!ok) return json(res, 404, { success: false, error: 'Rendez-vous introuvable' });
     const salon = await db.findSalonById(booking.salon);
     // Server runs in Europe/Zurich (TZ set at boot): local date + time = salon time.
@@ -3644,6 +3645,10 @@ route('POST', '/api/review/:bookingId', async (req, res, params) => {
 //  HTTP SERVER
 // ==========================
 
+// Safety net: one unexpected error in a request must not take the whole
+// server (every salon) down. It is logged; the request fails on its own.
+process.on('unhandledRejection', err => console.error('⚠️ Unhandled rejection:', err));
+
 const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
     let pathname = decodeURIComponent(url.pathname);
@@ -3794,8 +3799,7 @@ const server = http.createServer(async (req, res) => {
         const token = url.searchParams.get('token') || '';
 
         const booking = await db.findBookingById(bookingId).catch(() => null);
-        const isValidToken = !!(booking && booking.cancelToken && token.length === booking.cancelToken.length &&
-            crypto.timingSafeEqual(Buffer.from(token), Buffer.from(booking.cancelToken)));
+        const isValidToken = !!(booking && booking.cancelToken && safeEqual(token, booking.cancelToken));
         // Also allow the salon's own staff via JWT (never another salon's).
         const proUser = verifyToken(req);
         const isProAccess = !!(booking && proUser && (proUser.role === 'owner' || proUser.role === 'employee' || proUser.role === 'superadmin') &&
