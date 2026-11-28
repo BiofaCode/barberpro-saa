@@ -103,6 +103,12 @@ describe('receipt access', () => {
         expect((await request(server).get(`/receipt/${BOOKING_ID}?token=${'0'.repeat(32)}`)).status).toBe(404);
     });
 
+    test('a same-length token with multi-byte characters is refused, not a crash', async () => {
+        const weird = encodeURIComponent('é'.repeat(32));
+        expect((await request(server).get(`/receipt/${BOOKING_ID}?token=${weird}`)).status).toBe(404);
+        expect((await request(server).get(`/api/bookings/${BOOKING_ID}/ics?token=${weird}`)).status).toBe(404);
+    });
+
     test('salon name is escaped in the receipt', async () => {
         db.findSalonById.mockResolvedValue({ ...SALON, name: '<b>x</b>', branding: { primaryColor: 'red;}</style><script>' } });
         const res = await request(server).get(`/receipt/${BOOKING_ID}?token=${TOKEN}`);
